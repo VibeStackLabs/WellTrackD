@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "../firebase";
-import { collection, addDoc, getDocs } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  doc,
+  getDocs,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import {
   Container,
@@ -84,8 +91,25 @@ export default function Dashboard() {
     setData(sortedData);
   };
 
+  const fetchProfile = async () => {
+    const ref = doc(db, "users", userId);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const p = snap.data();
+      if (p.heightUnit === "cm") {
+        setHeightCm(p.heightCm || "");
+        setHeightUnit("cm");
+      } else if (p.heightUnit === "ft/in") {
+        setHeightFt(p.heightFt || "");
+        setHeightIn(p.heightIn || "");
+        setHeightUnit("ft/in");
+      }
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchProfile();
   }, []);
 
   // Calculate BMI
@@ -120,12 +144,30 @@ export default function Dashboard() {
       bmi: bmi ? Number(bmi) : null,
       date: new Date().toISOString().split("T")[0], // add date
     });
+
+    // Save height permanently if provided
+    if (heightUnit === "cm" && heightCm) {
+      await setDoc(
+        doc(db, "users", userId),
+        { heightUnit: "cm", heightCm },
+        { merge: true },
+      );
+    }
+
+    if (heightUnit === "ft/in" && (heightFt || heightIn)) {
+      await setDoc(
+        doc(db, "users", userId),
+        {
+          heightUnit: "ft/in",
+          heightFt,
+          heightIn,
+        },
+        { merge: true },
+      );
+    }
+
     setWeight("");
-    setHeightCm("");
-    setHeightFt("");
-    setHeightIn("");
     setWeightUnit("kg");
-    setHeightUnit("cm");
     setOpenBMI(false);
     fetchData();
   };
