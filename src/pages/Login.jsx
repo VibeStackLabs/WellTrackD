@@ -2,6 +2,15 @@ import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 import { useNavigate, Link } from "react-router-dom";
+import {
+  Container,
+  Card,
+  CardContent,
+  Typography,
+  TextField,
+  Button,
+  Box,
+} from "@mui/material";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -18,34 +27,61 @@ export default function Login() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <h1 className="text-3xl font-bold mb-6">Login</h1>
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="mb-3 p-2 border rounded w-64"
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className="mb-3 p-2 border rounded w-64"
-      />
-      <button
-        onClick={handleLogin}
-        className="bg-green-500 text-white py-2 px-6 rounded hover:bg-green-600"
-      >
-        Login
-      </button>
-      <p className="mt-4">
-        Don't have an account?{" "}
-        <Link to="/signup" className="text-blue-500 underline">
-          Signup
-        </Link>
-      </p>
-    </div>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#f3f4f6", // same as dashboard bg
+        p: 2,
+      }}
+    >
+      <Container maxWidth="sm">
+        <Card sx={{ borderRadius: 3, p: 4, boxShadow: 8 }}>
+          <CardContent>
+            <Typography variant="h4" fontWeight="bold" gutterBottom>
+              Login
+            </Typography>
+
+            <Box display="flex" flexDirection="column" gap={2}>
+              <TextField
+                label="Email"
+                type="email"
+                fullWidth
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <TextField
+                label="Password"
+                type="password"
+                fullWidth
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                size="large"
+                sx={{ mt: 1, borderRadius: 2 }}
+                onClick={handleLogin}
+              >
+                Login
+              </Button>
+            </Box>
+
+            <Typography variant="body2" sx={{ mt: 2, textAlign: "center" }}>
+              Don't have an account?{" "}
+              <Link
+                to="/signup"
+                style={{ textDecoration: "none", color: "#4f46e5" }}
+              >
+                Signup
+              </Link>
+            </Typography>
+          </CardContent>
+        </Card>
+      </Container>
+    </Box>
   );
 }

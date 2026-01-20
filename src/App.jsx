@@ -10,7 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "./firebase";
 
-function App() {
+export default function App() {
   const [user, loading] = useAuthState(auth);
 
   if (loading)
@@ -43,5 +43,3 @@ function App() {
     </Router>
   );
 }
-
-export default App;
