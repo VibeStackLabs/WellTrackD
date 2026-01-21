@@ -7,6 +7,7 @@ import {
   getDocs,
   getDoc,
   setDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import {
@@ -58,7 +59,17 @@ const EXERCISES = [
 ];
 
 export default function Dashboard() {
-  const userId = auth.currentUser.uid;
+  const [userId, setUserId] = useState(null);
+
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged((user) => {
+      if (user) setUserId(user.uid);
+    });
+    return () => unsub();
+  }, []);
+
+  // Profile State
+  const [profile, setProfile] = useState(null);
 
   // FAB State
   const [fabOpen, setFabOpen] = useState(false);
@@ -84,6 +95,7 @@ export default function Dashboard() {
 
   // Fetch data
   const fetchData = async () => {
+    if (!userId) return;
     const snapshot = await getDocs(collection(db, "users", userId, "workouts"));
     const sortedData = snapshot.docs
       .map((doc) => doc.data())
@@ -92,10 +104,14 @@ export default function Dashboard() {
   };
 
   const fetchProfile = async () => {
+    if (!userId) return;
     const ref = doc(db, "users", userId);
     const snap = await getDoc(ref);
+
     if (snap.exists()) {
       const p = snap.data();
+      setProfile(p);
+
       if (p.heightUnit === "cm") {
         setHeightCm(p.heightCm || "");
         setHeightUnit("cm");
@@ -108,9 +124,10 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    if (!userId) return;
     fetchData();
     fetchProfile();
-  }, []);
+  }, [userId]);
 
   // Calculate BMI
   const calculateBMI = () => {
@@ -131,8 +148,8 @@ export default function Dashboard() {
     const bmi = calculateBMI();
     if (!weight) return alert("Enter a weight");
 
-    await addDoc(collection(db, "users", userId, "workouts"), {
-      weight: Number(weightUnit === "lbs" ? weight * 0.453592 : weight),
+    await addDoc(collection(db, "users", userId, "bodyMetrics"), {
+      bodyweight: Number(weightUnit === "lbs" ? weight * 0.453592 : weight),
       height:
         heightUnit === "cm"
           ? heightCm
@@ -142,7 +159,8 @@ export default function Dashboard() {
             ? (Number(heightFt) * 12 + Number(heightIn)) * 2.54
             : null,
       bmi: bmi ? Number(bmi) : null,
-      date: new Date().toISOString().split("T")[0], // add date
+      createdAt: serverTimestamp(),
+      date: new Date().toISOString().split("T")[0],
     });
 
     // Save height permanently if provided
@@ -197,7 +215,7 @@ export default function Dashboard() {
           : Number(workoutWeight),
       calories: Number(calories),
       bmi: latestEntry.bmi || null,
-      weight: latestEntry.weight || null,
+      bodyweight: latestEntry.bodyweight || null,
       height: latestEntry.height || null,
       date: new Date().toISOString().split("T")[0],
     });
@@ -211,12 +229,16 @@ export default function Dashboard() {
   };
 
   const latestEntry = data[data.length - 1] || {};
-  const totalWorkouts = data.length;
+  const totalWorkouts = data.filter((d) => d.exercise).length;
   const weeklyWorkouts = data.filter(
-    (d) => new Date(d.date) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    (d) =>
+      d.exercise &&
+      new Date(d.date) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
   ).length;
   const monthlyWorkouts = data.filter(
-    (d) => new Date(d.date) >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+    (d) =>
+      d.exercise &&
+      new Date(d.date) >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
   ).length;
 
   const actions = [
@@ -241,7 +263,7 @@ export default function Dashboard() {
         mb={4}
       >
         <Typography variant="h4" fontWeight="bold">
-          Workout Tracker
+          Welcome, {profile?.name || "User"}
         </Typography>
         <Button variant="contained" color="error" onClick={() => signOut(auth)}>
           Logout
@@ -258,10 +280,10 @@ export default function Dashboard() {
             <ScaleIcon color="primary" fontSize="large" />
             <Box>
               <Typography variant="body2" color="textSecondary">
-                Latest Weight
+                Latest Body Weight
               </Typography>
               <Typography variant="h6" color="primary">
-                {latestEntry.weight?.toFixed(1) || "--"} kg
+                {latestEntry.bodyweight?.toFixed(1) || "--"} kg
               </Typography>
             </Box>
           </Card>
@@ -343,7 +365,7 @@ export default function Dashboard() {
             <Tooltip />
             <Line
               type="monotone"
-              dataKey="weight"
+              dataKey="bodyweight"
               stroke="#1976d2"
               strokeWidth={2}
             />
