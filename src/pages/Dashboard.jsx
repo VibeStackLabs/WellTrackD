@@ -49,15 +49,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-// Predefined exercises with MET factors
-const EXERCISES = [
-  { name: "Bench Press", met: 0.1 },
-  { name: "Squat", met: 0.12 },
-  { name: "Deadlift", met: 0.11 },
-  { name: "Push Ups", met: 0.08 },
-  { name: "Pull Ups", met: 0.09 },
-];
-
 export default function Dashboard() {
   const [userId, setUserId] = useState(null);
 
@@ -214,9 +205,6 @@ export default function Dashboard() {
           ? Number(workoutWeight) * 0.453592
           : Number(workoutWeight),
       calories: Number(calories),
-      bmi: latestEntry.bmi || null,
-      bodyweight: latestEntry.bodyweight || null,
-      height: latestEntry.height || null,
       date: new Date().toISOString().split("T")[0],
     });
     setExercise("");
