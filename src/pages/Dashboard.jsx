@@ -51,13 +51,7 @@ import {
 
 export default function Dashboard() {
   const [userId, setUserId] = useState(null);
-
-  useEffect(() => {
-    const unsub = auth.onAuthStateChanged((user) => {
-      if (user) setUserId(user.uid);
-    });
-    return () => unsub();
-  }, []);
+  const [loading, setLoading] = useState(true);
 
   // Profile State
   const [profile, setProfile] = useState(null);
@@ -80,164 +74,195 @@ export default function Dashboard() {
   const [workoutWeight, setWorkoutWeight] = useState("");
   const [workoutUnit, setWorkoutUnit] = useState("kg");
 
-  const [data, setData] = useState([]);
+  // Data states
+  const [workouts, setWorkouts] = useState([]);
+  const [bmiEntries, setBmiEntries] = useState([]);
   const [openBMI, setOpenBMI] = useState(false);
   const [openWorkout, setOpenWorkout] = useState(false);
 
-  // Fetch data
-  const fetchData = async () => {
-    if (!userId) return;
+  // Listen to auth
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged((user) => {
+      if (user) setUserId(user.uid);
+      else setUserId(null);
+    });
+    return () => unsub();
+  }, []);
 
-    // Workout Data
-    const snapshot = await getDocs(collection(db, "users", userId, "workouts"));
-    const sortedData = snapshot.docs
-      .map((doc) => doc.data())
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
-    setData(sortedData);
-
-    // BMI Data
-    const bmiSnapshot = await getDocs(
-      collection(db, "users", userId, "bodyMetrics"),
-    );
-    const bmiData = bmiSnapshot.docs
-      .map((doc) => doc.data())
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
-    setData((prevData) => [...prevData, ...bmiData]);
-  };
-
+  // Fetch Profile
   const fetchProfile = async () => {
     if (!userId) return;
-    const ref = doc(db, "users", userId);
-    const snap = await getDoc(ref);
+    try {
+      const ref = doc(db, "users", userId);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const p = snap.data();
+        setProfile(p);
 
-    if (snap.exists()) {
-      const p = snap.data();
-      setProfile(p);
-
-      if (p.heightUnit === "cm") {
-        setHeightCm(p.heightCm || "");
-        setHeightUnit("cm");
-      } else if (p.heightUnit === "ft/in") {
-        setHeightFt(p.heightFt || "");
-        setHeightIn(p.heightIn || "");
-        setHeightUnit("ft/in");
+        if (p.heightUnit === "cm") {
+          setHeightCm(p.heightCm || "");
+          setHeightUnit("cm");
+        } else if (p.heightUnit === "ft/in") {
+          setHeightFt(p.heightFt || "");
+          setHeightIn(p.heightIn || "");
+          setHeightUnit("ft/in");
+        }
       }
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+    }
+  };
+
+  // Fetch Data
+  const fetchData = async () => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      // Workouts
+      const workoutSnap = await getDocs(
+        collection(db, "users", userId, "workouts"),
+      );
+      const workoutData = workoutSnap.docs
+        .map((doc) => doc.data())
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+      setWorkouts(workoutData);
+
+      // BMI
+      const bmiSnap = await getDocs(
+        collection(db, "users", userId, "bodyMetrics"),
+      );
+      const bmiData = bmiSnap.docs
+        .map((doc) => doc.data())
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+      setBmiEntries(bmiData);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     if (!userId) return;
-    fetchData();
     fetchProfile();
+    fetchData();
   }, [userId]);
 
-  // Calculate BMI
+  // --- BMI ---
   const calculateBMI = () => {
-    if (!weight) return 0;
+    if (!weight) return null;
     let w = Number(weight);
-    if (weightUnit === "lbs") w *= 0.453592; // lbs → kg
+    if (weightUnit === "lbs") w *= 0.453592;
     let hM = 0;
     if (heightUnit === "cm" && heightCm) hM = Number(heightCm) / 100;
     else if (heightUnit === "ft/in" && (heightFt || heightIn))
       hM = (Number(heightFt) * 12 + Number(heightIn)) * 0.0254;
-
-    if (hM === 0) return null; // BMI not calculated if no height
+    if (hM === 0) return null;
     return (w / (hM * hM)).toFixed(1);
   };
 
-  // Add / Update BMI Entry
-  const addBMIEntry = async () => {
-    const bmi = calculateBMI();
-    if (!weight) return alert("Enter a weight");
-
-    await addDoc(collection(db, "users", userId, "bodyMetrics"), {
-      bodyweight: Number(weightUnit === "lbs" ? weight * 0.453592 : weight),
-      height:
-        heightUnit === "cm"
-          ? heightCm
-            ? Number(heightCm)
-            : null
-          : heightFt || heightIn
-            ? (Number(heightFt) * 12 + Number(heightIn)) * 2.54
-            : null,
-      bmi: bmi ? Number(bmi) : null,
-      createdAt: serverTimestamp(),
-      date: new Date().toISOString().split("T")[0],
-    });
-
-    // Save height permanently if provided
-    if (heightUnit === "cm" && heightCm) {
-      await setDoc(
-        doc(db, "users", userId),
-        { heightUnit: "cm", heightCm },
-        { merge: true },
-      );
-    }
-
-    if (heightUnit === "ft/in" && (heightFt || heightIn)) {
-      await setDoc(
-        doc(db, "users", userId),
-        {
-          heightUnit: "ft/in",
-          heightFt,
-          heightIn,
-        },
-        { merge: true },
-      );
-    }
-
+  const clearBMIForm = () => {
     setWeight("");
     setWeightUnit("kg");
-    setOpenBMI(false);
-    fetchData();
   };
 
-  // Calculate calories for workout
+  const addBMIEntry = async () => {
+    if (!userId) return alert("User not loaded yet.");
+    const bmi = calculateBMI();
+    if (!weight) return alert("Enter a weight");
+    if (bmi === null) return alert("Enter a valid height");
+
+    try {
+      await addDoc(collection(db, "users", userId, "bodyMetrics"), {
+        bodyweight:
+          weightUnit === "lbs" ? Number(weight) * 0.453592 : Number(weight),
+        height:
+          heightUnit === "cm"
+            ? Number(heightCm) || null
+            : (Number(heightFt) * 12 + Number(heightIn)) * 2.54 || null,
+        bmi: Number(bmi),
+        createdAt: serverTimestamp(),
+        date: new Date().toISOString().split("T")[0],
+      });
+
+      // Save height permanently
+      if (heightUnit === "cm" && heightCm) {
+        await setDoc(
+          doc(db, "users", userId),
+          { heightUnit: "cm", heightCm },
+          { merge: true },
+        );
+      } else if (heightUnit === "ft/in" && (heightFt || heightIn)) {
+        await setDoc(
+          doc(db, "users", userId),
+          { heightUnit: "ft/in", heightFt, heightIn },
+          { merge: true },
+        );
+      }
+
+      clearBMIForm();
+      setOpenBMI(false);
+      fetchData();
+    } catch (err) {
+      console.error("Error adding BMI:", err);
+    }
+  };
+
+  // --- Workout ---
   const calculateCalories = () => {
-    if (!exercise || !sets || !reps || !workoutWeight) return 0;
-    let w = Number(workoutWeight);
-    if (workoutUnit === "lbs") w *= 0.453592; // convert lbs to kg
-    const MET = 0.1; // default for any user-defined exercise
-    return (w * Number(sets) * Number(reps) * MET).toFixed(1);
+    const w = Number(workoutWeight);
+    const s = Number(sets);
+    const r = Number(reps);
+    if (!w || !s || !r) return 0;
+    const weightKg = workoutUnit === "lbs" ? w * 0.453592 : w;
+    const MET = 0.1; // placeholder
+    return (weightKg * s * r * MET).toFixed(1);
   };
 
-  // Add workout entry
-  const addWorkoutEntry = async () => {
-    if (!exercise || !sets || !reps || !workoutWeight)
-      return alert("Fill all fields");
-    const calories = calculateCalories();
-    const latestEntry = data[data.length - 1] || {};
-    await addDoc(collection(db, "users", userId, "workouts"), {
-      exercise,
-      sets: Number(sets),
-      reps: Number(reps),
-      weight:
-        workoutUnit === "lbs"
-          ? Number(workoutWeight) * 0.453592
-          : Number(workoutWeight),
-      calories: Number(calories),
-      date: new Date().toISOString().split("T")[0],
-    });
+  const clearWorkoutForm = () => {
     setExercise("");
     setSets("");
     setReps("");
     setWorkoutWeight("");
     setWorkoutUnit("kg");
-    setOpenWorkout(false);
-    fetchData();
   };
 
-  const latestEntry = data[data.length - 1] || {};
-  const totalWorkouts = data.filter((d) => d.exercise).length;
-  const weeklyWorkouts = data.filter(
-    (d) =>
-      d.exercise &&
-      new Date(d.date) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+  const addWorkoutEntry = async () => {
+    if (!userId) return alert("User not loaded yet.");
+    if (!exercise || !sets || !reps || !workoutWeight)
+      return alert("Fill all fields");
+
+    try {
+      const calories = calculateCalories();
+      await addDoc(collection(db, "users", userId, "workouts"), {
+        exercise,
+        sets: Number(sets),
+        reps: Number(reps),
+        weight:
+          workoutUnit === "lbs"
+            ? Number(workoutWeight) * 0.453592
+            : Number(workoutWeight),
+        calories: Number(calories),
+        date: new Date().toISOString().split("T")[0],
+      });
+
+      clearWorkoutForm();
+      setOpenWorkout(false);
+      fetchData();
+    } catch (err) {
+      console.error("Error adding workout:", err);
+    }
+  };
+
+  // --- Summary Calculations ---
+  const latestBMIEntry = bmiEntries[bmiEntries.length - 1] || {};
+  const latestWorkoutEntry = workouts[workouts.length - 1] || {};
+  const totalWorkouts = workouts.length;
+  const weeklyWorkouts = workouts.filter(
+    (d) => new Date(d.date) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
   ).length;
-  const monthlyWorkouts = data.filter(
-    (d) =>
-      d.exercise &&
-      new Date(d.date) >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+  const monthlyWorkouts = workouts.filter(
+    (d) => new Date(d.date) >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
   ).length;
 
   const actions = [
@@ -252,6 +277,11 @@ export default function Dashboard() {
       onClick: () => setOpenWorkout(true),
     },
   ];
+
+  // Merge data for chart
+  const chartData = [...bmiEntries, ...workouts].sort(
+    (a, b) => new Date(a.date) - new Date(b.date),
+  );
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -282,7 +312,10 @@ export default function Dashboard() {
                 Latest Body Weight
               </Typography>
               <Typography variant="h6" color="primary">
-                {latestEntry.bodyweight?.toFixed(1) || "--"} kg
+                {latestBMIEntry.bodyweight
+                  ? latestBMIEntry.bodyweight.toFixed(1)
+                  : "--"}{" "}
+                kg
               </Typography>
             </Box>
           </Card>
@@ -298,7 +331,7 @@ export default function Dashboard() {
                 Latest BMI
               </Typography>
               <Typography variant="h6" color="success.main">
-                {latestEntry.bmi || "--"}
+                {latestBMIEntry.bmi ?? "--"}
               </Typography>
             </Box>
           </Card>
@@ -357,7 +390,7 @@ export default function Dashboard() {
           Weight & BMI Progress
         </Typography>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={data}>
+          <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
             <YAxis />
@@ -396,7 +429,7 @@ export default function Dashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {data
+              {workouts
                 .slice()
                 .reverse()
                 .map((row, idx) => (
@@ -421,8 +454,7 @@ export default function Dashboard() {
         icon={<AddIcon />}
         open={fabOpen}
         onClick={() => setFabOpen((prev) => !prev)}
-        onOpen={() => {}}
-        onClose={() => setFabOpen(false)}
+        disabled={!userId}
       >
         {actions.map((action) => (
           <SpeedDialAction
@@ -438,7 +470,13 @@ export default function Dashboard() {
       </SpeedDial>
 
       {/* BMI Dialog */}
-      <Dialog open={openBMI} onClose={() => setOpenBMI(false)}>
+      <Dialog
+        open={openBMI}
+        onClose={() => {
+          setOpenBMI(false);
+          clearBMIForm();
+        }}
+      >
         <DialogTitle>Add / Update BMI</DialogTitle>
         <DialogContent
           sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
@@ -502,7 +540,14 @@ export default function Dashboard() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenBMI(false)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              setOpenBMI(false);
+              clearBMIForm();
+            }}
+          >
+            Cancel
+          </Button>
           <Button variant="contained" onClick={addBMIEntry}>
             Add / Update
           </Button>
@@ -510,7 +555,13 @@ export default function Dashboard() {
       </Dialog>
 
       {/* Workout Dialog */}
-      <Dialog open={openWorkout} onClose={() => setOpenWorkout(false)}>
+      <Dialog
+        open={openWorkout}
+        onClose={() => {
+          setOpenWorkout(false);
+          clearWorkoutForm();
+        }}
+      >
         <DialogTitle>Add Today's Workout</DialogTitle>
         <DialogContent
           sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
@@ -555,16 +606,18 @@ export default function Dashboard() {
               <MenuItem value="lbs">lbs</MenuItem>
             </TextField>
           </Box>
-          <TextField
-            label="Calories"
-            value={calculateCalories()}
-            InputProps={{ readOnly: true }}
-          />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenWorkout(false)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              setOpenWorkout(false);
+              clearWorkoutForm();
+            }}
+          >
+            Cancel
+          </Button>
           <Button variant="contained" onClick={addWorkoutEntry}>
-            Add
+            Add Workout
           </Button>
         </DialogActions>
       </Dialog>
