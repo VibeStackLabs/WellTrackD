@@ -48,6 +48,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { format, parseISO } from "date-fns";
 
 export default function Dashboard() {
   const [userId, setUserId] = useState(null);
@@ -255,8 +256,14 @@ export default function Dashboard() {
   };
 
   // --- Summary Calculations ---
-  const latestBMIEntry = bmiEntries[bmiEntries.length - 1] || {};
-  const latestWorkoutEntry = workouts[workouts.length - 1] || {};
+  const latestBMIEntry =
+    bmiEntries.length > 0
+      ? bmiEntries.reduce((latest, entry) => {
+          return entry.createdAt?.toMillis() > latest.createdAt?.toMillis()
+            ? entry
+            : latest;
+        })
+      : {};
   const totalWorkouts = workouts.length;
   const weeklyWorkouts = workouts.filter(
     (d) => new Date(d.date) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
@@ -390,22 +397,62 @@ export default function Dashboard() {
           Weight & BMI Progress
         </Typography>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData}>
+          <LineChart
+            data={bmiEntries
+              .slice()
+              .sort((a, b) => new Date(a.date) - new Date(b.date))
+              .map((entry) => ({
+                date: entry.date,
+                weight: entry.bodyweight,
+                bmi: entry.bmi,
+              }))}
+            margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+          >
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Line
-              type="monotone"
-              dataKey="bodyweight"
+            <XAxis
+              dataKey="date"
+              tickFormatter={(date) => format(parseISO(date), "d-MM-yy")}
+            />
+            <YAxis
+              yAxisId="left"
+              orientation="left"
               stroke="#1976d2"
-              strokeWidth={2}
+              domain={["dataMin - 5", "dataMax + 5"]}
+              label={{
+                value: "Weight (kg)",
+                angle: -90,
+                position: "insideLeft",
+              }}
+            />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              stroke="#2e7d32"
+              domain={["dataMin - 2", "dataMax + 2"]}
+              label={{ value: "BMI", angle: 90, position: "insideRight" }}
+            />
+            <Tooltip
+              formatter={(value, name) =>
+                name === "weight"
+                  ? [`${value.toFixed(1)} kg`, "Weight"]
+                  : [value, "BMI"]
+              }
             />
             <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="weight"
+              stroke="#1976d2"
+              strokeWidth={2}
+              dot={{ r: 4 }}
+            />
+            <Line
+              yAxisId="right"
               type="monotone"
               dataKey="bmi"
               stroke="#2e7d32"
               strokeWidth={2}
+              dot={{ r: 4 }}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -434,7 +481,9 @@ export default function Dashboard() {
                 .reverse()
                 .map((row, idx) => (
                   <TableRow key={idx} hover>
-                    <TableCell>{row.date}</TableCell>
+                    <TableCell>
+                      {format(parseISO(row.date), "dd-MM-yyyy")}
+                    </TableCell>
                     <TableCell>{row.exercise || "--"}</TableCell>
                     <TableCell>{row.sets || "--"}</TableCell>
                     <TableCell>{row.reps || "--"}</TableCell>
