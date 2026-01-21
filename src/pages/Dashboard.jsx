@@ -87,11 +87,22 @@ export default function Dashboard() {
   // Fetch data
   const fetchData = async () => {
     if (!userId) return;
+
+    // Workout Data
     const snapshot = await getDocs(collection(db, "users", userId, "workouts"));
     const sortedData = snapshot.docs
       .map((doc) => doc.data())
       .sort((a, b) => new Date(a.date) - new Date(b.date));
     setData(sortedData);
+
+    // BMI Data
+    const bmiSnapshot = await getDocs(
+      collection(db, "users", userId, "bodyMetrics"),
+    );
+    const bmiData = bmiSnapshot.docs
+      .map((doc) => doc.data())
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    setData((prevData) => [...prevData, ...bmiData]);
   };
 
   const fetchProfile = async () => {
