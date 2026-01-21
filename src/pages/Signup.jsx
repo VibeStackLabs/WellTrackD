@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../firebase";
@@ -11,37 +11,89 @@ import {
   TextField,
   Button,
   Box,
+  CircularProgress,
 } from "@mui/material";
 
 export default function Signup() {
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
+  const [usernameTouched, setUsernameTouched] = useState(false); // track manual edits
+  const [usernameAvailable, setUsernameAvailable] = useState(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
+  // --- Validate username locally ---
+  const validateUsername = (name) => {
+    if (!name) return "Username is required";
+    if (!/^[a-z0-9_]+$/.test(name))
+      return "Only lowercase letters, numbers, _ allowed";
+    if (name.length < 3) return "Username too short (min 3 chars)";
+    if (name.length > 15) return "Username too long (max 15 chars)";
+    return "";
+  };
+
+  // --- Auto-generate username from full name if not manually edited ---
+  useEffect(() => {
+    if (!usernameTouched) {
+      const generatedUsername = name
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_]/g, "");
+      setUsername(generatedUsername);
+    }
+  }, [name, usernameTouched]);
+
+  // --- Check username availability in real-time ---
+  useEffect(() => {
+    const cleanUsername = username.toLowerCase().replace(/\s/g, "");
+    setUsernameError(validateUsername(cleanUsername));
+    setUsernameAvailable(null);
+
+    if (usernameError || !cleanUsername) return; // skip Firestore if invalid
+
+    const timer = setTimeout(async () => {
+      setCheckingUsername(true);
+      try {
+        const usernameRef = doc(db, "usernames", cleanUsername);
+        const usernameSnap = await getDoc(usernameRef);
+        setUsernameAvailable(!usernameSnap.exists());
+      } catch (err) {
+        console.error("Error checking username:", err);
+        setUsernameAvailable(null);
+      } finally {
+        setCheckingUsername(false);
+      }
+    }, 500); // debounce 500ms
+
+    return () => clearTimeout(timer);
+  }, [username, usernameError]);
+
   const handleSignup = async () => {
+    const cleanUsername = username.toLowerCase().replace(/\s/g, "");
+    const error = validateUsername(cleanUsername);
+
     if (!name || !username || !email || !password) {
       alert("Please fill all fields");
       return;
     }
 
-    const cleanUsername = username.toLowerCase();
+    if (error) {
+      alert(error);
+      return;
+    }
+
+    if (usernameAvailable === false) {
+      alert("Username already taken");
+      return;
+    }
 
     try {
       setLoading(true);
-
-      // 🔹 Check if username already exists
-      const usernameRef = doc(db, "usernames", cleanUsername);
-      const usernameSnap = await getDoc(usernameRef);
-
-      if (usernameSnap.exists()) {
-        alert("Username already taken");
-        setLoading(false);
-        return;
-      }
 
       // 🔹 Create Auth user
       const userCredential = await createUserWithEmailAndPassword(
@@ -53,9 +105,7 @@ export default function Signup() {
       const user = userCredential.user;
 
       // 🔹 Update Firebase Auth display name
-      await updateProfile(user, {
-        displayName: name,
-      });
+      await updateProfile(user, { displayName: name });
 
       // 🔹 Store user profile
       await setDoc(doc(db, "users", user.uid), {
@@ -66,7 +116,7 @@ export default function Signup() {
         createdAt: serverTimestamp(),
       });
 
-      // 🔹 Reserve username (prevents duplicates)
+      // 🔹 Reserve username
       await setDoc(doc(db, "usernames", cleanUsername), {
         uid: user.uid,
       });
@@ -109,8 +159,29 @@ export default function Signup() {
                 label="Username"
                 fullWidth
                 value={username}
-                onChange={(e) => setUsername(e.target.value.replace(/\s/g, ""))}
-                helperText="Lowercase, no spaces"
+                onChange={(e) => {
+                  setUsername(e.target.value.replace(/\s/g, "").toLowerCase());
+                  setUsernameTouched(true); // user has typed
+                }}
+                helperText={
+                  checkingUsername ? (
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <CircularProgress size={16} /> Checking...
+                    </Box>
+                  ) : usernameTouched && usernameError ? ( // only show error after touched
+                    usernameError
+                  ) : usernameAvailable === true ? (
+                    "Username available ✅"
+                  ) : usernameAvailable === false ? (
+                    "Username already taken ❌"
+                  ) : (
+                    ""
+                  )
+                }
+                error={
+                  usernameTouched &&
+                  (!!usernameError || usernameAvailable === false)
+                }
               />
 
               <TextField
@@ -134,7 +205,12 @@ export default function Signup() {
                 size="large"
                 sx={{ mt: 1, borderRadius: 2 }}
                 onClick={handleSignup}
-                disabled={loading}
+                disabled={
+                  loading ||
+                  checkingUsername ||
+                  !!usernameError ||
+                  usernameAvailable === false
+                }
               >
                 {loading ? "Creating Account..." : "Signup"}
               </Button>
