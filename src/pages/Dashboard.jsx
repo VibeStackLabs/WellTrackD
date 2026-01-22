@@ -136,7 +136,11 @@ export default function Dashboard() {
       );
       const bmiData = bmiSnap.docs
         .map((doc) => doc.data())
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
+        .sort((a, b) => {
+          const aTime = a.createdAt?.toMillis?.() || 0;
+          const bTime = b.createdAt?.toMillis?.() || 0;
+          return aTime - bTime;
+        });
       setBmiEntries(bmiData);
     } catch (err) {
       console.error("Error fetching data:", err);
@@ -641,7 +645,7 @@ export default function Dashboard() {
               .slice()
               .sort((a, b) => new Date(a.date) - new Date(b.date))
               .map((entry) => ({
-                date: entry.date,
+                date: entry.createdAt?.toDate?.() || new Date(entry.date),
                 weight: entry.bodyweight,
                 bmi: entry.bmi,
               }))}
@@ -650,7 +654,7 @@ export default function Dashboard() {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               dataKey="date"
-              tickFormatter={(date) => format(parseISO(date), "d-MM-yy")}
+              tickFormatter={(date) => format(new Date(date), "d-MM-yy")}
             />
             <YAxis
               yAxisId="left"
