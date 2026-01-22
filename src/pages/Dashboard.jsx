@@ -320,6 +320,28 @@ export default function Dashboard() {
     }
   }
 
+  const shouldShowStreakReminder = () => {
+    if (streak < 1) return false;
+
+    const now = new Date();
+    const hour = now.getHours();
+
+    if (hour < 18) return false; // before 6 PM
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const workedOutToday = workouts.some((w) => {
+      const d = new Date(w.date);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime() === today.getTime();
+    });
+
+    return !workedOutToday;
+  };
+
+  const showStreakReminder = shouldShowStreakReminder();
+
   // Calories Burned
   const [calorieFilter, setCalorieFilter] = useState("week"); // "week" or "month"
   const [anchorEl, setAnchorEl] = useState(null);
@@ -414,6 +436,28 @@ export default function Dashboard() {
           Logout
         </Button>
       </Box>
+
+      {/* Streak Reminder */}
+      {showStreakReminder && (
+        <Card
+          sx={{
+            mb: 3,
+            borderLeft: "6px solid",
+            borderColor: "warning.main",
+            backgroundColor: "warning.light",
+          }}
+        >
+          <CardContent>
+            <Typography fontWeight="bold">
+              🔔 Don’t lose your streak!
+            </Typography>
+            <Typography variant="body2">
+              You haven’t logged a workout today. Log one before midnight to
+              keep your streak alive 🔥
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Cards */}
       <Grid container spacing={2} mb={4}>
