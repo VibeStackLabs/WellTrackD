@@ -1,3 +1,4 @@
+import React from "react";
 import { useState, useEffect } from "react";
 import { db, auth } from "../firebase";
 import {
@@ -371,6 +372,31 @@ export default function Dashboard() {
 
       return true;
     });
+  };
+
+  const getWorkoutsByWeekday = () => {
+    const filtered = getFilteredWorkouts(); // workouts filtered by week
+    const days = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+
+    // Initialize grouped object
+    const grouped = {};
+    days.forEach((day) => (grouped[day] = []));
+
+    filtered.forEach((w) => {
+      const d = new Date(w.date);
+      const dayName = days[d.getDay()]; // 0 = Sunday, 1 = Monday, ...
+      grouped[dayName].push(w);
+    });
+
+    return grouped;
   };
 
   // --- Summary Calculations ---
@@ -863,40 +889,63 @@ export default function Dashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {getFilteredWorkouts()
-                .slice()
-                .reverse()
-                .map((row, idx) => (
-                  <TableRow key={row.id} hover>
-                    <TableCell>
-                      {format(parseISO(row.date), "dd-MM-yyyy")}
-                    </TableCell>
-                    <TableCell>{row.exercise || "--"}</TableCell>
-                    <TableCell>{row.sets || "--"}</TableCell>
-                    <TableCell>{row.reps || "--"}</TableCell>
-                    <TableCell>{row.weight?.toFixed(1) || "--"}</TableCell>
-                    <TableCell>{row.calories || "--"}</TableCell>
-                    <TableCell>
-                      <IconButton
-                        disabled={!isToday(row.date)}
-                        size="small"
-                        color="primary"
-                        onClick={() => openEditWorkout(row)}
-                      >
-                        <EditIcon />
-                      </IconButton>
+              {Object.entries(getWorkoutsByWeekday()).map(
+                ([day, workouts]) =>
+                  workouts.length > 0 && (
+                    <React.Fragment key={day}>
+                      {/* Day header row */}
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          sx={{
+                            fontWeight: "bold",
+                            backgroundColor: "#f0f0f0",
+                          }}
+                        >
+                          {day}
+                        </TableCell>
+                      </TableRow>
 
-                      <IconButton
-                        disabled={!isToday(row.date)}
-                        size="small"
-                        color="error"
-                        onClick={() => setDeleteTarget(row)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      {/* Workout rows */}
+                      {workouts
+                        .slice()
+                        .reverse()
+                        .map((row) => (
+                          <TableRow key={row.id} hover>
+                            <TableCell>
+                              {format(parseISO(row.date), "dd-MM-yyyy")}
+                            </TableCell>
+                            <TableCell>{row.exercise || "--"}</TableCell>
+                            <TableCell>{row.sets || "--"}</TableCell>
+                            <TableCell>{row.reps || "--"}</TableCell>
+                            <TableCell>
+                              {row.weight?.toFixed(1) || "--"}
+                            </TableCell>
+                            <TableCell>{row.calories || "--"}</TableCell>
+                            <TableCell>
+                              <IconButton
+                                disabled={!isToday(row.date)}
+                                size="small"
+                                color="primary"
+                                onClick={() => openEditWorkout(row)}
+                              >
+                                <EditIcon />
+                              </IconButton>
+
+                              <IconButton
+                                disabled={!isToday(row.date)}
+                                size="small"
+                                color="error"
+                                onClick={() => setDeleteTarget(row)}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </React.Fragment>
+                  ),
+              )}
             </TableBody>
           </Table>
         </TableContainer>
