@@ -547,7 +547,7 @@ export default function Dashboard() {
 
       {/* Summary Cards */}
       <Grid container spacing={2} mb={4}>
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 2.3 }}>
           <Card
             variant="outlined"
             sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
@@ -576,7 +576,7 @@ export default function Dashboard() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 1.8 }}>
           <Card
             variant="outlined"
             sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
@@ -601,7 +601,7 @@ export default function Dashboard() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 2.2 }}>
           <Card
             variant="outlined"
             sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
@@ -624,7 +624,7 @@ export default function Dashboard() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 2 }}>
           <Card
             variant="outlined"
             sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
@@ -642,7 +642,7 @@ export default function Dashboard() {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={4}>
+        <Grid size={{ xs: 12, sm: 3 }}>
           <Card
             variant="outlined"
             sx={{
