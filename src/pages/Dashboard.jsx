@@ -318,6 +318,14 @@ export default function Dashboard() {
     setOpenWorkout(true);
   };
 
+  const isToday = (date) => {
+    const d = new Date(date);
+    const t = new Date();
+    d.setHours(0, 0, 0, 0);
+    t.setHours(0, 0, 0, 0);
+    return d.getTime() === t.getTime();
+  };
+
   // --- Summary Calculations ---
   const latestBMIEntry =
     bmiEntries.length > 0
@@ -792,6 +800,7 @@ export default function Dashboard() {
                     <TableCell>{row.calories || "--"}</TableCell>
                     <TableCell>
                       <IconButton
+                        disabled={!isToday(row.date)}
                         size="small"
                         color="primary"
                         onClick={() => openEditWorkout(row)}
@@ -800,6 +809,7 @@ export default function Dashboard() {
                       </IconButton>
 
                       <IconButton
+                        disabled={!isToday(row.date)}
                         size="small"
                         color="error"
                         onClick={() => setDeleteTarget(row)}
