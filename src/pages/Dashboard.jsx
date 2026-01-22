@@ -47,6 +47,8 @@ import BarChartIcon from "@mui/icons-material/BarChart";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import IconButton from "@mui/material/IconButton";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
 import {
   LineChart,
   Line,
@@ -87,6 +89,10 @@ export default function Dashboard() {
   // Edit and Delete States
   const [editingWorkout, setEditingWorkout] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+
+  // Snackbar and Alert States
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [lastDeleted, setLastDeleted] = useState(null);
 
   // Data states
   const [workouts, setWorkouts] = useState([]);
@@ -282,11 +288,24 @@ export default function Dashboard() {
 
     try {
       await deleteDoc(doc(db, "users", userId, "workouts", deleteTarget.id));
+      setLastDeleted(deleteTarget);
       setDeleteTarget(null);
+      setSnackbarOpen(true);
       fetchData();
     } catch (err) {
       console.error("Delete failed:", err);
     }
+  };
+
+  const undoDelete = async () => {
+    if (!lastDeleted || !userId) return;
+
+    const { id, ...data } = lastDeleted;
+
+    await setDoc(doc(db, "users", userId, "workouts", id), data);
+    setLastDeleted(null);
+    setSnackbarOpen(false);
+    fetchData();
   };
 
   const openEditWorkout = (row) => {
@@ -818,6 +837,23 @@ export default function Dashboard() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={5000}
+        onClose={() => setSnackbarOpen(false)}
+      >
+        <Alert
+          severity="info"
+          action={
+            <Button color="inherit" size="small" onClick={undoDelete}>
+              UNDO
+            </Button>
+          }
+        >
+          Workout deleted
+        </Alert>
+      </Snackbar>
 
       {/* FAB */}
       <SpeedDial
