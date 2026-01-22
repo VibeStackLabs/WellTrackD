@@ -50,6 +50,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { format, parseISO } from "date-fns";
+import CountUp from "react-countup";
 
 export default function Dashboard() {
   const [userId, setUserId] = useState(null);
@@ -411,10 +412,19 @@ export default function Dashboard() {
                 Latest Body Weight
               </Typography>
               <Typography variant="h6" color="primary">
-                {latestBMIEntry.bodyweight
-                  ? latestBMIEntry.bodyweight.toFixed(1)
-                  : "--"}{" "}
-                kg
+                {latestBMIEntry.bodyweight != null ? (
+                  <>
+                    <CountUp
+                      key={latestBMIEntry.bodyweight}
+                      end={Number(latestBMIEntry.bodyweight)}
+                      duration={0.5}
+                      decimals={1}
+                    />{" "}
+                    kg
+                  </>
+                ) : (
+                  "-- kg"
+                )}
               </Typography>
             </Box>
           </Card>
@@ -431,7 +441,15 @@ export default function Dashboard() {
                 Latest BMI
               </Typography>
               <Typography variant="h6" color="success.main">
-                {latestBMIEntry.bmi ?? "--"}
+                {latestBMIEntry.bmi != null ? (
+                  <CountUp
+                    end={Number(latestBMIEntry.bmi)}
+                    duration={0.5}
+                    decimals={1}
+                  />
+                ) : (
+                  "--"
+                )}
               </Typography>
             </Box>
           </Card>
@@ -468,7 +486,8 @@ export default function Dashboard() {
                 Consistency
               </Typography>
               <Typography variant="h6" color="secondary">
-                {streak} {streak === 1 ? "day" : "days"}
+                <CountUp end={streak} duration={0.5} />{" "}
+                {streak === 1 ? "day" : "days"}
               </Typography>
             </Box>
           </Card>
@@ -511,7 +530,12 @@ export default function Dashboard() {
                 </Button>
 
                 <Typography variant="h6" color="success.main">
-                  {caloriesBurned.toFixed(0)}
+                  <CountUp
+                    end={caloriesBurned}
+                    duration={0.8}
+                    separator=","
+                    decimals={0}
+                  />
                 </Typography>
               </Box>
             </Box>
