@@ -290,18 +290,34 @@ export default function Dashboard() {
     .slice()
     .sort((a, b) => new Date(a.date) - new Date(b.date));
   let streak = 0;
-  let yesterday = new Date();
-  yesterday.setHours(0, 0, 0, 0);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let expectedDate = new Date(today);
+
+  // Check if there's a workout today
+  const hasWorkoutToday = sortedWorkouts.some((w) => {
+    const d = new Date(w.date);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() === today.getTime();
+  });
+
+  // If no workout today, start from yesterday
+  if (!hasWorkoutToday) {
+    expectedDate.setDate(expectedDate.getDate() - 1);
+  }
+
   for (let i = sortedWorkouts.length - 1; i >= 0; i--) {
     const workoutDate = new Date(sortedWorkouts[i].date);
     workoutDate.setHours(0, 0, 0, 0);
-    if (
-      workoutDate.getTime() === yesterday.getTime() ||
-      (streak === 0 && workoutDate.getTime() <= yesterday.getTime())
-    ) {
+
+    if (workoutDate.getTime() === expectedDate.getTime()) {
       streak++;
-      yesterday.setDate(yesterday.getDate() - 1);
-    } else break;
+      expectedDate.setDate(expectedDate.getDate() - 1);
+    } else if (workoutDate.getTime() < expectedDate.getTime()) {
+      break;
+    }
   }
 
   // Calories Burned
