@@ -460,7 +460,10 @@ export default function Dashboard() {
             variant="outlined"
             sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
           >
-            <BarChartIcon color="success" fontSize="large" />
+            <BarChartIcon
+              sx={{ color: getBMIColor(latestBMIEntry.bmi) }}
+              fontSize="large"
+            />
             <Box>
               <Typography variant="body2" color="textSecondary">
                 BMI Status
