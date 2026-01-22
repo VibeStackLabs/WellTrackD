@@ -264,6 +264,15 @@ export default function Dashboard() {
       date: editingWorkout?.date || new Date().toISOString().split("T")[0],
     };
 
+    // OPTIMISTIC UPDATE
+    if (editingWorkout) {
+      setWorkouts((prev) =>
+        prev.map((w) =>
+          w.id === editingWorkout.id ? { ...w, ...payload } : w,
+        ),
+      );
+    }
+
     try {
       if (editingWorkout) {
         await updateDoc(
@@ -271,29 +280,37 @@ export default function Dashboard() {
           payload,
         );
       } else {
-        await addDoc(collection(db, "users", userId, "workouts"), payload);
+        const docRef = await addDoc(
+          collection(db, "users", userId, "workouts"),
+          payload,
+        );
+
+        setWorkouts((prev) => [...prev, { id: docRef.id, ...payload }]);
       }
 
       clearWorkoutForm();
       setEditingWorkout(null);
       setOpenWorkout(false);
-      fetchData();
     } catch (err) {
       console.error("Save failed:", err);
+      fetchData(); // restore from server
     }
   };
 
   const confirmDeleteWorkout = async () => {
     if (!userId || !deleteTarget) return;
 
+    // 🔥 Optimistic UI
+    setWorkouts((prev) => prev.filter((w) => w.id !== deleteTarget.id));
+
+    const deleted = deleteTarget;
+    setDeleteTarget(null);
+
     try {
-      await deleteDoc(doc(db, "users", userId, "workouts", deleteTarget.id));
-      setLastDeleted(deleteTarget);
-      setDeleteTarget(null);
-      setSnackbarOpen(true);
-      fetchData();
+      await deleteDoc(doc(db, "users", userId, "workouts", deleted.id));
     } catch (err) {
-      console.error("Delete failed:", err);
+      console.error("Delete failed, reverting:", err);
+      setWorkouts((prev) => [...prev, deleted]); // rollback
     }
   };
 
