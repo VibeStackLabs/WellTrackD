@@ -264,13 +264,32 @@ export default function Dashboard() {
             : latest;
         })
       : {};
-  const totalWorkouts = workouts.length;
-  const weeklyWorkouts = workouts.filter(
-    (d) => new Date(d.date) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-  ).length;
-  const monthlyWorkouts = workouts.filter(
-    (d) => new Date(d.date) >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-  ).length;
+
+  // Consistency (workout streak)
+  const sortedWorkouts = workouts
+    .slice()
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  let streak = 0;
+  let yesterday = new Date();
+  yesterday.setHours(0, 0, 0, 0);
+  for (let i = sortedWorkouts.length - 1; i >= 0; i--) {
+    const workoutDate = new Date(sortedWorkouts[i].date);
+    workoutDate.setHours(0, 0, 0, 0);
+    if (
+      workoutDate.getTime() === yesterday.getTime() ||
+      (streak === 0 && workoutDate.getTime() <= yesterday.getTime())
+    ) {
+      streak++;
+      yesterday.setDate(yesterday.getDate() - 1);
+    } else break;
+  }
+
+  // Calories Burned (last 7 days)
+  const caloriesBurned = workouts
+    .filter(
+      (d) => new Date(d.date) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    )
+    .reduce((sum, w) => sum + (w.calories || 0), 0);
 
   const actions = [
     {
@@ -308,7 +327,7 @@ export default function Dashboard() {
 
       {/* Summary Cards */}
       <Grid container spacing={2} mb={4}>
-        <Grid item xs={12} sm={2}>
+        <Grid item xs={12} sm={4}>
           <Card
             variant="outlined"
             sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
@@ -327,7 +346,8 @@ export default function Dashboard() {
             </Box>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={2}>
+
+        <Grid item xs={12} sm={4}>
           <Card
             variant="outlined"
             sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
@@ -343,7 +363,8 @@ export default function Dashboard() {
             </Box>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={2}>
+
+        <Grid item xs={12} sm={4}>
           <Card
             variant="outlined"
             sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
@@ -351,42 +372,29 @@ export default function Dashboard() {
             <FitnessCenterIcon color="secondary" fontSize="large" />
             <Box>
               <Typography variant="body2" color="textSecondary">
-                Total Workouts
+                Consistency
               </Typography>
               <Typography variant="h6" color="secondary">
-                {totalWorkouts}
+                {streak} {streak === 1 ? "day" : "days"}
               </Typography>
             </Box>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={3}>
-          <Card variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="body2" color="textSecondary">
-              Weekly Workouts
-            </Typography>
-            <Typography variant="h6" color="info.main">
-              {weeklyWorkouts}
-            </Typography>
-            <LinearProgress
-              variant="determinate"
-              value={(weeklyWorkouts / 7) * 100}
-              sx={{ height: 10, borderRadius: 5, mt: 1 }}
-            />
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={3}>
-          <Card variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="body2" color="textSecondary">
-              Monthly Workouts
-            </Typography>
-            <Typography variant="h6" color="warning.main">
-              {monthlyWorkouts}
-            </Typography>
-            <LinearProgress
-              variant="determinate"
-              value={(monthlyWorkouts / 30) * 100}
-              sx={{ height: 10, borderRadius: 5, mt: 1 }}
-            />
+
+        <Grid item xs={12} sm={4}>
+          <Card
+            variant="outlined"
+            sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
+          >
+            <BarChartIcon color="success" fontSize="large" />
+            <Box>
+              <Typography variant="body2" color="textSecondary">
+                Calories Burned (7d)
+              </Typography>
+              <Typography variant="h6" color="success.main">
+                {caloriesBurned.toFixed(0)}
+              </Typography>
+            </Box>
           </Card>
         </Grid>
       </Grid>
