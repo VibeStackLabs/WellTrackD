@@ -265,6 +265,24 @@ export default function Dashboard() {
         })
       : {};
 
+  const getBMIStatus = (bmi) => {
+    if (!bmi) return "--";
+    if (bmi < 18.5) return "Underweight";
+    if (bmi >= 18.5 && bmi < 25) return "Normal";
+    if (bmi >= 25 && bmi < 30) return "Overweight";
+    return "Obese";
+  };
+
+  const latestBMIStatus = getBMIStatus(latestBMIEntry.bmi);
+
+  const getBMIColor = (bmi) => {
+    if (!bmi) return "text.secondary";
+    if (bmi < 18.5) return "warning.main"; // Underweight
+    if (bmi < 25) return "success.main"; // Normal
+    if (bmi < 30) return "warning.main"; // Overweight
+    return "error.main"; // Obese
+  };
+
   // Consistency (workout streak)
   const sortedWorkouts = workouts
     .slice()
@@ -359,6 +377,26 @@ export default function Dashboard() {
               </Typography>
               <Typography variant="h6" color="success.main">
                 {latestBMIEntry.bmi ?? "--"}
+              </Typography>
+            </Box>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={4}>
+          <Card
+            variant="outlined"
+            sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
+          >
+            <BarChartIcon color="success" fontSize="large" />
+            <Box>
+              <Typography variant="body2" color="textSecondary">
+                BMI Status
+              </Typography>
+              <Typography
+                variant="h6"
+                sx={{ color: getBMIColor(latestBMIEntry.bmi) }}
+              >
+                {latestBMIStatus}
               </Typography>
             </Box>
           </Card>
