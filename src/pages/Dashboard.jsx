@@ -85,6 +85,7 @@ export default function Dashboard() {
   const [reps, setReps] = useState("");
   const [workoutWeight, setWorkoutWeight] = useState("");
   const [workoutUnit, setWorkoutUnit] = useState("kg");
+  const [workoutFilter, setWorkoutFilter] = useState("today");
 
   // Edit and Delete States
   const [editingWorkout, setEditingWorkout] = useState(null);
@@ -300,7 +301,7 @@ export default function Dashboard() {
   const confirmDeleteWorkout = async () => {
     if (!userId || !deleteTarget) return;
 
-    // 🔥 Optimistic UI
+    // Optimistic UI
     setWorkouts((prev) => prev.filter((w) => w.id !== deleteTarget.id));
 
     const deleted = deleteTarget;
@@ -341,6 +342,35 @@ export default function Dashboard() {
     d.setHours(0, 0, 0, 0);
     t.setHours(0, 0, 0, 0);
     return d.getTime() === t.getTime();
+  };
+
+  // Filtered workouts
+  const getFilteredWorkouts = () => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    return workouts.filter((w) => {
+      const workoutDate = new Date(w.date);
+      workoutDate.setHours(0, 0, 0, 0);
+
+      if (workoutFilter === "today") {
+        return workoutDate.getTime() === now.getTime();
+      }
+
+      if (workoutFilter === "week") {
+        const weekAgo = new Date(now);
+        weekAgo.setDate(now.getDate() - 7);
+        return workoutDate >= weekAgo;
+      }
+
+      if (workoutFilter === "month") {
+        const monthAgo = new Date(now);
+        monthAgo.setDate(now.getDate() - 30);
+        return workoutDate >= monthAgo;
+      }
+
+      return true;
+    });
   };
 
   // --- Summary Calculations ---
@@ -788,6 +818,37 @@ export default function Dashboard() {
         <Typography variant="h6" mb={2}>
           Workout History
         </Typography>
+
+        <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+          <Button
+            variant={workoutFilter === "today" ? "contained" : "outlined"}
+            onClick={() => setWorkoutFilter("today")}
+          >
+            Today
+          </Button>
+
+          <Button
+            variant={workoutFilter === "week" ? "contained" : "outlined"}
+            onClick={() => setWorkoutFilter("week")}
+          >
+            This Week
+          </Button>
+
+          <Button
+            variant={workoutFilter === "month" ? "contained" : "outlined"}
+            onClick={() => setWorkoutFilter("month")}
+          >
+            This Month
+          </Button>
+
+          <Button
+            variant={workoutFilter === "all" ? "contained" : "outlined"}
+            onClick={() => setWorkoutFilter("all")}
+          >
+            All
+          </Button>
+        </Box>
+
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -802,7 +863,7 @@ export default function Dashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {workouts
+              {getFilteredWorkouts()
                 .slice()
                 .reverse()
                 .map((row, idx) => (
