@@ -8,6 +8,8 @@ import {
   getDoc,
   setDoc,
   serverTimestamp,
+  query,
+  orderBy,
 } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import {
@@ -131,16 +133,14 @@ export default function Dashboard() {
       setWorkouts(workoutData);
 
       // BMI
-      const bmiSnap = await getDocs(
+      const bmiQuery = query(
         collection(db, "users", userId, "bodyMetrics"),
+        orderBy("createdAt", "asc"),
       );
-      const bmiData = bmiSnap.docs
-        .map((doc) => doc.data())
-        .sort((a, b) => {
-          const aTime = a.createdAt?.toMillis?.() || 0;
-          const bTime = b.createdAt?.toMillis?.() || 0;
-          return aTime - bTime;
-        });
+
+      const bmiSnap = await getDocs(bmiQuery);
+
+      const bmiData = bmiSnap.docs.map((doc) => doc.data());
       setBmiEntries(bmiData);
     } catch (err) {
       console.error("Error fetching data:", err);
