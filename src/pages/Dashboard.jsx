@@ -10,6 +10,8 @@ import {
   serverTimestamp,
   query,
   orderBy,
+  updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import {
@@ -42,6 +44,9 @@ import AddIcon from "@mui/icons-material/Add";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import ScaleIcon from "@mui/icons-material/Scale";
 import BarChartIcon from "@mui/icons-material/BarChart";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import IconButton from "@mui/material/IconButton";
 import {
   LineChart,
   Line,
@@ -78,6 +83,10 @@ export default function Dashboard() {
   const [reps, setReps] = useState("");
   const [workoutWeight, setWorkoutWeight] = useState("");
   const [workoutUnit, setWorkoutUnit] = useState("kg");
+
+  // Edit and Delete States
+  const [editingWorkout, setEditingWorkout] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   // Data states
   const [workouts, setWorkouts] = useState([]);
@@ -128,7 +137,7 @@ export default function Dashboard() {
         collection(db, "users", userId, "workouts"),
       );
       const workoutData = workoutSnap.docs
-        .map((doc) => doc.data())
+        .map((d) => ({ id: d.id, ...d.data() }))
         .sort((a, b) => new Date(a.date) - new Date(b.date));
       setWorkouts(workoutData);
 
@@ -140,7 +149,7 @@ export default function Dashboard() {
 
       const bmiSnap = await getDocs(bmiQuery);
 
-      const bmiData = bmiSnap.docs.map((doc) => doc.data());
+      const bmiData = bmiSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setBmiEntries(bmiData);
     } catch (err) {
       console.error("Error fetching data:", err);
@@ -234,31 +243,60 @@ export default function Dashboard() {
     setWorkoutUnit("kg");
   };
 
-  const addWorkoutEntry = async () => {
-    if (!userId) return alert("User not loaded yet.");
-    if (!exercise || !sets || !reps || !workoutWeight)
-      return alert("Fill all fields");
+  const saveWorkout = async () => {
+    if (!userId) return;
+
+    const payload = {
+      exercise,
+      sets: Number(sets),
+      reps: Number(reps),
+      weight:
+        workoutUnit === "lbs"
+          ? Number(workoutWeight) * 0.453592
+          : Number(workoutWeight),
+      calories: Number(calculateCalories()),
+      date: editingWorkout?.date || new Date().toISOString().split("T")[0],
+    };
 
     try {
-      const calories = calculateCalories();
-      await addDoc(collection(db, "users", userId, "workouts"), {
-        exercise,
-        sets: Number(sets),
-        reps: Number(reps),
-        weight:
-          workoutUnit === "lbs"
-            ? Number(workoutWeight) * 0.453592
-            : Number(workoutWeight),
-        calories: Number(calories),
-        date: new Date().toISOString().split("T")[0],
-      });
+      if (editingWorkout) {
+        await updateDoc(
+          doc(db, "users", userId, "workouts", editingWorkout.id),
+          payload,
+        );
+      } else {
+        await addDoc(collection(db, "users", userId, "workouts"), payload);
+      }
 
       clearWorkoutForm();
+      setEditingWorkout(null);
       setOpenWorkout(false);
       fetchData();
     } catch (err) {
-      console.error("Error adding workout:", err);
+      console.error("Save failed:", err);
     }
+  };
+
+  const confirmDeleteWorkout = async () => {
+    if (!userId || !deleteTarget) return;
+
+    try {
+      await deleteDoc(doc(db, "users", userId, "workouts", deleteTarget.id));
+      setDeleteTarget(null);
+      fetchData();
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
+  };
+
+  const openEditWorkout = (row) => {
+    setEditingWorkout(row);
+    setExercise(row.exercise);
+    setSets(row.sets);
+    setReps(row.reps);
+    setWorkoutWeight(row.weight);
+    setWorkoutUnit("kg");
+    setOpenWorkout(true);
   };
 
   // --- Summary Calculations ---
@@ -716,6 +754,7 @@ export default function Dashboard() {
                 <TableCell>Reps</TableCell>
                 <TableCell>Weight (kg)</TableCell>
                 <TableCell>Calories</TableCell>
+                <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -723,7 +762,7 @@ export default function Dashboard() {
                 .slice()
                 .reverse()
                 .map((row, idx) => (
-                  <TableRow key={idx} hover>
+                  <TableRow key={row.id} hover>
                     <TableCell>
                       {format(parseISO(row.date), "dd-MM-yyyy")}
                     </TableCell>
@@ -732,12 +771,53 @@ export default function Dashboard() {
                     <TableCell>{row.reps || "--"}</TableCell>
                     <TableCell>{row.weight?.toFixed(1) || "--"}</TableCell>
                     <TableCell>{row.calories || "--"}</TableCell>
+                    <TableCell>
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => openEditWorkout(row)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => setDeleteTarget(row)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
                   </TableRow>
                 ))}
             </TableBody>
           </Table>
         </TableContainer>
       </Card>
+
+      {/* Delete Dialog */}
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+      >
+        <DialogTitle>Delete Workout</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete{" "}
+            <strong>{deleteTarget?.exercise}</strong>?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={confirmDeleteWorkout}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* FAB */}
       <SpeedDial
@@ -852,6 +932,7 @@ export default function Dashboard() {
         onClose={() => {
           setOpenWorkout(false);
           clearWorkoutForm();
+          setEditingWorkout(null);
         }}
       >
         <DialogTitle>Add Today's Workout</DialogTitle>
@@ -908,8 +989,8 @@ export default function Dashboard() {
           >
             Cancel
           </Button>
-          <Button variant="contained" onClick={addWorkoutEntry}>
-            Add Workout
+          <Button variant="contained" onClick={saveWorkout}>
+            {editingWorkout ? "Update Workout" : "Add Workout"}
           </Button>
         </DialogActions>
       </Dialog>
