@@ -31,6 +31,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Menu,
   MenuItem,
   SpeedDial,
   SpeedDialAction,
@@ -302,12 +303,65 @@ export default function Dashboard() {
     } else break;
   }
 
-  // Calories Burned (last 7 days)
-  const caloriesBurned = workouts
-    .filter(
-      (d) => new Date(d.date) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    )
-    .reduce((sum, w) => sum + (w.calories || 0), 0);
+  // Calories Burned
+  const [calorieFilter, setCalorieFilter] = useState("week"); // "week" or "month"
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  const getCaloriesBurned = () => {
+    const now = new Date();
+    let startDate;
+
+    if (calorieFilter === "week") {
+      startDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - 7,
+      );
+    } else if (calorieFilter === "month") {
+      startDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - 30,
+      );
+    }
+
+    return workouts
+      .filter((d) => new Date(d.date) >= startDate)
+      .reduce((sum, w) => sum + (w.calories || 0), 0);
+  };
+
+  const caloriesBurned = getCaloriesBurned();
+
+  function CalorieDropdown({ value, onChange }) {
+    const [anchorEl, setAnchorEl] = useState(null);
+    const open = Boolean(anchorEl);
+
+    const handleClick = (event) => setAnchorEl(event.currentTarget);
+    const handleClose = (val) => {
+      if (val) onChange(val);
+      setAnchorEl(null);
+    };
+
+    return (
+      <>
+        <Button
+          variant="text"
+          onClick={handleClick}
+          sx={{
+            textTransform: "none",
+            color: "success.main",
+            fontWeight: "bold",
+          }}
+        >
+          {value === "week" ? "This Week" : "This Month"}
+        </Button>
+        <Menu anchorEl={anchorEl} open={open} onClose={() => handleClose(null)}>
+          <MenuItem onClick={() => handleClose("week")}>This Week</MenuItem>
+          <MenuItem onClick={() => handleClose("month")}>This Month</MenuItem>
+        </Menu>
+      </>
+    );
+  }
 
   const actions = [
     {
@@ -329,6 +383,7 @@ export default function Dashboard() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      {loading && <LinearProgress sx={{ mb: 2 }} />}
       <Box
         display="flex"
         justifyContent="space-between"
@@ -422,17 +477,68 @@ export default function Dashboard() {
         <Grid item xs={12} sm={4}>
           <Card
             variant="outlined"
-            sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              p: 2,
+              gap: 2,
+            }}
           >
+            {/* Icon */}
             <BarChartIcon color="success" fontSize="large" />
-            <Box>
-              <Typography variant="body2" color="textSecondary">
-                Calories Burned (7d)
+
+            {/* Text content */}
+            <Box sx={{ display: "flex", flexDirection: "column" }}>
+              {/* Title */}
+              <Typography variant="body2" color="text.secondary">
+                Calories Burned
               </Typography>
-              <Typography variant="h6" color="success.main">
-                {caloriesBurned.toFixed(0)}
-              </Typography>
+
+              {/* Dropdown + value on same line */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Button
+                  variant="text"
+                  onClick={(e) => setAnchorEl(e.currentTarget)}
+                  sx={{
+                    textTransform: "none",
+                    color: "success.main",
+                    fontWeight: 600,
+                    p: 0,
+                    minWidth: "auto",
+                  }}
+                >
+                  {calorieFilter === "week" ? "This Week" : "This Month"}
+                </Button>
+
+                <Typography variant="h6" color="success.main">
+                  {caloriesBurned.toFixed(0)}
+                </Typography>
+              </Box>
             </Box>
+
+            {/* Menu */}
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={() => setAnchorEl(null)}
+            >
+              <MenuItem
+                onClick={() => {
+                  setCalorieFilter("week");
+                  setAnchorEl(null);
+                }}
+              >
+                This Week
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setCalorieFilter("month");
+                  setAnchorEl(null);
+                }}
+              >
+                This Month
+              </MenuItem>
+            </Menu>
           </Card>
         </Grid>
       </Grid>
