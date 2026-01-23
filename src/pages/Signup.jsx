@@ -12,6 +12,11 @@ import {
   Button,
   Box,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 
 export default function Signup() {
@@ -24,6 +29,9 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [error, setError] = useState(""); // dialog error
+  const [open, setOpen] = useState(false); // dialog open
 
   const navigate = useNavigate();
 
@@ -75,27 +83,30 @@ export default function Signup() {
 
   const handleSignup = async () => {
     const cleanUsername = username.toLowerCase().replace(/\s/g, "");
-    const error = validateUsername(cleanUsername);
+    const errorMsg = validateUsername(cleanUsername);
 
     if (!name || !username || !email || !password) {
-      alert("Please fill all fields");
+      setError("Please fill all fields");
+      setOpen(true);
       return;
     }
 
-    if (error) {
-      alert(error);
+    if (errorMsg) {
+      setError(errorMsg);
+      setOpen(true);
       return;
     }
 
     if (usernameAvailable === false) {
-      alert("Username already taken");
+      setError("Username already taken");
+      setOpen(true);
       return;
     }
 
     try {
       setLoading(true);
 
-      // 🔹 Create Auth user
+      // Create Auth user
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -104,10 +115,10 @@ export default function Signup() {
 
       const user = userCredential.user;
 
-      // 🔹 Update Firebase Auth display name
+      // Update display name
       await updateProfile(user, { displayName: name });
 
-      // 🔹 Store user profile
+      // Store user profile
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name,
@@ -116,18 +127,36 @@ export default function Signup() {
         createdAt: serverTimestamp(),
       });
 
-      // 🔹 Reserve username
+      // Reserve username
       await setDoc(doc(db, "usernames", cleanUsername), {
         uid: user.uid,
       });
 
       navigate("/dashboard");
     } catch (err) {
-      alert(err.message);
+      let friendlyMessage;
+      switch (err.code) {
+        case "auth/email-already-in-use":
+          friendlyMessage = "This email is already in use.";
+          break;
+        case "auth/invalid-email":
+          friendlyMessage = "Enter a valid email address.";
+          break;
+        case "auth/weak-password":
+          friendlyMessage = "Password should be at least 6 characters.";
+          break;
+        default:
+          friendlyMessage = "An unexpected error occurred. Please try again.";
+          break;
+      }
+      setError(friendlyMessage);
+      setOpen(true);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleClose = () => setOpen(false);
 
   return (
     <Box
@@ -228,6 +257,19 @@ export default function Signup() {
           </CardContent>
         </Card>
       </Container>
+
+      {/* Dialog Box for Errors */}
+      <Dialog open={open} onClose={handleClose}>
+        <DialogTitle>Error</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{error}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="primary">
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
