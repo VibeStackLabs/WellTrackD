@@ -30,7 +30,7 @@ export default function Login() {
   // Pick a random message **once per page load** using useMemo
   const randomMessage = useMemo(() => {
     const messages = [
-      "Welcome back! Let’s crush your fitness goals today! 💪",
+      "Let’s crush your fitness goals today! 💪",
       "Track, train, transform—your progress awaits!",
       "Every workout counts. Log in and keep going!",
       "Consistency is key. Let’s get moving! 🏋️",
@@ -93,15 +93,20 @@ export default function Login() {
       }}
     >
       <Container maxWidth="sm">
-        <Card sx={{ borderRadius: 3, p: 4, boxShadow: 8 }}>
+        <Card sx={{ borderRadius: 4, p: 5, boxShadow: 10 }}>
           <CardContent>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-              Login
+            <Typography
+              variant="h4"
+              fontWeight="bold"
+              gutterBottom
+              color="primary"
+            >
+              Welcome Back!
             </Typography>
 
             {/* Motivational text with fade */}
             <Fade in={showMessage} timeout={800}>
-              <Typography variant="body1" sx={{ mb: 3, color: "gray" }}>
+              <Typography variant="body1" sx={{ mb: 3, color: "#555" }}>
                 {randomMessage}
               </Typography>
             </Fade>
@@ -125,14 +130,17 @@ export default function Login() {
                 variant="contained"
                 color="primary"
                 size="large"
-                sx={{ mt: 1, borderRadius: 2 }}
+                sx={{ mt: 1, borderRadius: 3 }}
                 onClick={handleLogin}
               >
-                Login
+                Start Tracking
               </Button>
             </Box>
 
-            <Typography variant="body2" sx={{ mt: 2, textAlign: "center" }}>
+            <Typography
+              variant="body2"
+              sx={{ mt: 3, textAlign: "center", color: "#555" }}
+            >
               Don't have an account?{" "}
               <Link
                 to="/signup"

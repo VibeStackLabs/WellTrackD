@@ -87,11 +87,11 @@ export default function Signup() {
   // Random motivational messages picked only once per page load
   const randomMessage = useMemo(() => {
     const messages = [
-      "Create your account and start your fitness journey today! 🏋️",
+      "Start your fitness journey today! 🏋️",
       "Join the movement—track, train, transform!",
       "Every journey starts with a single step. Sign up now!",
       "Your progress starts here! Let’s do this 💪",
-      "Sign up and make every workout count!",
+      "Make every workout count!",
     ];
     return messages[Math.floor(Math.random() * messages.length)];
   }, []);
@@ -191,15 +191,20 @@ export default function Signup() {
       }}
     >
       <Container maxWidth="sm">
-        <Card sx={{ borderRadius: 3, p: 4, boxShadow: 8 }}>
+        <Card sx={{ borderRadius: 4, p: 5, boxShadow: 10 }}>
           <CardContent>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-              Signup
+            <Typography
+              variant="h4"
+              fontWeight="bold"
+              gutterBottom
+              color="primary"
+            >
+              Create Your Account
             </Typography>
 
             {/* Motivational text with fade */}
             <Fade in={showMessage} timeout={800}>
-              <Typography variant="body1" sx={{ mb: 3, color: "gray" }}>
+              <Typography variant="body1" sx={{ mb: 3, color: "#555" }}>
                 {randomMessage}
               </Typography>
             </Fade>
@@ -261,7 +266,7 @@ export default function Signup() {
                 variant="contained"
                 size="large"
                 fullWidth
-                sx={{ mt: 1, borderRadius: 2 }}
+                sx={{ mt: 1, borderRadius: 3 }}
                 onClick={handleSignup}
                 disabled={
                   loading ||
@@ -270,11 +275,14 @@ export default function Signup() {
                   usernameAvailable === false
                 }
               >
-                {loading ? "Creating Account..." : "Signup"}
+                {loading ? "Creating Account..." : "Get Started"}
               </Button>
             </Box>
 
-            <Typography variant="body2" sx={{ mt: 2, textAlign: "center" }}>
+            <Typography
+              variant="body2"
+              sx={{ mt: 3, textAlign: "center", color: "#555" }}
+            >
               Already have an account?{" "}
               <Link
                 to="/login"
