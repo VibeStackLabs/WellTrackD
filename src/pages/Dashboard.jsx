@@ -87,6 +87,7 @@ export default function Dashboard() {
   const [sets, setSets] = useState([{ setNumber: 1, reps: "", weight: "" }]);
   const [workoutUnit, setWorkoutUnit] = useState("kg");
   const [workoutFilter, setWorkoutFilter] = useState("today");
+  const [workoutDate, setWorkoutDate] = useState("");
 
   // Edit and Delete States
   const [editingWorkout, setEditingWorkout] = useState(null);
@@ -247,6 +248,7 @@ export default function Dashboard() {
     setExercise("");
     setSets([{ setNumber: 1, reps: "", weight: "" }]);
     setWorkoutUnit("kg");
+    setWorkoutDate("");
   };
 
   const addSet = () => {
@@ -290,6 +292,45 @@ export default function Dashboard() {
   const saveWorkout = async () => {
     if (!userId || !exercise) return;
 
+    // Validate that all sets have reps and weight
+    const hasEmptySets = sets.some((set) => !set.reps || !set.weight);
+    if (hasEmptySets) {
+      alert("Please fill in reps and weight for all sets");
+      return;
+    }
+
+    // Determine the date
+    let selectedDate;
+    if (editingWorkout) {
+      // Keep the original date when editing
+      selectedDate = editingWorkout.date;
+    } else {
+      // Use selected date or today
+      selectedDate = workoutDate || new Date().toISOString().split("T")[0];
+    }
+
+    // Validate date - no future dates
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDateObj = new Date(selectedDate);
+    selectedDateObj.setHours(0, 0, 0, 0);
+
+    if (selectedDateObj > today) {
+      alert(
+        "Cannot add workouts for future dates. Please select today or a past date.",
+      );
+      return;
+    }
+
+    // Also validate date is not too far in the past (optional)
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+    if (selectedDateObj < oneYearAgo) {
+      alert("Cannot add workouts older than 1 year.");
+      return;
+    }
+
     const payload = {
       exercise,
       sets: sets.map((set) => ({
@@ -309,7 +350,7 @@ export default function Dashboard() {
         return sum + (weight || 0);
       }, 0),
       calories: Number(calculateTotalCalories()),
-      date: editingWorkout?.date || new Date().toISOString().split("T")[0],
+      date: selectedDate, // Use the selected date
       createdAt: serverTimestamp(),
     };
 
@@ -624,7 +665,7 @@ export default function Dashboard() {
     },
     {
       icon: <FitnessCenterIcon />,
-      name: "Add Today's Workout",
+      name: "Add Workout",
       onClick: () => setOpenWorkout(true),
     },
   ];
@@ -1232,9 +1273,48 @@ export default function Dashboard() {
         fullWidth
       >
         <DialogTitle>
-          {editingWorkout ? "Edit Workout" : "Add Today's Workout"}
+          {editingWorkout ? "Edit Workout" : "Add Workout"}
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
+          {/* Date Picker */}
+          {!editingWorkout && (
+            <TextField
+              label="Workout Date"
+              type="date"
+              value={workoutDate || new Date().toISOString().split("T")[0]}
+              onChange={(e) => setWorkoutDate(e.target.value)}
+              fullWidth
+              margin="normal"
+              InputLabelProps={{
+                shrink: true,
+              }}
+              inputProps={{
+                max: new Date().toISOString().split("T")[0], // Prevent future dates
+              }}
+              helperText={
+                workoutDate === new Date().toISOString().split("T")[0] ||
+                !workoutDate
+                  ? "Today"
+                  : `Logging for ${format(new Date(workoutDate), "dd-MM-yyyy")}`
+              }
+            />
+          )}
+
+          {/* If editing, show the date as read-only */}
+          {editingWorkout && (
+            <TextField
+              label="Workout Date"
+              value={format(parseISO(editingWorkout.date), "dd-MM-yyyy")}
+              fullWidth
+              margin="normal"
+              InputProps={{
+                readOnly: true,
+              }}
+              disabled
+              helperText="Date cannot be changed for existing workouts"
+            />
+          )}
+
           {/* Exercise Name */}
           <TextField
             label="Exercise Name"
@@ -1368,6 +1448,7 @@ export default function Dashboard() {
             onClick={() => {
               setOpenWorkout(false);
               clearWorkoutForm();
+              setEditingWorkout(null);
             }}
           >
             Cancel
