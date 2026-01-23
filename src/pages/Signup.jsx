@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../firebase";
@@ -30,8 +30,8 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [error, setError] = useState(""); // dialog error
-  const [open, setOpen] = useState(false); // dialog open
+  const [error, setError] = useState("");
+  const [open, setOpen] = useState(false);
 
   const navigate = useNavigate();
 
@@ -80,6 +80,18 @@ export default function Signup() {
 
     return () => clearTimeout(timer);
   }, [username, usernameError]);
+
+  // Random motivational messages picked only once per page load
+  const randomMessage = useMemo(() => {
+    const messages = [
+      "Create your account and start your fitness journey today! 🏋️",
+      "Join the movement—track, train, transform!",
+      "Every journey starts with a single step. Sign up now!",
+      "Your progress starts here! Let’s do this 💪",
+      "Sign up and make every workout count!",
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+  }, []);
 
   const handleSignup = async () => {
     const cleanUsername = username.toLowerCase().replace(/\s/g, "");
@@ -176,6 +188,11 @@ export default function Signup() {
               Signup
             </Typography>
 
+            {/* Motivational text */}
+            <Typography variant="body1" sx={{ mb: 3, color: "gray" }}>
+              {randomMessage}
+            </Typography>
+
             <Box display="flex" flexDirection="column" gap={2}>
               <TextField
                 label="Full Name"
@@ -232,6 +249,7 @@ export default function Signup() {
               <Button
                 variant="contained"
                 size="large"
+                fullWidth
                 sx={{ mt: 1, borderRadius: 2 }}
                 onClick={handleSignup}
                 disabled={

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 import { useNavigate, Link } from "react-router-dom";
@@ -23,6 +23,18 @@ export default function Login() {
   const [error, setError] = useState(""); // store user-friendly error
   const [open, setOpen] = useState(false); // dialog open state
   const navigate = useNavigate();
+
+  // Pick a random message **once per page load** using useMemo
+  const randomMessage = useMemo(() => {
+    const messages = [
+      "Log in to track your workouts and crush your goals 💪",
+      "Every rep counts! Get back to your fitness journey",
+      "Welcome back! Let’s smash today’s workout 🏋️",
+      "Time to move! Log in and track your progress",
+      "Your next milestone is waiting. Log in now!",
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+  }, []); // empty dependency array → runs only once
 
   const handleLogin = async () => {
     try {
@@ -58,9 +70,7 @@ export default function Login() {
     }
   };
 
-  const handleClose = () => {
-    setOpen(false); // close dialog
-  };
+  const handleClose = () => setOpen(false);
 
   return (
     <Box
@@ -78,6 +88,11 @@ export default function Login() {
           <CardContent>
             <Typography variant="h4" fontWeight="bold" gutterBottom>
               Login
+            </Typography>
+
+            {/* Motivational text */}
+            <Typography variant="body1" sx={{ mb: 3, color: "gray" }}>
+              {randomMessage}
             </Typography>
 
             <Box display="flex" flexDirection="column" gap={2}>
