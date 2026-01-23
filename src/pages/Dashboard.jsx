@@ -40,6 +40,8 @@ import {
   MenuItem,
   SpeedDial,
   SpeedDialAction,
+  ButtonGroup,
+  InputAdornment,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
@@ -82,9 +84,7 @@ export default function Dashboard() {
 
   // Workout States
   const [exercise, setExercise] = useState("");
-  const [sets, setSets] = useState("");
-  const [reps, setReps] = useState("");
-  const [workoutWeight, setWorkoutWeight] = useState("");
+  const [sets, setSets] = useState([{ setNumber: 1, reps: "", weight: "" }]);
   const [workoutUnit, setWorkoutUnit] = useState("kg");
   const [workoutFilter, setWorkoutFilter] = useState("today");
 
@@ -245,25 +245,72 @@ export default function Dashboard() {
 
   const clearWorkoutForm = () => {
     setExercise("");
-    setSets("");
-    setReps("");
-    setWorkoutWeight("");
+    setSets([{ setNumber: 1, reps: "", weight: "" }]);
     setWorkoutUnit("kg");
   };
 
+  const addSet = () => {
+    setSets((prev) => [
+      ...prev,
+      { setNumber: prev.length + 1, reps: "", weight: "" },
+    ]);
+  };
+
+  const removeSet = (index) => {
+    if (sets.length === 1) return; // Keep at least one set
+    const newSets = sets.filter((_, i) => i !== index);
+    // Re-number sets
+    setSets(
+      newSets.map((set, idx) => ({
+        ...set,
+        setNumber: idx + 1,
+      })),
+    );
+  };
+
+  const updateSet = (index, field, value) => {
+    const newSets = [...sets];
+    newSets[index] = { ...newSets[index], [field]: value };
+    setSets(newSets);
+  };
+
+  const calculateTotalCalories = () => {
+    return sets
+      .reduce((total, set) => {
+        const weightKg =
+          workoutUnit === "lbs"
+            ? Number(set.weight) * 0.453592
+            : Number(set.weight);
+        const calories = weightKg * Number(set.reps) * 0.1; // MET factor
+        return total + (isNaN(calories) ? 0 : calories);
+      }, 0)
+      .toFixed(1);
+  };
+
   const saveWorkout = async () => {
-    if (!userId) return;
+    if (!userId || !exercise) return;
 
     const payload = {
       exercise,
-      sets: Number(sets),
-      reps: Number(reps),
-      weight:
-        workoutUnit === "lbs"
-          ? Number(workoutWeight) * 0.453592
-          : Number(workoutWeight),
-      calories: Number(calculateCalories()),
+      sets: sets.map((set) => ({
+        setNumber: set.setNumber,
+        reps: Number(set.reps),
+        weight:
+          workoutUnit === "lbs"
+            ? Number(set.weight) * 0.453592
+            : Number(set.weight),
+      })),
+      totalReps: sets.reduce((sum, set) => sum + Number(set.reps || 0), 0),
+      totalWeight: sets.reduce((sum, set) => {
+        const weight =
+          workoutUnit === "lbs"
+            ? Number(set.weight) * 0.453592
+            : Number(set.weight);
+        return sum + (weight || 0);
+      }, 0),
+      calories: Number(calculateTotalCalories()),
       date: editingWorkout?.date || new Date().toISOString().split("T")[0],
+      createdAt: serverTimestamp(),
     };
 
     // OPTIMISTIC UPDATE
@@ -273,6 +320,8 @@ export default function Dashboard() {
           w.id === editingWorkout.id ? { ...w, ...payload } : w,
         ),
       );
+    } else {
+      setWorkouts((prev) => [...prev, { id: "temp", ...payload }]);
     }
 
     try {
@@ -287,7 +336,12 @@ export default function Dashboard() {
           payload,
         );
 
-        setWorkouts((prev) => [...prev, { id: docRef.id, ...payload }]);
+        // Replace temp ID with real one
+        setWorkouts((prev) =>
+          prev.map((w) =>
+            w.id === "temp" ? { id: docRef.id, ...payload } : w,
+          ),
+        );
       }
 
       clearWorkoutForm();
@@ -330,9 +384,22 @@ export default function Dashboard() {
   const openEditWorkout = (row) => {
     setEditingWorkout(row);
     setExercise(row.exercise);
-    setSets(row.sets);
-    setReps(row.reps);
-    setWorkoutWeight(row.weight);
+
+    // Handle both old and new data formats
+    if (row.sets && row.sets.length > 0) {
+      // New format with multiple sets
+      setSets(row.sets);
+    } else {
+      // Old format - convert to new format
+      setSets([
+        {
+          setNumber: 1,
+          reps: row.reps || "",
+          weight: row.weight || "",
+        },
+      ]);
+    }
+
     setWorkoutUnit("kg");
     setOpenWorkout(true);
   };
@@ -886,9 +953,9 @@ export default function Dashboard() {
               <TableRow>
                 <TableCell>Date</TableCell>
                 <TableCell>Exercise</TableCell>
-                <TableCell>Sets</TableCell>
-                <TableCell>Reps</TableCell>
-                <TableCell>Weight (kg)</TableCell>
+                <TableCell>Sets Summary</TableCell>
+                <TableCell>Total Reps</TableCell>
+                <TableCell>Total Weight (kg)</TableCell>
                 <TableCell>Calories</TableCell>
                 <TableCell>Actions</TableCell>
               </TableRow>
@@ -921,42 +988,76 @@ export default function Dashboard() {
                       </TableRow>
 
                       {/* Workout rows */}
-                      {workouts
-                        .slice()
-                        .reverse()
-                        .map((row) => (
-                          <TableRow key={row.id} hover>
-                            <TableCell>
-                              {format(parseISO(row.date), "dd-MM-yyyy")}
-                            </TableCell>
-                            <TableCell>{row.exercise || "--"}</TableCell>
-                            <TableCell>{row.sets || "--"}</TableCell>
-                            <TableCell>{row.reps || "--"}</TableCell>
-                            <TableCell>
-                              {row.weight?.toFixed(1) || "--"}
-                            </TableCell>
-                            <TableCell>{row.calories || "--"}</TableCell>
-                            <TableCell>
-                              <IconButton
-                                disabled={!isToday(row.date)}
-                                size="small"
-                                color="primary"
-                                onClick={() => openEditWorkout(row)}
-                              >
-                                <EditIcon />
-                              </IconButton>
-
-                              <IconButton
-                                disabled={!isToday(row.date)}
-                                size="small"
-                                color="error"
-                                onClick={() => setDeleteTarget(row)}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                      {getFilteredWorkouts().map((row) => (
+                        <TableRow key={row.id} hover>
+                          <TableCell>
+                            {format(parseISO(row.date), "dd-MM-yyyy")}
+                          </TableCell>
+                          <TableCell>{row.exercise || "--"}</TableCell>
+                          <TableCell>
+                            {row.sets ? (
+                              <Box>
+                                <Typography variant="body2">
+                                  {row.sets.length} sets
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  {row.sets.map((set, idx) => (
+                                    <span key={idx}>
+                                      {set.reps}×{set.weight?.toFixed(1)}
+                                      {idx < row.sets.length - 1 ? ", " : ""}
+                                    </span>
+                                  ))}
+                                </Typography>
+                              </Box>
+                            ) : row.sets ? (
+                              `${row.sets}×${row.reps}`
+                            ) : (
+                              "--"
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {row.sets
+                              ? row.sets.reduce(
+                                  (sum, set) => sum + (Number(set.reps) || 0),
+                                  0,
+                                )
+                              : row.reps || "--"}
+                          </TableCell>
+                          <TableCell>
+                            {row.sets
+                              ? row.sets
+                                  .reduce(
+                                    (sum, set) =>
+                                      sum + (Number(set.weight) || 0),
+                                    0,
+                                  )
+                                  .toFixed(1)
+                              : row.weight?.toFixed(1) || "--"}
+                          </TableCell>
+                          <TableCell>{row.calories || "--"}</TableCell>
+                          <TableCell>
+                            <IconButton
+                              disabled={!isToday(row.date)}
+                              size="small"
+                              color="primary"
+                              onClick={() => openEditWorkout(row)}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton
+                              disabled={!isToday(row.date)}
+                              size="small"
+                              color="error"
+                              onClick={() => setDeleteTarget(row)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </React.Fragment>
                   ),
               )}
@@ -1127,58 +1228,141 @@ export default function Dashboard() {
           clearWorkoutForm();
           setEditingWorkout(null);
         }}
+        maxWidth="md"
+        fullWidth
       >
-        <DialogTitle>Add Today's Workout</DialogTitle>
-        <DialogContent
-          sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
-        >
+        <DialogTitle>
+          {editingWorkout ? "Edit Workout" : "Add Today's Workout"}
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          {/* Exercise Name */}
           <TextField
             label="Exercise Name"
             value={exercise}
             onChange={(e) => setExercise(e.target.value)}
             fullWidth
-            margin="dense"
+            margin="normal"
           />
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <TextField
-              label="Sets"
-              type="number"
-              value={sets}
-              onChange={(e) => setSets(e.target.value)}
-              fullWidth
-              margin="dense"
-            />
-            <TextField
-              label="Reps"
-              type="number"
-              value={reps}
-              onChange={(e) => setReps(e.target.value)}
-              fullWidth
-              margin="dense"
-            />
+
+          {/* Unit Selection */}
+          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+            <Typography variant="body2" sx={{ mr: 2 }}>
+              Weight Unit:
+            </Typography>
+            <ButtonGroup size="small">
+              <Button
+                variant={workoutUnit === "kg" ? "contained" : "outlined"}
+                onClick={() => setWorkoutUnit("kg")}
+              >
+                kg
+              </Button>
+              <Button
+                variant={workoutUnit === "lbs" ? "contained" : "outlined"}
+                onClick={() => setWorkoutUnit("lbs")}
+              >
+                lbs
+              </Button>
+            </ButtonGroup>
           </Box>
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <TextField
-              label="Weight"
-              type="number"
-              value={workoutWeight}
-              onChange={(e) => setWorkoutWeight(e.target.value)}
-              fullWidth
-              margin="dense"
-            />
-            <TextField
-              select
-              label="Unit"
-              value={workoutUnit}
-              onChange={(e) => setWorkoutUnit(e.target.value)}
-              sx={{ width: 100 }}
-              margin="dense"
+
+          {/* Sets Header */}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr auto",
+              gap: 2,
+              mb: 1,
+              alignItems: "center",
+            }}
+          >
+            <Typography variant="subtitle2">Set</Typography>
+            <Typography variant="subtitle2">Reps</Typography>
+            <Typography variant="subtitle2">Weight ({workoutUnit})</Typography>
+            <Typography variant="subtitle2">Action</Typography>
+          </Box>
+
+          {/* Dynamic Sets */}
+          {sets.map((set, index) => (
+            <Box
+              key={index}
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr auto",
+                gap: 2,
+                mb: 2,
+                alignItems: "center",
+              }}
             >
-              <MenuItem value="kg">kg</MenuItem>
-              <MenuItem value="lbs">lbs</MenuItem>
-            </TextField>
+              {/* Set Number */}
+              <Typography variant="body1">#{set.setNumber}</Typography>
+
+              {/* Reps Input */}
+              <TextField
+                type="number"
+                placeholder="Reps"
+                value={set.reps}
+                onChange={(e) => updateSet(index, "reps", e.target.value)}
+                size="small"
+              />
+
+              {/* Weight Input */}
+              <TextField
+                type="number"
+                placeholder="Weight"
+                value={set.weight}
+                onChange={(e) => updateSet(index, "weight", e.target.value)}
+                size="small"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      {workoutUnit}
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              {/* Remove Button (only show if more than 1 set) */}
+              <IconButton
+                onClick={() => removeSet(index)}
+                disabled={sets.length === 1}
+                size="small"
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          ))}
+
+          {/* Add Set Button */}
+          <Button
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={addSet}
+            sx={{ mt: 1 }}
+          >
+            Add Another Set
+          </Button>
+
+          {/* Total Calories */}
+          <Box
+            sx={{
+              mt: 3,
+              p: 2,
+              bgcolor: "grey.50",
+              borderRadius: 1,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Typography variant="subtitle1">
+              Estimated Calories Burned:
+            </Typography>
+            <Typography variant="h6" color="success.main">
+              {calculateTotalCalories()} cal
+            </Typography>
           </Box>
         </DialogContent>
+
         <DialogActions>
           <Button
             onClick={() => {
@@ -1188,7 +1372,11 @@ export default function Dashboard() {
           >
             Cancel
           </Button>
-          <Button variant="contained" onClick={saveWorkout}>
+          <Button
+            variant="contained"
+            onClick={saveWorkout}
+            disabled={!exercise || sets.some((s) => !s.reps || !s.weight)}
+          >
             {editingWorkout ? "Update Workout" : "Add Workout"}
           </Button>
         </DialogActions>
