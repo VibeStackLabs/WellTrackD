@@ -10,11 +10,18 @@ import {
   TextField,
   Button,
   Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState(""); // store user-friendly error
+  const [open, setOpen] = useState(false); // dialog open state
   const navigate = useNavigate();
 
   const handleLogin = async () => {
@@ -22,8 +29,37 @@ export default function Login() {
       await signInWithEmailAndPassword(auth, email, password);
       navigate("/dashboard");
     } catch (err) {
-      alert(err.message);
+      let friendlyMessage;
+
+      // Map Firebase errors to user-friendly messages
+      switch (err.code) {
+        case "auth/invalid-email":
+          friendlyMessage = "Enter a valid email address.";
+          break;
+        case "auth/user-disabled":
+          friendlyMessage = "This account has been disabled.";
+          break;
+        case "auth/user-not-found":
+          friendlyMessage = "No account found with this email.";
+          break;
+        case "auth/wrong-password":
+          friendlyMessage = "Incorrect password. Please try again.";
+          break;
+        case "auth/invalid-credential":
+          friendlyMessage = "Invalid login credentials.";
+          break;
+        default:
+          friendlyMessage = "An unexpected error occurred. Please try again.";
+          break;
+      }
+
+      setError(friendlyMessage);
+      setOpen(true); // open dialog on error
     }
+  };
+
+  const handleClose = () => {
+    setOpen(false); // close dialog
   };
 
   return (
@@ -82,6 +118,19 @@ export default function Login() {
           </CardContent>
         </Card>
       </Container>
+
+      {/* Dialog Box for Error */}
+      <Dialog open={open} onClose={handleClose}>
+        <DialogTitle>Error</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{error}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="primary">
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
