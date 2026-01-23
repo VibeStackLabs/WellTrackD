@@ -81,6 +81,7 @@ export default function Dashboard() {
   const [heightFt, setHeightFt] = useState("");
   const [heightIn, setHeightIn] = useState("");
   const [heightUnit, setHeightUnit] = useState("cm");
+  const [chartFilter, setChartFilter] = useState("week");
 
   // Workout States
   const [exercise, setExercise] = useState("");
@@ -231,6 +232,45 @@ export default function Dashboard() {
     } catch (err) {
       console.error("Error adding BMI:", err);
     }
+  };
+
+  const getFilteredChartData = () => {
+    const now = new Date();
+    let startDate;
+
+    switch (chartFilter) {
+      case "week":
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "month":
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case "3months":
+        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        // "all" - return all data
+        return bmiEntries
+          .slice()
+          .sort((a, b) => new Date(a.date) - new Date(b.date))
+          .map((entry) => ({
+            date: entry.createdAt?.toDate?.() || new Date(entry.date),
+            weight: entry.bodyweight,
+            bmi: entry.bmi,
+          }));
+    }
+
+    return bmiEntries
+      .filter((entry) => {
+        const entryDate = entry.createdAt?.toDate?.() || new Date(entry.date);
+        return entryDate >= startDate;
+      })
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .map((entry) => ({
+        date: entry.createdAt?.toDate?.() || new Date(entry.date),
+        weight: entry.bodyweight,
+        bmi: entry.bmi,
+      }));
   };
 
   // --- Workout ---
@@ -887,69 +927,170 @@ export default function Dashboard() {
 
       {/* Chart */}
       <Card variant="outlined" sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" mb={2}>
-          Weight & BMI Progress
-        </Typography>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart
-            data={bmiEntries
-              .slice()
-              .sort((a, b) => new Date(a.date) - new Date(b.date))
-              .map((entry) => ({
-                date: entry.createdAt?.toDate?.() || new Date(entry.date),
-                weight: entry.bodyweight,
-                bmi: entry.bmi,
-              }))}
-            margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 2,
+          }}
+        >
+          <Typography variant="h6">Weight & BMI Progress</Typography>
+
+          {/* Chart Filter Buttons */}
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              size="small"
+              variant={chartFilter === "week" ? "contained" : "outlined"}
+              onClick={() => setChartFilter("week")}
+            >
+              Last 7 days
+            </Button>
+            <Button
+              size="small"
+              variant={chartFilter === "month" ? "contained" : "outlined"}
+              onClick={() => setChartFilter("month")}
+            >
+              Last 30 days
+            </Button>
+            <Button
+              size="small"
+              variant={chartFilter === "3months" ? "contained" : "outlined"}
+              onClick={() => setChartFilter("3months")}
+            >
+              Last 90 days
+            </Button>
+            <Button
+              size="small"
+              variant={chartFilter === "all" ? "contained" : "outlined"}
+              onClick={() => setChartFilter("all")}
+            >
+              All time
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Statistics Summary */}
+        {getFilteredChartData().length > 0 && (
+          <Box sx={{ display: "flex", gap: 3, mb: 3, flexWrap: "wrap" }}>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Starting Weight
+              </Typography>
+              <Typography variant="h6" color="primary">
+                {getFilteredChartData()[0]?.weight?.toFixed(1) || "--"} kg
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Current Weight
+              </Typography>
+              <Typography variant="h6" color="primary">
+                {getFilteredChartData()[
+                  getFilteredChartData().length - 1
+                ]?.weight?.toFixed(1) || "--"}{" "}
+                kg
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Change
+              </Typography>
+              <Typography
+                variant="h6"
+                sx={{
+                  color:
+                    getFilteredChartData()[0]?.weight <
+                    getFilteredChartData()[getFilteredChartData().length - 1]
+                      ?.weight
+                      ? "error.main"
+                      : "success.main",
+                }}
+              >
+                {getFilteredChartData().length > 1
+                  ? `${(getFilteredChartData()[getFilteredChartData().length - 1]?.weight - getFilteredChartData()[0]?.weight).toFixed(1)} kg`
+                  : "-- kg"}
+              </Typography>
+            </Box>
+          </Box>
+        )}
+
+        {/* Show message if no data for selected period */}
+        {getFilteredChartData().length === 0 ? (
+          <Box
+            sx={{
+              height: 300,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="date"
-              tickFormatter={(date) => format(new Date(date), "d-MM-yy")}
-            />
-            <YAxis
-              yAxisId="left"
-              orientation="left"
-              stroke="#1976d2"
-              domain={["dataMin - 5", "dataMax + 5"]}
-              label={{
-                value: "Weight (kg)",
-                angle: -90,
-                position: "insideLeft",
-              }}
-            />
-            <YAxis
-              yAxisId="right"
-              orientation="right"
-              stroke="#2e7d32"
-              domain={["dataMin - 2", "dataMax + 2"]}
-              label={{ value: "BMI", angle: 90, position: "insideRight" }}
-            />
-            <Tooltip
-              formatter={(value, name) =>
-                name === "weight"
-                  ? [`${value.toFixed(1)} kg`, "Weight"]
-                  : [value, "BMI"]
-              }
-            />
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey="weight"
-              stroke="#1976d2"
-              strokeWidth={2}
-              dot={{ r: 4 }}
-            />
-            <Line
-              yAxisId="right"
-              type="monotone"
-              dataKey="bmi"
-              stroke="#2e7d32"
-              strokeWidth={2}
-              dot={{ r: 4 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+            <Typography color="text.secondary">
+              {chartFilter === "all"
+                ? "No BMI data available. Add your first BMI entry!"
+                : `No BMI data available for the selected period (${chartFilter}).`}
+            </Typography>
+          </Box>
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart
+              data={getFilteredChartData()}
+              margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="date"
+                tickFormatter={(date) => format(new Date(date), "d-MM-yy")}
+              />
+              <YAxis
+                yAxisId="left"
+                orientation="left"
+                stroke="#1976d2"
+                domain={["dataMin - 5", "dataMax + 5"]}
+                label={{
+                  value: "Weight (kg)",
+                  angle: -90,
+                  position: "insideLeft",
+                }}
+              />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                stroke="#2e7d32"
+                domain={["dataMin - 2", "dataMax + 2"]}
+                label={{ value: "BMI", angle: 90, position: "insideRight" }}
+              />
+              <Tooltip
+                formatter={(value, name) =>
+                  name === "weight"
+                    ? [`${Number(value).toFixed(1)} kg`, "Weight"]
+                    : [Number(value).toFixed(1), "BMI"]
+                }
+                labelFormatter={(label) =>
+                  format(new Date(label), "dd-MM-yyyy")
+                }
+              />
+              <Line
+                yAxisId="left"
+                type="monotone"
+                dataKey="weight"
+                stroke="#1976d2"
+                strokeWidth={2}
+                dot={{ r: 4 }}
+                name="Weight"
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="bmi"
+                stroke="#2e7d32"
+                strokeWidth={2}
+                dot={{ r: 4 }}
+                name="BMI"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </Card>
 
       {/* Workout Table */}
