@@ -1047,6 +1047,7 @@ export default function Dashboard() {
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
               fullWidth
+              margin="dense"
             />
             <TextField
               select
@@ -1054,6 +1055,7 @@ export default function Dashboard() {
               value={weightUnit}
               onChange={(e) => setWeightUnit(e.target.value)}
               sx={{ width: 100 }}
+              margin="dense"
             >
               <MenuItem value="kg">kg</MenuItem>
               <MenuItem value="lbs">lbs</MenuItem>
@@ -1067,6 +1069,7 @@ export default function Dashboard() {
                 value={heightCm}
                 onChange={(e) => setHeightCm(e.target.value)}
                 fullWidth
+                margin="dense"
               />
             ) : (
               <>
@@ -1076,6 +1079,7 @@ export default function Dashboard() {
                   value={heightFt}
                   onChange={(e) => setHeightFt(e.target.value)}
                   sx={{ width: 100 }}
+                  margin="dense"
                 />
                 <TextField
                   label="Inches"
@@ -1083,6 +1087,7 @@ export default function Dashboard() {
                   value={heightIn}
                   onChange={(e) => setHeightIn(e.target.value)}
                   sx={{ width: 100 }}
+                  margin="dense"
                 />
               </>
             )}
@@ -1092,6 +1097,7 @@ export default function Dashboard() {
               value={heightUnit}
               onChange={(e) => setHeightUnit(e.target.value)}
               sx={{ width: 100 }}
+              margin="dense"
             >
               <MenuItem value="cm">cm</MenuItem>
               <MenuItem value="ft/in">ft/in</MenuItem>
@@ -1130,6 +1136,8 @@ export default function Dashboard() {
             label="Exercise Name"
             value={exercise}
             onChange={(e) => setExercise(e.target.value)}
+            fullWidth
+            margin="dense"
           />
           <Box sx={{ display: "flex", gap: 2 }}>
             <TextField
@@ -1138,6 +1146,7 @@ export default function Dashboard() {
               value={sets}
               onChange={(e) => setSets(e.target.value)}
               fullWidth
+              margin="dense"
             />
             <TextField
               label="Reps"
@@ -1145,6 +1154,7 @@ export default function Dashboard() {
               value={reps}
               onChange={(e) => setReps(e.target.value)}
               fullWidth
+              margin="dense"
             />
           </Box>
           <Box sx={{ display: "flex", gap: 2 }}>
@@ -1154,6 +1164,7 @@ export default function Dashboard() {
               value={workoutWeight}
               onChange={(e) => setWorkoutWeight(e.target.value)}
               fullWidth
+              margin="dense"
             />
             <TextField
               select
@@ -1161,6 +1172,7 @@ export default function Dashboard() {
               value={workoutUnit}
               onChange={(e) => setWorkoutUnit(e.target.value)}
               sx={{ width: 100 }}
+              margin="dense"
             >
               <MenuItem value="kg">kg</MenuItem>
               <MenuItem value="lbs">lbs</MenuItem>
