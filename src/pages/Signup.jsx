@@ -17,6 +17,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Fade,
 } from "@mui/material";
 
 export default function Signup() {
@@ -32,6 +33,8 @@ export default function Signup() {
 
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
+
+  const [showMessage, setShowMessage] = useState(false); // For fade-in
 
   const navigate = useNavigate();
 
@@ -91,6 +94,12 @@ export default function Signup() {
       "Sign up and make every workout count!",
     ];
     return messages[Math.floor(Math.random() * messages.length)];
+  }, []);
+
+  // Trigger fade-in after component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => setShowMessage(true), 200); // slight delay
+    return () => clearTimeout(timer);
   }, []);
 
   const handleSignup = async () => {
@@ -188,10 +197,12 @@ export default function Signup() {
               Signup
             </Typography>
 
-            {/* Motivational text */}
-            <Typography variant="body1" sx={{ mb: 3, color: "gray" }}>
-              {randomMessage}
-            </Typography>
+            {/* Motivational text with fade */}
+            <Fade in={showMessage} timeout={800}>
+              <Typography variant="body1" sx={{ mb: 3, color: "gray" }}>
+                {randomMessage}
+              </Typography>
+            </Fade>
 
             <Box display="flex" flexDirection="column" gap={2}>
               <TextField

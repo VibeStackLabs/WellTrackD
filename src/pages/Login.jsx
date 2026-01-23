@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 import { useNavigate, Link } from "react-router-dom";
@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Fade,
 } from "@mui/material";
 
 export default function Login() {
@@ -22,19 +23,27 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(""); // store user-friendly error
   const [open, setOpen] = useState(false); // dialog open state
+  const [showMessage, setShowMessage] = useState(false); // for fade-in
+
   const navigate = useNavigate();
 
   // Pick a random message **once per page load** using useMemo
   const randomMessage = useMemo(() => {
     const messages = [
-      "Log in to track your workouts and crush your goals 💪",
-      "Every rep counts! Get back to your fitness journey",
-      "Welcome back! Let’s smash today’s workout 🏋️",
-      "Time to move! Log in and track your progress",
-      "Your next milestone is waiting. Log in now!",
+      "Welcome back! Let’s crush your fitness goals today! 💪",
+      "Track, train, transform—your progress awaits!",
+      "Every workout counts. Log in and keep going!",
+      "Consistency is key. Let’s get moving! 🏋️",
+      "Your journey continues here. Let’s do this!",
     ];
     return messages[Math.floor(Math.random() * messages.length)];
-  }, []); // empty dependency array → runs only once
+  }, []);
+
+  // Trigger fade-in after component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => setShowMessage(true), 200); // slight delay
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleLogin = async () => {
     try {
@@ -90,10 +99,12 @@ export default function Login() {
               Login
             </Typography>
 
-            {/* Motivational text */}
-            <Typography variant="body1" sx={{ mb: 3, color: "gray" }}>
-              {randomMessage}
-            </Typography>
+            {/* Motivational text with fade */}
+            <Fade in={showMessage} timeout={800}>
+              <Typography variant="body1" sx={{ mb: 3, color: "gray" }}>
+                {randomMessage}
+              </Typography>
+            </Fade>
 
             <Box display="flex" flexDirection="column" gap={2}>
               <TextField
