@@ -375,7 +375,12 @@ export default function Dashboard() {
   };
 
   const getWorkoutsByWeekday = () => {
-    const filtered = getFilteredWorkouts(); // workouts filtered by week
+    const filtered = getFilteredWorkouts();
+
+    if (!["today", "week", "month"].includes(workoutFilter)) {
+      return { All: filtered };
+    }
+
     const days = [
       "Sunday",
       "Monday",
@@ -391,9 +396,9 @@ export default function Dashboard() {
     days.forEach((day) => (grouped[day] = []));
 
     filtered.forEach((w) => {
-      const d = new Date(w.date);
-      const dayName = days[d.getDay()]; // 0 = Sunday, 1 = Monday, ...
-      grouped[dayName].push(w);
+      const parseLocalDate = (dateStr) => new Date(dateStr + "T00:00:00");
+      const d = parseLocalDate(w.date);
+      grouped[days[d.getDay()]].push(w);
     });
 
     return grouped;
@@ -889,6 +894,15 @@ export default function Dashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
+              {/* No workouts found message */}
+              {getFilteredWorkouts().length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} align="center">
+                    No workouts found for this period 💤
+                  </TableCell>
+                </TableRow>
+              )}
+
               {Object.entries(getWorkoutsByWeekday()).map(
                 ([day, workouts]) =>
                   workouts.length > 0 && (
