@@ -274,16 +274,6 @@ export default function Dashboard() {
   };
 
   // --- Workout ---
-  const calculateCalories = () => {
-    const w = Number(workoutWeight);
-    const s = Number(sets);
-    const r = Number(reps);
-    if (!w || !s || !r) return 0;
-    const weightKg = workoutUnit === "lbs" ? w * 0.453592 : w;
-    const MET = 0.1; // placeholder
-    return (weightKg * s * r * MET).toFixed(1);
-  };
-
   const clearWorkoutForm = () => {
     setExercise("");
     setSets([{ setNumber: 1, reps: "", weight: "" }]);
@@ -637,10 +627,11 @@ export default function Dashboard() {
 
   const showStreakReminder = shouldShowStreakReminder();
 
-  // Calories Burned
+  // Calories burned filter
   const [calorieFilter, setCalorieFilter] = useState("week"); // "week" or "month"
   const [anchorEl, setAnchorEl] = useState(null);
 
+  // Calories Burned calculation
   const getCaloriesBurned = () => {
     const now = new Date();
     let startDate;
@@ -666,37 +657,6 @@ export default function Dashboard() {
 
   const caloriesBurned = getCaloriesBurned();
 
-  function CalorieDropdown({ value, onChange }) {
-    const [anchorEl, setAnchorEl] = useState(null);
-    const open = Boolean(anchorEl);
-
-    const handleClick = (event) => setAnchorEl(event.currentTarget);
-    const handleClose = (val) => {
-      if (val) onChange(val);
-      setAnchorEl(null);
-    };
-
-    return (
-      <>
-        <Button
-          variant="text"
-          onClick={handleClick}
-          sx={{
-            textTransform: "none",
-            color: "success.main",
-            fontWeight: "bold",
-          }}
-        >
-          {value === "week" ? "This Week" : "This Month"}
-        </Button>
-        <Menu anchorEl={anchorEl} open={open} onClose={() => handleClose(null)}>
-          <MenuItem onClick={() => handleClose("week")}>This Week</MenuItem>
-          <MenuItem onClick={() => handleClose("month")}>This Month</MenuItem>
-        </Menu>
-      </>
-    );
-  }
-
   const actions = [
     {
       icon: <ScaleIcon />,
@@ -709,11 +669,6 @@ export default function Dashboard() {
       onClick: () => setOpenWorkout(true),
     },
   ];
-
-  // Merge data for chart
-  const chartData = [...bmiEntries, ...workouts].sort(
-    (a, b) => new Date(a.date) - new Date(b.date),
-  );
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -744,10 +699,10 @@ export default function Dashboard() {
         >
           <CardContent>
             <Typography fontWeight="bold">
-              🔔 Don’t lose your streak!
+              🔔 Don't lose your streak!
             </Typography>
             <Typography variant="body2">
-              You haven’t logged a workout today. Log one before midnight to
+              You haven't logged a workout today. Log one before midnight to
               keep your streak alive 🔥
             </Typography>
           </CardContent>
