@@ -90,6 +90,18 @@ export default function Dashboard() {
   const [workoutFilter, setWorkoutFilter] = useState("today");
   const [workoutDate, setWorkoutDate] = useState("");
 
+  // Workout Types states
+  const [workoutType, setWorkoutType] = useState("strength"); // "strength" or "cardio"
+  const [cardioType, setCardioType] = useState("treadmill"); // Updated cardio types
+  const [duration, setDuration] = useState(""); // in minutes
+  const [distance, setDistance] = useState(""); // in km or miles
+  const [distanceUnit, setDistanceUnit] = useState("km"); // "km" or "miles"
+  const [intensity, setIntensity] = useState("moderate"); // "light", "moderate", "vigorous"
+  const [speed, setSpeed] = useState(""); // optional - speed in km/h or mph
+  const [incline, setIncline] = useState(""); // optional - incline for treadmill
+  const [resistance, setResistance] = useState(""); // optional - resistance level
+  const [isDistanceEdited, setIsDistanceEdited] = useState(false); // State to track if user manually edited distance
+
   // Edit and Delete States
   const [editingWorkout, setEditingWorkout] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -279,6 +291,35 @@ export default function Dashboard() {
     setSets([{ setNumber: 1, reps: "", weight: "" }]);
     setWorkoutUnit("kg");
     setWorkoutDate("");
+    setWorkoutType("strength");
+    setCardioType("treadmill");
+    setDuration("");
+    setDistance("");
+    setDistanceUnit("km");
+    setIntensity("moderate");
+    setSpeed("");
+    setIncline("");
+    setResistance("");
+    setIsDistanceEdited(false); // Reset the edit flag
+  };
+
+  const clearIrrelevantCardioFields = (equipmentType) => {
+    if (equipmentType !== "treadmill") {
+      setDuration("");
+      setIncline("");
+    }
+    if (!["treadmill", "cycle", "airbike"].includes(equipmentType)) {
+      setDuration("");
+      setSpeed("");
+    }
+    if (
+      !["crosstrainer", "cycle", "airbike", "stairmaster", "rowing"].includes(
+        equipmentType,
+      )
+    ) {
+      setDuration("");
+      setResistance("");
+    }
   };
 
   const addSet = () => {
@@ -306,7 +347,163 @@ export default function Dashboard() {
     setSets(newSets);
   };
 
+  const calculateCardioCalories = () => {
+    if (!duration || Number(duration) <= 0) return 0;
+
+    // Parse values with decimals
+    const dur = parseFloat(duration) || 0;
+    const spd = parseFloat(speed) || 0;
+    const inc = parseFloat(incline) || 0;
+    const res = parseFloat(resistance) || 0;
+
+    // Get user weight or use default
+    const userWeight = latestBMIEntry?.bodyweight || 70;
+
+    // Base MET values for different equipment
+    let baseMET = 0;
+
+    // More accurate intensity multipliers
+    const intensityMultiplier =
+      {
+        light: 0.7,
+        moderate: 1.0,
+        vigorous: 1.4,
+        max: 1.7,
+      }[intensity] || 1.0;
+
+    switch (cardioType) {
+      case "treadmill":
+        // More accurate treadmill MET calculation
+        if (spd <= 0) {
+          // If no speed, use intensity-based MET
+          baseMET = 4.0; // Base walking MET
+        } else if (spd < 4.0) {
+          baseMET = 3.0 + (spd - 2.5) * 1.0; // 3-4.5 MET for walking 2.5-4 mph
+        } else if (spd < 5.0) {
+          baseMET = 4.5 + (spd - 4.0) * 2.0; // 4.5-6.5 MET for brisk walking
+        } else if (spd < 7.0) {
+          baseMET = 6.5 + (spd - 5.0) * 1.5; // 6.5-8.5 MET for jogging
+        } else {
+          baseMET = 8.5 + (spd - 7.0) * 1.0; // 8.5+ MET for running
+        }
+
+        // Adjust for incline: 0.1 MET per % incline
+        if (inc > 0) {
+          baseMET += inc * 0.1;
+        }
+        break;
+
+      case "cycle":
+        // Stationary bike with more granular calculation
+        baseMET = 3.5; // Base
+        if (spd > 0) {
+          // MET increases with speed
+          baseMET += spd * 0.3;
+        }
+        if (res > 0) {
+          // Resistance adds to MET
+          baseMET += res * 0.5;
+        }
+        break;
+
+      case "crosstrainer":
+        baseMET = 4.0 + res * 0.4;
+        if (spd > 0) {
+          baseMET += spd * 0.2;
+        }
+        break;
+
+      case "airbike":
+        baseMET = 5.0 + res * 0.6 + spd * 0.4;
+        break;
+
+      case "stairmaster":
+        baseMET = 6.0 + res * 0.5;
+        break;
+
+      case "rowing":
+        baseMET = 4.5 + res * 0.6 + spd * 0.3;
+        break;
+
+      default:
+        baseMET = 5.0; // Generic cardio
+    }
+
+    // Apply intensity multiplier
+    baseMET *= intensityMultiplier;
+
+    // Ensure MET is reasonable (3-20 range)
+    baseMET = Math.max(3, Math.min(baseMET, 20));
+
+    // Calories = MET × weight (kg) × duration (hours)
+    const calories = baseMET * userWeight * (dur / 60);
+
+    return Math.round(calories);
+  };
+
+  const calculateAutoDistance = () => {
+    const durNum = parseFloat(duration);
+    const spdNum = parseFloat(speed);
+    const incNum = parseFloat(incline) || 0;
+
+    if (!durNum || durNum <= 0 || !spdNum || spdNum <= 0) return "";
+
+    // Basic distance = Speed × Time (in hours)
+    const durHours = durNum / 60;
+    let dist = spdNum * durHours;
+
+    // Adjust for incline: Incline increases effective distance
+    // Formula: Actual distance = Flat distance × (1 + incline_factor)
+    if (cardioType === "treadmill" && incNum > 0) {
+      // For treadmill: 1% incline adds approximately 0.5-1% to effective distance
+      // Using 0.8% per % incline as a reasonable estimate
+      const inclineFactor = 1 + incNum * 0.008;
+      dist *= inclineFactor;
+    }
+
+    // Round to 2 decimal places
+    return Math.round(dist * 100) / 100;
+  };
+
+  useEffect(() => {
+    if (workoutType === "cardio" && speed && duration) {
+      const calculatedDist = calculateAutoDistance();
+      if (calculatedDist && !isDistanceEdited) {
+        setDistance(calculatedDist.toString());
+      }
+    } else if (workoutType === "cardio" && (!speed || !duration)) {
+      // Clear distance if speed or duration is cleared
+      if (!isDistanceEdited) {
+        setDistance("");
+      }
+    }
+  }, [speed, duration, incline, cardioType, workoutType, isDistanceEdited]);
+
+  useEffect(() => {
+    if (workoutType === "strength") {
+      setIsDistanceEdited(false);
+      setDistance("");
+    }
+  }, [workoutType]);
+
+  const getCardioExerciseName = (cardioType) => {
+    const exerciseMap = {
+      treadmill: "Treadmill",
+      crosstrainer: "Cross Trainer (Elliptical)",
+      cycle: "Stationary Cycle",
+      airbike: "Air Bike",
+      stairmaster: "Stair Master",
+      rowing: "Rowing Machine",
+    };
+    return exerciseMap[cardioType] || "Cardio";
+  };
+
   const calculateTotalCalories = () => {
+    if (workoutType === "cardio") {
+      return calculateCardioCalories();
+    }
+
+    // Original strength training calculation
     return sets
       .reduce((total, set) => {
         const weightKg =
@@ -320,13 +517,39 @@ export default function Dashboard() {
   };
 
   const saveWorkout = async () => {
-    if (!userId || !exercise) return;
+    if (!userId) return;
 
-    // Validate that all sets have reps and weight
-    const hasEmptySets = sets.some((set) => !set.reps || !set.weight);
-    if (hasEmptySets) {
-      alert("Please fill in reps and weight for all sets");
-      return;
+    // Validate based on workout type
+    if (workoutType === "strength") {
+      if (!exercise) {
+        alert("Please enter an exercise name");
+        return;
+      }
+      const hasEmptySets = sets.some((set) => !set.reps || !set.weight);
+      if (hasEmptySets) {
+        alert("Please fill in reps and weight for all sets");
+        return;
+      }
+    } else if (workoutType === "cardio") {
+      // For cardio, exercise should be auto-filled but validate anyway
+      if (!exercise || exercise.trim() === "") {
+        // Auto-fill if empty
+        setExercise(getCardioExerciseName(cardioType));
+      }
+
+      if (!duration || Number(duration) <= 0) {
+        alert("Please enter a valid duration (in minutes)");
+        return;
+      }
+
+      // Auto-calculate distance if not provided but speed is
+      if (!distance && speed && Number(speed) > 0) {
+        const autoDist = calculateAutoDistance();
+        if (autoDist) {
+          setDistance(autoDist.toString());
+          setIsDistanceEdited(false);
+        }
+      }
     }
 
     // Determine the date
@@ -361,28 +584,92 @@ export default function Dashboard() {
       return;
     }
 
-    const payload = {
-      exercise,
-      sets: sets.map((set) => ({
-        setNumber: set.setNumber,
-        reps: Number(set.reps),
-        weight:
-          workoutUnit === "lbs"
-            ? Number(set.weight) * 0.453592
-            : Number(set.weight),
-      })),
-      totalReps: sets.reduce((sum, set) => sum + Number(set.reps || 0), 0),
-      totalWeight: sets.reduce((sum, set) => {
-        const weight =
-          workoutUnit === "lbs"
-            ? Number(set.weight) * 0.453592
-            : Number(set.weight);
-        return sum + (weight || 0);
-      }, 0),
-      calories: Number(calculateTotalCalories()),
-      date: selectedDate, // Use the selected date
-      createdAt: serverTimestamp(),
-    };
+    // Create payload based on workout type
+    let payload;
+
+    if (workoutType === "strength") {
+      payload = {
+        workoutType: "strength",
+        exercise,
+        sets: sets.map((set) => ({
+          setNumber: set.setNumber,
+          reps: Number(set.reps),
+          weight:
+            workoutUnit === "lbs"
+              ? Number(set.weight) * 0.453592
+              : Number(set.weight),
+        })),
+        totalReps: sets.reduce((sum, set) => sum + Number(set.reps || 0), 0),
+        totalWeight: sets.reduce((sum, set) => {
+          const weight =
+            workoutUnit === "lbs"
+              ? Number(set.weight) * 0.453592
+              : Number(set.weight);
+          return sum + (weight || 0);
+        }, 0),
+        calories: Number(calculateTotalCalories()),
+        date: selectedDate,
+        createdAt: serverTimestamp(),
+      };
+    } else {
+      const cardioPayload = {
+        workoutType: "cardio",
+        exercise,
+        cardioType,
+        duration: Number(duration),
+        distance: distance ? Number(distance) : null,
+        distanceUnit,
+        intensity,
+        calories: Number(calculateTotalCalories()),
+        date: selectedDate,
+        createdAt: serverTimestamp(),
+      };
+
+      // Add cardio-specific fields only for relevant equipment
+      if (
+        cardioType === "treadmill" ||
+        cardioType === "cycle" ||
+        cardioType === "airbike"
+      ) {
+        cardioPayload.speed = speed ? Number(speed) : null;
+      }
+
+      if (cardioType === "treadmill") {
+        cardioPayload.incline = incline ? Number(incline) : null;
+        // Treadmill should NOT have resistance
+        cardioPayload.resistance = null;
+      }
+
+      // Resistance only for specific machines (NOT treadmill)
+      if (
+        cardioType === "crosstrainer" ||
+        cardioType === "cycle" ||
+        cardioType === "airbike" ||
+        cardioType === "stairmaster" ||
+        cardioType === "rowing"
+      ) {
+        cardioPayload.resistance = resistance ? Number(resistance) : null;
+      }
+
+      // Clear fields that don't apply to the current equipment
+      if (cardioType !== "treadmill") {
+        cardioPayload.incline = null;
+      }
+
+      if (!["treadmill", "cycle", "airbike"].includes(cardioType)) {
+        cardioPayload.speed = null;
+      }
+
+      if (
+        !["crosstrainer", "cycle", "airbike", "stairmaster", "rowing"].includes(
+          cardioType,
+        )
+      ) {
+        cardioPayload.resistance = null;
+      }
+
+      payload = cardioPayload;
+    }
 
     // OPTIMISTIC UPDATE
     if (editingWorkout) {
@@ -454,24 +741,65 @@ export default function Dashboard() {
 
   const openEditWorkout = (row) => {
     setEditingWorkout(row);
-    setExercise(row.exercise);
 
-    // Handle both old and new data formats
-    if (row.sets && row.sets.length > 0) {
-      // New format with multiple sets
-      setSets(row.sets);
+    if (row.workoutType === "cardio") {
+      setWorkoutType("cardio");
+      setCardioType(row.cardioType || "treadmill");
+      setExercise(row.exercise || getCardioExerciseName(row.cardioType));
+      setDuration(row.duration?.toString() || "");
+      setDistance(row.distance?.toString() || "");
+      setDistanceUnit(row.distanceUnit || "km");
+      setIntensity(row.intensity || "moderate");
+
+      // Only set speed for relevant equipment
+      if (
+        row.cardioType === "treadmill" ||
+        row.cardioType === "cycle" ||
+        row.cardioType === "airbike"
+      ) {
+        setSpeed(row.speed?.toString() || "");
+      } else {
+        setSpeed("");
+      }
+
+      // Only set incline for treadmill
+      if (row.cardioType === "treadmill") {
+        setIncline(row.incline?.toString() || "");
+      } else {
+        setIncline("");
+      }
+
+      // Only set resistance for relevant equipment (NOT treadmill)
+      if (
+        row.cardioType === "crosstrainer" ||
+        row.cardioType === "cycle" ||
+        row.cardioType === "airbike" ||
+        row.cardioType === "stairmaster" ||
+        row.cardioType === "rowing"
+      ) {
+        setResistance(row.resistance?.toString() || "");
+      } else {
+        setResistance("");
+      }
     } else {
-      // Old format - convert to new format
-      setSets([
-        {
-          setNumber: 1,
-          reps: row.reps || "",
-          weight: row.weight || "",
-        },
-      ]);
+      // Handle both old and new data formats
+      if (row.sets && row.sets.length > 0) {
+        // New format with multiple sets
+        setSets(row.sets);
+      } else {
+        // Old format - convert to new format
+        setSets([
+          {
+            setNumber: 1,
+            reps: row.reps || "",
+            weight: row.weight || "",
+          },
+        ]);
+      }
+      setWorkoutType("strength");
+      setWorkoutUnit("kg");
     }
 
-    setWorkoutUnit("kg");
     setOpenWorkout(true);
   };
 
@@ -1090,7 +1418,7 @@ export default function Dashboard() {
               <TableRow>
                 <TableCell>Date</TableCell>
                 <TableCell>Exercise</TableCell>
-                <TableCell>Sets Summary</TableCell>
+                <TableCell>Details</TableCell>
                 <TableCell>Total Reps</TableCell>
                 <TableCell>Total Weight (kg)</TableCell>
                 <TableCell>Calories</TableCell>
@@ -1130,49 +1458,86 @@ export default function Dashboard() {
                           <TableCell>
                             {format(parseISO(row.date), "dd-MM-yyyy")}
                           </TableCell>
-                          <TableCell>{row.exercise || "--"}</TableCell>
                           <TableCell>
-                            {row.sets ? (
+                            <Box>
+                              <Typography variant="body2">
+                                {row.exercise || "--"}
+                              </Typography>
+                              {row.workoutType === "cardio"}
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            {row.workoutType === "strength" ? (
+                              row.sets ? (
+                                <Box>
+                                  <Typography variant="body2">
+                                    {row.sets.length} sets
+                                  </Typography>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    {row.sets.map((set, idx) => (
+                                      <span key={idx}>
+                                        {set.reps}×{set.weight?.toFixed(1)}
+                                        {idx < row.sets.length - 1 ? ", " : ""}
+                                      </span>
+                                    ))}
+                                  </Typography>
+                                </Box>
+                              ) : (
+                                "--"
+                              )
+                            ) : (
                               <Box>
                                 <Typography variant="body2">
-                                  {row.sets.length} sets
+                                  {row.duration} min
+                                  {/* Show speed only for relevant equipment */}
+                                  {row.speed &&
+                                    (row.cardioType === "treadmill" ||
+                                      row.cardioType === "cycle" ||
+                                      row.cardioType === "airbike") &&
+                                    ` • ${row.speed} ${row.cardioType === "treadmill" ? "km/h" : "RPM"}`}
+                                  {/* Show incline only for treadmill */}
+                                  {row.incline &&
+                                    row.cardioType === "treadmill" &&
+                                    ` • ${row.incline}% incline`}
+                                  {/* Show resistance only for specific equipment (NOT treadmill) */}
+                                  {row.resistance &&
+                                    (row.cardioType === "crosstrainer" ||
+                                      row.cardioType === "cycle" ||
+                                      row.cardioType === "airbike" ||
+                                      row.cardioType === "stairmaster" ||
+                                      row.cardioType === "rowing") &&
+                                    ` • Level ${row.resistance}`}
                                 </Typography>
+                                {row.distance && (
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    {row.distance} {row.distanceUnit}
+                                  </Typography>
+                                )}
                                 <Typography
                                   variant="caption"
+                                  display="block"
                                   color="text.secondary"
                                 >
-                                  {row.sets.map((set, idx) => (
-                                    <span key={idx}>
-                                      {set.reps}×{set.weight?.toFixed(1)}
-                                      {idx < row.sets.length - 1 ? ", " : ""}
-                                    </span>
-                                  ))}
+                                  {row.intensity} intensity
                                 </Typography>
                               </Box>
-                            ) : row.sets ? (
-                              `${row.sets}×${row.reps}`
-                            ) : (
-                              "--"
                             )}
                           </TableCell>
                           <TableCell>
-                            {row.sets
-                              ? row.sets.reduce(
-                                  (sum, set) => sum + (Number(set.reps) || 0),
-                                  0,
-                                )
-                              : row.reps || "--"}
+                            {row.workoutType === "strength"
+                              ? row.totalReps || "--"
+                              : "--"}
                           </TableCell>
                           <TableCell>
-                            {row.sets
-                              ? row.sets
-                                  .reduce(
-                                    (sum, set) =>
-                                      sum + (Number(set.weight) || 0),
-                                    0,
-                                  )
-                                  .toFixed(1)
-                              : row.weight?.toFixed(1) || "--"}
+                            {row.workoutType === "strength"
+                              ? row.totalWeight?.toFixed(1) || "--"
+                              : "--"}
                           </TableCell>
                           <TableCell>{row.calories || "--"}</TableCell>
                           <TableCell>
@@ -1418,105 +1783,346 @@ export default function Dashboard() {
             onChange={(e) => setExercise(e.target.value)}
             fullWidth
             margin="normal"
+            helperText="e.g., Bench Press, Running, Cycling"
           />
 
-          {/* Unit Selection */}
-          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-            <Typography variant="body2" sx={{ mr: 2 }}>
-              Weight Unit:
-            </Typography>
-            <ButtonGroup size="small">
-              <Button
-                variant={workoutUnit === "kg" ? "contained" : "outlined"}
-                onClick={() => setWorkoutUnit("kg")}
-              >
-                kg
-              </Button>
-              <Button
-                variant={workoutUnit === "lbs" ? "contained" : "outlined"}
-                onClick={() => setWorkoutUnit("lbs")}
-              >
-                lbs
-              </Button>
-            </ButtonGroup>
-          </Box>
-
-          {/* Sets Header */}
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr auto",
-              gap: 2,
-              mb: 1,
-              alignItems: "center",
-            }}
-          >
-            <Typography variant="subtitle2">Set</Typography>
-            <Typography variant="subtitle2">Reps</Typography>
-            <Typography variant="subtitle2">Weight ({workoutUnit})</Typography>
-            <Typography variant="subtitle2">Action</Typography>
-          </Box>
-
-          {/* Dynamic Sets */}
-          {sets.map((set, index) => (
-            <Box
-              key={index}
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr auto",
-                gap: 2,
-                mb: 2,
-                alignItems: "center",
+          {/* Workout Type Toggle */}
+          <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+            <Button
+              fullWidth
+              variant={workoutType === "strength" ? "contained" : "outlined"}
+              onClick={() => {
+                setWorkoutType("strength");
+                setExercise(""); // Clear exercise for strength
               }}
             >
-              {/* Set Number */}
-              <Typography variant="body1">#{set.setNumber}</Typography>
+              💪 Strength Training
+            </Button>
+            <Button
+              fullWidth
+              variant={workoutType === "cardio" ? "contained" : "outlined"}
+              onClick={() => {
+                setWorkoutType("cardio");
+                // Auto-set exercise name based on default cardio type (treadmill)
+                setExercise(getCardioExerciseName(cardioType));
+              }}
+            >
+              🏃 Cardio
+            </Button>
+          </Box>
 
-              {/* Reps Input */}
+          {/* Strength Training Form */}
+          {workoutType === "strength" && (
+            <>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                <Typography variant="body2" sx={{ mr: 2 }}>
+                  Weight Unit:
+                </Typography>
+                <ButtonGroup size="small">
+                  <Button
+                    variant={workoutUnit === "kg" ? "contained" : "outlined"}
+                    onClick={() => setWorkoutUnit("kg")}
+                  >
+                    kg
+                  </Button>
+                  <Button
+                    variant={workoutUnit === "lbs" ? "contained" : "outlined"}
+                    onClick={() => setWorkoutUnit("lbs")}
+                  >
+                    lbs
+                  </Button>
+                </ButtonGroup>
+              </Box>
+
+              {/* Sets Header */}
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr auto",
+                  gap: 2,
+                  mb: 1,
+                  alignItems: "center",
+                }}
+              >
+                <Typography variant="subtitle2">Set</Typography>
+                <Typography variant="subtitle2">Reps</Typography>
+                <Typography variant="subtitle2">
+                  Weight ({workoutUnit})
+                </Typography>
+                <Typography variant="subtitle2">Action</Typography>
+              </Box>
+
+              {/* Dynamic Sets */}
+              {sets.map((set, index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr auto",
+                    gap: 2,
+                    mb: 2,
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography variant="body1">#{set.setNumber}</Typography>
+                  <TextField
+                    type="number"
+                    placeholder="Reps"
+                    value={set.reps}
+                    onChange={(e) => updateSet(index, "reps", e.target.value)}
+                    size="small"
+                  />
+                  <TextField
+                    type="number"
+                    placeholder="Weight"
+                    value={set.weight}
+                    onChange={(e) => updateSet(index, "weight", e.target.value)}
+                    size="small"
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          {workoutUnit}
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <IconButton
+                    onClick={() => removeSet(index)}
+                    disabled={sets.length === 1}
+                    size="small"
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              ))}
+
+              {/* Add Set Button */}
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={addSet}
+                sx={{ mt: 1, mb: 3 }}
+              >
+                Add Another Set
+              </Button>
+            </>
+          )}
+
+          {/* Cardio Form */}
+          {workoutType === "cardio" && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {/* Cardio Type - Gym Equipment */}
               <TextField
+                select
+                label="Equipment Type"
+                value={cardioType}
+                onChange={(e) => {
+                  const newType = e.target.value;
+                  setCardioType(newType);
+                  // Always update exercise name when equipment changes
+                  setExercise(getCardioExerciseName(newType));
+
+                  // Clear fields that don't apply to the new equipment type
+                  clearIrrelevantCardioFields(newType);
+
+                  // Clear fields that don't apply to the new equipment type
+                  if (newType !== "treadmill") {
+                    setIncline("");
+                  }
+                  if (!["treadmill", "cycle", "airbike"].includes(newType)) {
+                    setSpeed("");
+                  }
+                  if (
+                    ![
+                      "crosstrainer",
+                      "cycle",
+                      "airbike",
+                      "stairmaster",
+                      "rowing",
+                    ].includes(newType)
+                  ) {
+                    setResistance("");
+                  }
+                }}
+                fullWidth
+                margin="normal"
+              >
+                <MenuItem value="treadmill">Treadmill</MenuItem>
+                <MenuItem value="crosstrainer">
+                  Cross Trainer (Elliptical)
+                </MenuItem>
+                <MenuItem value="cycle">Stationary Cycle</MenuItem>
+                <MenuItem value="airbike">Air Bike</MenuItem>
+                <MenuItem value="stairmaster">Stair Master</MenuItem>
+                <MenuItem value="rowing">Rowing Machine</MenuItem>
+              </TextField>
+
+              {/* Duration (Always Required) */}
+              <TextField
+                label="Duration (minutes)"
                 type="number"
-                placeholder="Reps"
-                value={set.reps}
-                onChange={(e) => updateSet(index, "reps", e.target.value)}
-                size="small"
+                value={duration}
+                onChange={(e) => {
+                  setDuration(e.target.value);
+                }}
+                fullWidth
+                required
+                margin="normal"
+                inputProps={{
+                  step: "0.5", // Allow half-minute increments
+                }}
               />
 
-              {/* Weight Input */}
+              {/* Speed (Optional for Treadmill, Cycle, Air Bike) */}
+              {(cardioType === "treadmill" ||
+                cardioType === "cycle" ||
+                cardioType === "airbike") && (
+                <TextField
+                  label="Speed"
+                  type="number"
+                  value={speed}
+                  onChange={(e) => {
+                    setSpeed(e.target.value);
+                  }}
+                  fullWidth
+                  placeholder="e.g., 6.5, 8.2"
+                  margin="normal"
+                  inputProps={{
+                    step: "0.1",
+                  }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        {cardioType === "treadmill" ? "km/h" : "RPM"}
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              )}
+
+              {/* Incline (Specific to Treadmill) */}
+              {cardioType === "treadmill" && (
+                <TextField
+                  label="Incline (%)"
+                  type="number"
+                  value={incline}
+                  onChange={(e) => {
+                    setIncline(e.target.value);
+                  }}
+                  fullWidth
+                  placeholder="0 for flat"
+                  margin="normal"
+                  inputProps={{
+                    step: "0.5",
+                    min: "0",
+                    max: "15",
+                  }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">%</InputAdornment>
+                    ),
+                  }}
+                />
+              )}
+
+              {/* Distance (Optional) */}
               <TextField
+                label="Distance"
                 type="number"
-                placeholder="Weight"
-                value={set.weight}
-                onChange={(e) => updateSet(index, "weight", e.target.value)}
-                size="small"
+                value={distance}
+                onChange={(e) => {
+                  setDistance(e.target.value);
+                  setIsDistanceEdited(true); // Mark as manually edited
+                }}
+                fullWidth
+                margin="normal"
+                inputProps={{
+                  step: "0.01",
+                }}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
-                      {workoutUnit}
+                      <TextField
+                        select
+                        value={distanceUnit}
+                        onChange={(e) => setDistanceUnit(e.target.value)}
+                        variant="standard"
+                        sx={{ width: 80 }}
+                      >
+                        <MenuItem value="km">km</MenuItem>
+                        <MenuItem value="miles">miles</MenuItem>
+                      </TextField>
                     </InputAdornment>
                   ),
                 }}
               />
 
-              {/* Remove Button (only show if more than 1 set) */}
-              <IconButton
-                onClick={() => removeSet(index)}
-                disabled={sets.length === 1}
-                size="small"
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  mt: -1,
+                  mb: 1,
+                }}
               >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          ))}
+                <Typography variant="caption" color="text.secondary">
+                  Distance auto-calculates from speed, duration, and incline
+                </Typography>
+                {isDistanceEdited && distance && (
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setIsDistanceEdited(false);
+                      const calculatedDist = calculateAutoDistance();
+                      if (calculatedDist) {
+                        setDistance(calculatedDist.toString());
+                      }
+                    }}
+                  >
+                    Reset to Auto
+                  </Button>
+                )}
+              </Box>
 
-          {/* Add Set Button */}
-          <Button
-            variant="outlined"
-            startIcon={<AddIcon />}
-            onClick={addSet}
-            sx={{ mt: 1 }}
-          >
-            Add Another Set
-          </Button>
+              {/* Resistance (For machines with resistance levels) */}
+              {(cardioType === "crosstrainer" ||
+                cardioType === "cycle" ||
+                cardioType === "airbike" ||
+                cardioType === "stairmaster" ||
+                cardioType === "rowing") && (
+                <TextField
+                  label="Resistance Level"
+                  type="number"
+                  value={resistance}
+                  onChange={(e) => setResistance(e.target.value)}
+                  fullWidth
+                  placeholder="Optional"
+                  margin="normal"
+                  helperText="1-10 or machine specific level"
+                />
+              )}
+
+              {/* Intensity Level */}
+              <TextField
+                select
+                label="Intensity Level"
+                value={intensity}
+                onChange={(e) => setIntensity(e.target.value)}
+                fullWidth
+                margin="normal"
+              >
+                <MenuItem value="light">Light (30-50% max effort)</MenuItem>
+                <MenuItem value="moderate">
+                  Moderate (50-70% max effort)
+                </MenuItem>
+                <MenuItem value="vigorous">
+                  Vigorous (70-85% max effort)
+                </MenuItem>
+                <MenuItem value="max">Maximum (85-100% max effort)</MenuItem>
+              </TextField>
+            </Box>
+          )}
 
           {/* Total Calories */}
           <Box
@@ -1552,7 +2158,11 @@ export default function Dashboard() {
           <Button
             variant="contained"
             onClick={saveWorkout}
-            disabled={!exercise || sets.some((s) => !s.reps || !s.weight)}
+            disabled={
+              workoutType === "strength"
+                ? !exercise || sets.some((s) => !s.reps || !s.weight)
+                : !duration || Number(duration) <= 0 // Cardio only needs duration
+            }
           >
             {editingWorkout ? "Update Workout" : "Add Workout"}
           </Button>
