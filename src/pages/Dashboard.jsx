@@ -93,14 +93,17 @@ export default function Dashboard() {
   // Workout Types states
   const [workoutType, setWorkoutType] = useState("strength"); // "strength" or "cardio"
   const [cardioType, setCardioType] = useState("treadmill"); // Updated cardio types
-  const [duration, setDuration] = useState(""); // in minutes
+  const [speedUnit, setSpeedUnit] = useState("km/h"); // "km/h" or "mph"
   const [distance, setDistance] = useState(""); // in km or miles
   const [distanceUnit, setDistanceUnit] = useState("km"); // "km" or "miles"
   const [intensity, setIntensity] = useState("moderate"); // "light", "moderate", "vigorous"
-  const [speed, setSpeed] = useState(""); // optional - speed in km/h or mph
-  const [incline, setIncline] = useState(""); // optional - incline for treadmill
-  const [resistance, setResistance] = useState(""); // optional - resistance level
   const [isDistanceEdited, setIsDistanceEdited] = useState(false); // State to track if user manually edited distance
+
+  // Cardio Session States
+  const [cardioSessions, setCardioSessions] = useState([
+    { id: 1, duration: "", speed: "", incline: "", resistance: "" },
+  ]);
+  const [sessionCount, setSessionCount] = useState(1);
 
   // Edit and Delete States
   const [editingWorkout, setEditingWorkout] = useState(null);
@@ -293,33 +296,112 @@ export default function Dashboard() {
     setWorkoutDate("");
     setWorkoutType("strength");
     setCardioType("treadmill");
-    setDuration("");
     setDistance("");
     setDistanceUnit("km");
     setIntensity("moderate");
-    setSpeed("");
-    setIncline("");
-    setResistance("");
     setIsDistanceEdited(false); // Reset the edit flag
+    // Always reset to one session
+    setCardioSessions([
+      { id: 1, duration: "", speed: "", incline: "", resistance: "" },
+    ]);
+    setSessionCount(1);
+    // Reset speed unit to default
+    setSpeedUnit("km/h");
+  };
+
+  // Add cardio session
+  const addCardioSession = () => {
+    const newSessionCount = sessionCount + 1;
+    setSessionCount(newSessionCount);
+    setCardioSessions((prev) => [
+      ...prev,
+      {
+        id: newSessionCount,
+        duration: "",
+        speed: "",
+        incline: "",
+        resistance: "",
+      },
+    ]);
+  };
+
+  // Remove cardio session
+  const removeCardioSession = (id) => {
+    if (cardioSessions.length <= 1) return;
+    setCardioSessions((prev) => prev.filter((session) => session.id !== id));
+  };
+
+  // Update cardio session
+  const updateCardioSession = (id, field, value) => {
+    setCardioSessions((prev) =>
+      prev.map((session) =>
+        session.id === id ? { ...session, [field]: value } : session,
+      ),
+    );
+  };
+
+  // Calculate totals from all sessions
+  const calculateCardioTotals = () => {
+    let totalDuration = 0;
+    let totalDistance = 0;
+    let avgSpeed = 0;
+
+    cardioSessions.forEach((session) => {
+      const dur = parseFloat(session.duration) || 0;
+      const spd = parseFloat(session.speed) || 0;
+
+      totalDuration += dur;
+
+      if (dur > 0 && spd > 0) {
+        const sessionDistance = spd * (dur / 60);
+        totalDistance += sessionDistance;
+      }
+    });
+
+    if (totalDuration > 0) {
+      avgSpeed = totalDistance / (totalDuration / 60) || 0;
+    }
+
+    return {
+      totalDuration: Math.round(totalDuration * 100) / 100,
+      totalDistance: Math.round(totalDistance * 100) / 100,
+      avgSpeed: Math.round(avgSpeed * 100) / 100,
+    };
   };
 
   const clearIrrelevantCardioFields = (equipmentType) => {
-    if (equipmentType !== "treadmill") {
-      setDuration("");
-      setIncline("");
-    }
-    if (!["treadmill", "cycle", "airbike"].includes(equipmentType)) {
-      setDuration("");
-      setSpeed("");
-    }
-    if (
-      !["crosstrainer", "cycle", "airbike", "stairmaster", "rowing"].includes(
-        equipmentType,
-      )
-    ) {
-      setDuration("");
-      setResistance("");
-    }
+    // Don't clear fields when editing
+    if (editingWorkout) return;
+
+    // Clear irrelevant fields in all sessions
+    setCardioSessions((prevSessions) =>
+      prevSessions.map((session) => {
+        const updatedSession = { ...session };
+
+        if (equipmentType !== "treadmill") {
+          updatedSession.incline = "";
+        }
+
+        if (!["treadmill", "cycle", "airbike"].includes(equipmentType)) {
+          updatedSession.speed = "";
+        }
+
+        // Clear resistance for equipment that doesn't use it
+        if (
+          ![
+            "crosstrainer",
+            "cycle",
+            "airbike",
+            "stairmaster",
+            "rowing",
+          ].includes(equipmentType)
+        ) {
+          updatedSession.resistance = "";
+        }
+
+        return updatedSession;
+      }),
+    );
   };
 
   const addSet = () => {
@@ -348,21 +430,14 @@ export default function Dashboard() {
   };
 
   const calculateCardioCalories = () => {
-    if (!duration || Number(duration) <= 0) return 0;
+    return calculateCaloriesFromSessions();
+  };
 
-    // Parse values with decimals
-    const dur = parseFloat(duration) || 0;
-    const spd = parseFloat(speed) || 0;
-    const inc = parseFloat(incline) || 0;
-    const res = parseFloat(resistance) || 0;
-
-    // Get user weight or use default
+  // Add this new function for session-based calorie calculation
+  const calculateCaloriesFromSessions = () => {
     const userWeight = latestBMIEntry?.bodyweight || 70;
+    let totalCalories = 0;
 
-    // Base MET values for different equipment
-    let baseMET = 0;
-
-    // More accurate intensity multipliers
     const intensityMultiplier =
       {
         light: 0.7,
@@ -371,113 +446,154 @@ export default function Dashboard() {
         max: 1.7,
       }[intensity] || 1.0;
 
-    switch (cardioType) {
-      case "treadmill":
-        // More accurate treadmill MET calculation
-        if (spd <= 0) {
-          // If no speed, use intensity-based MET
-          baseMET = 4.0; // Base walking MET
-        } else if (spd < 4.0) {
-          baseMET = 3.0 + (spd - 2.5) * 1.0; // 3-4.5 MET for walking 2.5-4 mph
-        } else if (spd < 5.0) {
-          baseMET = 4.5 + (spd - 4.0) * 2.0; // 4.5-6.5 MET for brisk walking
-        } else if (spd < 7.0) {
-          baseMET = 6.5 + (spd - 5.0) * 1.5; // 6.5-8.5 MET for jogging
-        } else {
-          baseMET = 8.5 + (spd - 7.0) * 1.0; // 8.5+ MET for running
-        }
+    cardioSessions.forEach((session) => {
+      const dur = parseFloat(session.duration) || 0;
+      const spd = parseFloat(session.speed) || 0;
+      const inc = parseFloat(session.incline) || 0;
+      const res = parseFloat(session.resistance) || 0;
 
-        // Adjust for incline: 0.1 MET per % incline
-        if (inc > 0) {
-          baseMET += inc * 0.1;
-        }
-        break;
+      if (dur <= 0) return;
 
-      case "cycle":
-        // Stationary bike with more granular calculation
-        baseMET = 3.5; // Base
-        if (spd > 0) {
-          // MET increases with speed
-          baseMET += spd * 0.3;
-        }
-        if (res > 0) {
-          // Resistance adds to MET
-          baseMET += res * 0.5;
-        }
-        break;
+      let baseMET = 0;
 
-      case "crosstrainer":
-        baseMET = 4.0 + res * 0.4;
-        if (spd > 0) {
-          baseMET += spd * 0.2;
-        }
-        break;
+      // Calculate MET for this session
+      switch (cardioType) {
+        case "treadmill":
+          let effectiveSpeed = spd;
 
-      case "airbike":
-        baseMET = 5.0 + res * 0.6 + spd * 0.4;
-        break;
+          // Convert mph to km/h for MET calculation (MET tables use km/h)
+          if (speedUnit === "mph") {
+            effectiveSpeed = spd * 1.60934;
+          }
 
-      case "stairmaster":
-        baseMET = 6.0 + res * 0.5;
-        break;
+          if (effectiveSpeed <= 0) {
+            baseMET = 4.0;
+          } else if (effectiveSpeed < 4.0) {
+            baseMET = 3.0 + (effectiveSpeed - 2.5) * 1.0;
+          } else if (effectiveSpeed < 5.0) {
+            baseMET = 4.5 + (effectiveSpeed - 4.0) * 2.0;
+          } else if (effectiveSpeed < 7.0) {
+            baseMET = 6.5 + (effectiveSpeed - 5.0) * 1.5;
+          } else {
+            baseMET = 8.5 + (effectiveSpeed - 7.0) * 1.0;
+          }
 
-      case "rowing":
-        baseMET = 4.5 + res * 0.6 + spd * 0.3;
-        break;
+          if (inc > 0) {
+            baseMET += inc * 0.1;
+          }
+          break;
 
-      default:
-        baseMET = 5.0; // Generic cardio
-    }
+        case "cycle":
+          baseMET = 3.5 + spd * 0.3 + res * 0.5;
+          break;
 
-    // Apply intensity multiplier
-    baseMET *= intensityMultiplier;
+        case "crosstrainer":
+          baseMET = 4.0 + res * 0.4;
+          break;
 
-    // Ensure MET is reasonable (3-20 range)
-    baseMET = Math.max(3, Math.min(baseMET, 20));
+        case "airbike":
+          baseMET = 5.0 + res * 0.6 + spd * 0.4;
+          break;
 
-    // Calories = MET × weight (kg) × duration (hours)
-    const calories = baseMET * userWeight * (dur / 60);
+        case "stairmaster":
+          baseMET = 6.0 + res * 0.5;
+          break;
 
-    return Math.round(calories);
+        case "rowing":
+          baseMET = 4.5 + res * 0.6 + spd * 0.3;
+          break;
+
+        default:
+          baseMET = 5.0;
+      }
+
+      baseMET *= intensityMultiplier;
+      baseMET = Math.max(3, Math.min(baseMET, 20));
+
+      const sessionCalories = baseMET * userWeight * (dur / 60);
+      totalCalories += sessionCalories;
+    });
+
+    return Math.round(totalCalories);
   };
 
   const calculateAutoDistance = () => {
-    const durNum = parseFloat(duration);
-    const spdNum = parseFloat(speed);
-    const incNum = parseFloat(incline) || 0;
+    if (cardioSessions.length === 0) return "";
 
-    if (!durNum || durNum <= 0 || !spdNum || spdNum <= 0) return "";
+    const totals = calculateCardioTotals();
+    let totalDistance = totals.totalDistance;
 
-    // Basic distance = Speed × Time (in hours)
-    const durHours = durNum / 60;
-    let dist = spdNum * durHours;
+    // Adjust for incline if treadmill
+    if (cardioType === "treadmill") {
+      // Calculate weighted incline for all sessions
+      let totalInclineEffect = 0;
+      let totalWeightedDuration = 0;
 
-    // Adjust for incline: Incline increases effective distance
-    // Formula: Actual distance = Flat distance × (1 + incline_factor)
-    if (cardioType === "treadmill" && incNum > 0) {
-      // For treadmill: 1% incline adds approximately 0.5-1% to effective distance
-      // Using 0.8% per % incline as a reasonable estimate
-      const inclineFactor = 1 + incNum * 0.008;
-      dist *= inclineFactor;
+      cardioSessions.forEach((session) => {
+        const dur = parseFloat(session.duration) || 0;
+        const inc = parseFloat(session.incline) || 0;
+
+        if (dur > 0) {
+          totalInclineEffect += inc * dur;
+          totalWeightedDuration += dur;
+        }
+      });
+
+      // Calculate average incline
+      const avgIncline =
+        totalWeightedDuration > 0
+          ? totalInclineEffect / totalWeightedDuration
+          : 0;
+
+      // Apply incline factor to total distance
+      if (avgIncline > 0) {
+        const inclineFactor = 1 + avgIncline * 0.008;
+        totalDistance *= inclineFactor;
+      }
     }
 
-    // Round to 2 decimal places
-    return Math.round(dist * 100) / 100;
+    // Convert to selected distance unit
+    const calculatedDistance = Math.round(totalDistance * 100) / 100;
+
+    // If speed is in mph but distance unit is km, convert
+    if (speedUnit === "mph" && distanceUnit === "km") {
+      return Math.round(calculatedDistance * 1.60934 * 100) / 100;
+    }
+
+    // If speed is in km/h but distance unit is miles, convert
+    if (speedUnit === "km/h" && distanceUnit === "miles") {
+      return Math.round(calculatedDistance * 0.621371 * 100) / 100;
+    }
+
+    return calculatedDistance;
   };
 
   useEffect(() => {
-    if (workoutType === "cardio" && speed && duration) {
-      const calculatedDist = calculateAutoDistance();
-      if (calculatedDist && !isDistanceEdited) {
-        setDistance(calculatedDist.toString());
-      }
-    } else if (workoutType === "cardio" && (!speed || !duration)) {
-      // Clear distance if speed or duration is cleared
-      if (!isDistanceEdited) {
+    if (workoutType === "cardio") {
+      // Always using sessions now
+      // Check if any session has valid data for distance calculation
+      let hasValidDataForDistance = false;
+
+      cardioSessions.forEach((session) => {
+        const dur = parseFloat(session.duration) || 0;
+        const spd = parseFloat(session.speed) || 0;
+
+        if (dur > 0 && spd > 0) {
+          hasValidDataForDistance = true;
+        }
+      });
+
+      if (hasValidDataForDistance && !isDistanceEdited) {
+        const calculatedDist = calculateAutoDistance();
+        if (calculatedDist) {
+          setDistance(calculatedDist.toString());
+        }
+      } else if (!hasValidDataForDistance && !isDistanceEdited) {
+        // Clear distance if no valid session data
         setDistance("");
       }
     }
-  }, [speed, duration, incline, cardioType, workoutType, isDistanceEdited]);
+  }, [cardioType, workoutType, isDistanceEdited, cardioSessions]);
 
   useEffect(() => {
     if (workoutType === "strength") {
@@ -537,13 +653,34 @@ export default function Dashboard() {
         setExercise(getCardioExerciseName(cardioType));
       }
 
-      if (!duration || Number(duration) <= 0) {
-        alert("Please enter a valid duration (in minutes)");
+      // Validate sessions
+      const hasEmptySessions = cardioSessions.some(
+        (session) => !session.duration || parseFloat(session.duration) <= 0,
+      );
+
+      if (hasEmptySessions) {
+        alert("Please enter a valid duration for all sessions");
         return;
       }
 
-      // Auto-calculate distance if not provided but speed is
-      if (!distance && speed && Number(speed) > 0) {
+      // Validate speed for relevant equipment
+      if (
+        cardioType === "treadmill" ||
+        cardioType === "cycle" ||
+        cardioType === "airbike"
+      ) {
+        const hasInvalidSpeed = cardioSessions.some(
+          (session) => !session.speed || parseFloat(session.speed) <= 0,
+        );
+
+        if (hasInvalidSpeed) {
+          alert("Please enter a valid speed for all sessions");
+          return;
+        }
+      }
+
+      // Auto-calculate distance if not provided
+      if (!distance) {
         const autoDist = calculateAutoDistance();
         if (autoDist) {
           setDistance(autoDist.toString());
@@ -612,11 +749,13 @@ export default function Dashboard() {
         createdAt: serverTimestamp(),
       };
     } else {
+      const totals = calculateCardioTotals();
+
       const cardioPayload = {
         workoutType: "cardio",
         exercise,
         cardioType,
-        duration: Number(duration),
+        duration: totals.totalDuration,
         distance: distance ? Number(distance) : null,
         distanceUnit,
         intensity,
@@ -625,47 +764,40 @@ export default function Dashboard() {
         createdAt: serverTimestamp(),
       };
 
-      // Add cardio-specific fields only for relevant equipment
-      if (
-        cardioType === "treadmill" ||
-        cardioType === "cycle" ||
-        cardioType === "airbike"
-      ) {
-        cardioPayload.speed = speed ? Number(speed) : null;
-      }
-
+      // Save speed unit if treadmill
       if (cardioType === "treadmill") {
-        cardioPayload.incline = incline ? Number(incline) : null;
-        // Treadmill should NOT have resistance
-        cardioPayload.resistance = null;
+        cardioPayload.speedUnit = speedUnit;
       }
 
-      // Resistance only for specific machines (NOT treadmill)
-      if (
-        cardioType === "crosstrainer" ||
-        cardioType === "cycle" ||
-        cardioType === "airbike" ||
-        cardioType === "stairmaster" ||
-        cardioType === "rowing"
-      ) {
-        cardioPayload.resistance = resistance ? Number(resistance) : null;
+      // Always save sessions
+      cardioPayload.sessions = cardioSessions.map((session) => ({
+        duration: parseFloat(session.duration) || 0,
+        speed: parseFloat(session.speed) || null,
+        incline:
+          cardioType === "treadmill"
+            ? parseFloat(session.incline) || null
+            : null,
+        resistance: parseFloat(session.resistance) || null,
+      }));
+
+      // Save average speed for display
+      if (totals.avgSpeed > 0) {
+        cardioPayload.avgSpeed = totals.avgSpeed;
       }
 
-      // Clear fields that don't apply to the current equipment
-      if (cardioType !== "treadmill") {
-        cardioPayload.incline = null;
-      }
-
-      if (!["treadmill", "cycle", "airbike"].includes(cardioType)) {
-        cardioPayload.speed = null;
-      }
-
-      if (
-        !["crosstrainer", "cycle", "airbike", "stairmaster", "rowing"].includes(
-          cardioType,
-        )
-      ) {
-        cardioPayload.resistance = null;
+      // For backward compatibility, save first session values
+      if (cardioSessions.length > 0) {
+        if (cardioSessions[0].speed) {
+          cardioPayload.speed = parseFloat(cardioSessions[0].speed) || null;
+        }
+        if (cardioType === "treadmill" && cardioSessions[0].incline) {
+          cardioPayload.incline = parseFloat(cardioSessions[0].incline) || null;
+        }
+        // Add resistance for backward compatibility
+        if (cardioSessions[0].resistance) {
+          cardioPayload.resistance =
+            parseFloat(cardioSessions[0].resistance) || null;
+        }
       }
 
       payload = cardioPayload;
@@ -741,53 +873,62 @@ export default function Dashboard() {
 
   const openEditWorkout = (row) => {
     setEditingWorkout(row);
+    setExercise(row.exercise || "");
 
     if (row.workoutType === "cardio") {
       setWorkoutType("cardio");
       setCardioType(row.cardioType || "treadmill");
       setExercise(row.exercise || getCardioExerciseName(row.cardioType));
-      setDuration(row.duration?.toString() || "");
       setDistance(row.distance?.toString() || "");
       setDistanceUnit(row.distanceUnit || "km");
       setIntensity(row.intensity || "moderate");
 
-      // Only set speed for relevant equipment
-      if (
-        row.cardioType === "treadmill" ||
-        row.cardioType === "cycle" ||
-        row.cardioType === "airbike"
-      ) {
-        setSpeed(row.speed?.toString() || "");
+      // Always use sessions
+      if (row.sessions && row.sessions.length > 0) {
+        const sessionsWithIds = row.sessions.map((session, index) => ({
+          id: index + 1,
+          duration: session.duration?.toString() || "",
+          speed: session.speed?.toString() || "",
+          incline: session.incline?.toString() || "",
+          resistance: session.resistance?.toString() || "",
+        }));
+        setCardioSessions(sessionsWithIds);
+        setSessionCount(sessionsWithIds.length);
+
+        // Load speed unit if it exists
+        if (row.speedUnit) {
+          setSpeedUnit(row.speedUnit);
+        }
       } else {
-        setSpeed("");
+        // For backward compatibility with old data without sessions
+        setCardioSessions([
+          {
+            id: 1,
+            duration: row.duration?.toString() || "",
+            speed: row.speed?.toString() || "",
+            incline: row.incline?.toString() || "",
+            resistance: row.resistance?.toString() || "",
+          },
+        ]);
+        setSessionCount(1);
+
+        // Default to km/h for old data
+        setSpeedUnit("km/h");
       }
 
-      // Only set incline for treadmill
-      if (row.cardioType === "treadmill") {
-        setIncline(row.incline?.toString() || "");
-      } else {
-        setIncline("");
-      }
-
-      // Only set resistance for relevant equipment (NOT treadmill)
-      if (
-        row.cardioType === "crosstrainer" ||
-        row.cardioType === "cycle" ||
-        row.cardioType === "airbike" ||
-        row.cardioType === "stairmaster" ||
-        row.cardioType === "rowing"
-      ) {
-        setResistance(row.resistance?.toString() || "");
-      } else {
-        setResistance("");
-      }
+      // Handle resistance
+      const relevantEquipmentForResistance = [
+        "crosstrainer",
+        "cycle",
+        "airbike",
+        "stairmaster",
+        "rowing",
+      ];
     } else {
-      // Handle both old and new data formats
+      // Strength training (unchanged)
       if (row.sets && row.sets.length > 0) {
-        // New format with multiple sets
         setSets(row.sets);
       } else {
-        // Old format - convert to new format
         setSets([
           {
             setNumber: 1,
@@ -1490,34 +1631,73 @@ export default function Dashboard() {
                               )
                             ) : (
                               <Box>
-                                <Typography variant="body2">
-                                  {row.duration} min
-                                  {/* Show speed only for relevant equipment */}
-                                  {row.speed &&
-                                    (row.cardioType === "treadmill" ||
-                                      row.cardioType === "cycle" ||
-                                      row.cardioType === "airbike") &&
-                                    ` • ${row.speed} ${row.cardioType === "treadmill" ? "km/h" : "RPM"}`}
-                                  {/* Show incline only for treadmill */}
-                                  {row.incline &&
-                                    row.cardioType === "treadmill" &&
-                                    ` • ${row.incline}% incline`}
-                                  {/* Show resistance only for specific equipment (NOT treadmill) */}
-                                  {row.resistance &&
-                                    (row.cardioType === "crosstrainer" ||
-                                      row.cardioType === "cycle" ||
-                                      row.cardioType === "airbike" ||
-                                      row.cardioType === "stairmaster" ||
-                                      row.cardioType === "rowing") &&
-                                    ` • Level ${row.resistance}`}
-                                </Typography>
-                                {row.distance && (
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                  >
-                                    {row.distance} {row.distanceUnit}
-                                  </Typography>
+                                {row.sessions ? (
+                                  // Show sessions if available
+                                  <Box>
+                                    <Typography variant="body2">
+                                      {row.duration} min total
+                                      {row.avgSpeed &&
+                                        ` • Avg ${row.avgSpeed} ${row.speedUnit || (row.cardioType === "treadmill" ? "km/h" : "RPM")}`}
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      display="block"
+                                    >
+                                      {row.sessions.length} session
+                                      {row.sessions.length > 1 ? "s" : ""}:
+                                      {row.sessions.map((session, idx) => (
+                                        <span key={idx}>
+                                          {session.duration}min @{" "}
+                                          {session.speed || "?"}
+                                          {row.speedUnit
+                                            ? ` ${row.speedUnit}`
+                                            : row.cardioType === "treadmill"
+                                              ? " km/h"
+                                              : " RPM"}
+                                          {session.incline
+                                            ? ` ${session.incline}%`
+                                            : ""}
+                                          {session.resistance
+                                            ? ` • Level ${session.resistance}`
+                                            : ""}
+                                          {idx < row.sessions.length - 1
+                                            ? " + "
+                                            : ""}
+                                        </span>
+                                      ))}
+                                    </Typography>
+                                  </Box>
+                                ) : (
+                                  // Fallback to single session display
+                                  <Box>
+                                    <Typography variant="body2">
+                                      {row.duration} min
+                                      {row.speed &&
+                                        (row.cardioType === "treadmill" ||
+                                          row.cardioType === "cycle" ||
+                                          row.cardioType === "airbike") &&
+                                        ` • ${row.speed} ${row.speedUnit || (row.cardioType === "treadmill" ? "km/h" : "RPM")}`}
+                                      {row.incline &&
+                                        row.cardioType === "treadmill" &&
+                                        ` • ${row.incline}% incline`}
+                                      {row.resistance &&
+                                        (row.cardioType === "crosstrainer" ||
+                                          row.cardioType === "cycle" ||
+                                          row.cardioType === "airbike" ||
+                                          row.cardioType === "stairmaster" ||
+                                          row.cardioType === "rowing") &&
+                                        ` • Level ${row.resistance}`}
+                                    </Typography>
+                                    {row.distance && (
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        {row.distance} {row.distanceUnit}
+                                      </Typography>
+                                    )}
+                                  </Box>
                                 )}
                                 <Typography
                                   variant="caption"
@@ -1736,7 +1916,63 @@ export default function Dashboard() {
         <DialogTitle>
           {editingWorkout ? "Edit Workout" : "Add Workout"}
         </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
+
+        {editingWorkout && (
+          <Box
+            sx={{
+              px: 3,
+              pr: 5,
+            }}
+          >
+            <Card
+              variant="outlined"
+              sx={{
+                backgroundColor:
+                  workoutType === "cardio" ? "#f0f7ff" : "#fff8e1",
+                borderColor: workoutType === "cardio" ? "#1976d2" : "#ed6c02",
+                borderLeft: `4px solid ${workoutType === "cardio" ? "#1976d2" : "#ed6c02"}`,
+              }}
+            >
+              <CardContent sx={{ py: 1, "&:last-child": { pb: 1 } }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  {workoutType === "cardio" ? (
+                    <>
+                      <FitnessCenterIcon fontSize="small" color="primary" />
+                      <Typography
+                        variant="body2"
+                        color="primary"
+                        fontWeight="medium"
+                      >
+                        Editing {cardioType} workout
+                      </Typography>
+                    </>
+                  ) : (
+                    <>
+                      <FitnessCenterIcon fontSize="small" color="warning" />
+                      <Typography
+                        variant="body2"
+                        color="warning.dark"
+                        fontWeight="medium"
+                      >
+                        Editing strength workout
+                      </Typography>
+                    </>
+                  )}
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ ml: "auto" }}
+                  >
+                    Created on{" "}
+                    {format(parseISO(editingWorkout.date), "dd-MM-yyyy")}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Box>
+        )}
+
+        <DialogContent>
           {/* Date Picker */}
           {!editingWorkout && (
             <TextField
@@ -1783,7 +2019,14 @@ export default function Dashboard() {
             onChange={(e) => setExercise(e.target.value)}
             fullWidth
             margin="normal"
-            helperText="e.g., Bench Press, Running, Cycling"
+            helperText={
+              editingWorkout
+                ? "Exercise name can be edited"
+                : "e.g., Bench Press, Running, Cycling"
+            }
+            InputProps={{
+              readOnly: editingWorkout && workoutType === "cardio", // Read-only for cardio when editing
+            }}
           />
 
           {/* Workout Type Toggle */}
@@ -1792,9 +2035,12 @@ export default function Dashboard() {
               fullWidth
               variant={workoutType === "strength" ? "contained" : "outlined"}
               onClick={() => {
-                setWorkoutType("strength");
-                setExercise(""); // Clear exercise for strength
+                if (!editingWorkout) {
+                  setWorkoutType("strength");
+                  setExercise(""); // Clear exercise for strength
+                }
               }}
+              disabled={editingWorkout && workoutType === "cardio"}
             >
               💪 Strength Training
             </Button>
@@ -1802,10 +2048,13 @@ export default function Dashboard() {
               fullWidth
               variant={workoutType === "cardio" ? "contained" : "outlined"}
               onClick={() => {
-                setWorkoutType("cardio");
-                // Auto-set exercise name based on default cardio type (treadmill)
-                setExercise(getCardioExerciseName(cardioType));
+                if (!editingWorkout) {
+                  setWorkoutType("cardio");
+                  // Auto-set exercise name based on default cardio type (treadmill)
+                  setExercise(getCardioExerciseName(cardioType));
+                }
               }}
+              disabled={editingWorkout && workoutType === "strength"}
             >
               🏃 Cardio
             </Button>
@@ -1821,13 +2070,19 @@ export default function Dashboard() {
                 <ButtonGroup size="small">
                   <Button
                     variant={workoutUnit === "kg" ? "contained" : "outlined"}
-                    onClick={() => setWorkoutUnit("kg")}
+                    onClick={() => {
+                      if (!editingWorkout) setWorkoutUnit("kg");
+                    }}
+                    disabled={editingWorkout}
                   >
                     kg
                   </Button>
                   <Button
                     variant={workoutUnit === "lbs" ? "contained" : "outlined"}
-                    onClick={() => setWorkoutUnit("lbs")}
+                    onClick={() => {
+                      if (!editingWorkout) setWorkoutUnit("lbs");
+                    }}
+                    disabled={editingWorkout}
                   >
                     lbs
                   </Button>
@@ -1917,35 +2172,36 @@ export default function Dashboard() {
                 label="Equipment Type"
                 value={cardioType}
                 onChange={(e) => {
-                  const newType = e.target.value;
-                  setCardioType(newType);
-                  // Always update exercise name when equipment changes
-                  setExercise(getCardioExerciseName(newType));
+                  if (!editingWorkout) {
+                    const newType = e.target.value;
+                    setCardioType(newType);
+                    setExercise(getCardioExerciseName(newType));
+                    clearIrrelevantCardioFields(newType);
 
-                  // Clear fields that don't apply to the new equipment type
-                  clearIrrelevantCardioFields(newType);
+                    // Clear sessions when equipment changes (only when not editing)
+                    setCardioSessions([
+                      {
+                        id: 1,
+                        duration: "",
+                        speed: "",
+                        incline: "",
+                        resistance: "",
+                      },
+                    ]);
+                    setSessionCount(1);
 
-                  // Clear fields that don't apply to the new equipment type
-                  if (newType !== "treadmill") {
-                    setIncline("");
-                  }
-                  if (!["treadmill", "cycle", "airbike"].includes(newType)) {
-                    setSpeed("");
-                  }
-                  if (
-                    ![
-                      "crosstrainer",
-                      "cycle",
-                      "airbike",
-                      "stairmaster",
-                      "rowing",
-                    ].includes(newType)
-                  ) {
-                    setResistance("");
+                    // Reset speed unit to default when changing equipment
+                    if (newType === "treadmill") {
+                      setSpeedUnit("km/h");
+                    }
                   }
                 }}
                 fullWidth
                 margin="normal"
+                disabled={editingWorkout} // Disable when editing
+                InputProps={{
+                  style: editingWorkout ? { backgroundColor: "#f5f5f5" } : {},
+                }}
               >
                 <MenuItem value="treadmill">Treadmill</MenuItem>
                 <MenuItem value="crosstrainer">
@@ -1956,89 +2212,196 @@ export default function Dashboard() {
                 <MenuItem value="stairmaster">Stair Master</MenuItem>
                 <MenuItem value="rowing">Rowing Machine</MenuItem>
               </TextField>
-
-              {/* Duration (Always Required) */}
-              <TextField
-                label="Duration (minutes)"
-                type="number"
-                value={duration}
-                onChange={(e) => {
-                  setDuration(e.target.value);
-                }}
-                fullWidth
-                required
-                margin="normal"
-                inputProps={{
-                  step: "0.5", // Allow half-minute increments
-                }}
-              />
-
-              {/* Speed (Optional for Treadmill, Cycle, Air Bike) */}
-              {(cardioType === "treadmill" ||
-                cardioType === "cycle" ||
-                cardioType === "airbike") && (
-                <TextField
-                  label="Speed"
-                  type="number"
-                  value={speed}
-                  onChange={(e) => {
-                    setSpeed(e.target.value);
-                  }}
-                  fullWidth
-                  placeholder="e.g., 6.5, 8.2"
-                  margin="normal"
-                  inputProps={{
-                    step: "0.1",
-                  }}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        {cardioType === "treadmill" ? "km/h" : "RPM"}
-                      </InputAdornment>
-                    ),
-                  }}
-                />
+              {editingWorkout && (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mt: -1, mb: 1 }}
+                >
+                  Equipment type cannot be changed when editing a workout
+                </Typography>
               )}
 
-              {/* Incline (Specific to Treadmill) */}
-              {cardioType === "treadmill" && (
-                <TextField
-                  label="Incline (%)"
-                  type="number"
-                  value={incline}
-                  onChange={(e) => {
-                    setIncline(e.target.value);
-                  }}
-                  fullWidth
-                  placeholder="0 for flat"
-                  margin="normal"
-                  inputProps={{
-                    step: "0.5",
-                    min: "0",
-                    max: "15",
-                  }}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">%</InputAdornment>
-                    ),
-                  }}
-                />
-              )}
+              {/* Cardio Sessions */}
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Cardio Sessions
+                </Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Add your intervals (e.g., 5 min @ 4 km/h, 5 min @ 2 km/h)
+                </Typography>
 
-              {/* Distance (Optional) */}
+                {cardioSessions.map((session, index) => (
+                  <Box
+                    key={session.id}
+                    sx={{
+                      mb: 2,
+                      p: 2,
+                      border: "1px solid #ccc",
+                      borderRadius: 1,
+                      backgroundColor: index === 0 ? "transparent" : "grey.50",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 1,
+                      }}
+                    >
+                      <Typography variant="subtitle2">
+                        Session #{index + 1}
+                      </Typography>
+                      {cardioSessions.length > 1 && (
+                        <IconButton
+                          onClick={() => removeCardioSession(session.id)}
+                          size="small"
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+
+                    <Grid container spacing={2}>
+                      <Grid size={{ xs: 2.6 }}>
+                        <TextField
+                          label="Duration (min)"
+                          type="number"
+                          value={session.duration}
+                          onChange={(e) =>
+                            updateCardioSession(
+                              session.id,
+                              "duration",
+                              e.target.value,
+                            )
+                          }
+                          fullWidth
+                          size="small"
+                          required
+                          inputProps={{ step: "0.5", min: "0" }}
+                        />
+                      </Grid>
+
+                      {(cardioType === "treadmill" ||
+                        cardioType === "cycle" ||
+                        cardioType === "airbike") && (
+                        <Grid
+                          size={{ xs: cardioType === "treadmill" ? 2.6 : 2.6 }}
+                        >
+                          <TextField
+                            label={
+                              cardioType === "treadmill"
+                                ? `Speed (${speedUnit})`
+                                : "Speed (RPM)"
+                            }
+                            type="number"
+                            value={session.speed}
+                            onChange={(e) =>
+                              updateCardioSession(
+                                session.id,
+                                "speed",
+                                e.target.value,
+                              )
+                            }
+                            fullWidth
+                            size="small"
+                            required
+                            inputProps={{ step: "0.1", min: "0" }}
+                          />
+                        </Grid>
+                      )}
+
+                      {/* Speed unit selector (only for treadmill) */}
+                      {cardioType === "treadmill" && (
+                        <Grid size={{ xs: 2 }}>
+                          <TextField
+                            select
+                            label="Unit"
+                            value={speedUnit}
+                            onChange={(e) => setSpeedUnit(e.target.value)}
+                            fullWidth
+                            size="small"
+                            variant="outlined"
+                          >
+                            <MenuItem value="km/h">km/h</MenuItem>
+                            <MenuItem value="mph">mph</MenuItem>
+                          </TextField>
+                        </Grid>
+                      )}
+
+                      {cardioType === "treadmill" && (
+                        <Grid size={{ xs: 2.6 }}>
+                          <TextField
+                            label="Incline (%)"
+                            type="number"
+                            value={session.incline}
+                            onChange={(e) =>
+                              updateCardioSession(
+                                session.id,
+                                "incline",
+                                e.target.value,
+                              )
+                            }
+                            fullWidth
+                            size="small"
+                            inputProps={{ step: "0.5", min: "0", max: "15" }}
+                          />
+                        </Grid>
+                      )}
+
+                      {/* Resistance Level for relevant equipment */}
+                      {(cardioType === "crosstrainer" ||
+                        cardioType === "cycle" ||
+                        cardioType === "airbike" ||
+                        cardioType === "stairmaster" ||
+                        cardioType === "rowing") && (
+                        <Grid size={{ xs: 2.8 }}>
+                          <TextField
+                            label="Resistance Level"
+                            type="number"
+                            value={session.resistance || ""}
+                            onChange={(e) =>
+                              updateCardioSession(
+                                session.id,
+                                "resistance",
+                                e.target.value,
+                              )
+                            }
+                            fullWidth
+                            size="small"
+                            placeholder="Optional"
+                            inputProps={{ step: "0.5", min: "0" }}
+                          />
+                        </Grid>
+                      )}
+                    </Grid>
+                  </Box>
+                ))}
+
+                {/* Add Session Button */}
+                <Button
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  onClick={addCardioSession}
+                  sx={{ mt: 1 }}
+                >
+                  Add Another Session
+                </Button>
+              </Box>
+
+              {/* Distance */}
               <TextField
-                label="Distance"
+                label="Total Distance"
                 type="number"
                 value={distance}
                 onChange={(e) => {
                   setDistance(e.target.value);
-                  setIsDistanceEdited(true); // Mark as manually edited
+                  setIsDistanceEdited(true);
                 }}
                 fullWidth
                 margin="normal"
-                inputProps={{
-                  step: "0.01",
-                }}
+                inputProps={{ step: "0.01" }}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -2055,55 +2418,10 @@ export default function Dashboard() {
                     </InputAdornment>
                   ),
                 }}
+                helperText="Auto-calculated from sessions"
               />
 
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  mt: -1,
-                  mb: 1,
-                }}
-              >
-                <Typography variant="caption" color="text.secondary">
-                  Distance auto-calculates from speed, duration, and incline
-                </Typography>
-                {isDistanceEdited && distance && (
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      setIsDistanceEdited(false);
-                      const calculatedDist = calculateAutoDistance();
-                      if (calculatedDist) {
-                        setDistance(calculatedDist.toString());
-                      }
-                    }}
-                  >
-                    Reset to Auto
-                  </Button>
-                )}
-              </Box>
-
-              {/* Resistance (For machines with resistance levels) */}
-              {(cardioType === "crosstrainer" ||
-                cardioType === "cycle" ||
-                cardioType === "airbike" ||
-                cardioType === "stairmaster" ||
-                cardioType === "rowing") && (
-                <TextField
-                  label="Resistance Level"
-                  type="number"
-                  value={resistance}
-                  onChange={(e) => setResistance(e.target.value)}
-                  fullWidth
-                  placeholder="Optional"
-                  margin="normal"
-                  helperText="1-10 or machine specific level"
-                />
-              )}
-
-              {/* Intensity Level */}
+              {/* Intensity */}
               <TextField
                 select
                 label="Intensity Level"
@@ -2121,6 +2439,33 @@ export default function Dashboard() {
                 </MenuItem>
                 <MenuItem value="max">Maximum (85-100% max effort)</MenuItem>
               </TextField>
+
+              {/* Session Totals Display */}
+              <Box>
+                <Typography variant="subtitle1" gutterBottom>
+                  Session Totals
+                </Typography>
+                <Box sx={{ display: "flex", gap: 3 }}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Total Duration
+                    </Typography>
+                    <Typography variant="body1">
+                      {calculateCardioTotals().totalDuration} min
+                    </Typography>
+                  </Box>
+                  {cardioType === "treadmill" && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Average Speed
+                      </Typography>
+                      <Typography variant="body1">
+                        {calculateCardioTotals().avgSpeed} km/h
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
             </Box>
           )}
 
@@ -2128,7 +2473,6 @@ export default function Dashboard() {
           <Box
             sx={{
               mt: 3,
-              p: 2,
               bgcolor: "grey.50",
               borderRadius: 1,
               display: "flex",
@@ -2161,7 +2505,15 @@ export default function Dashboard() {
             disabled={
               workoutType === "strength"
                 ? !exercise || sets.some((s) => !s.reps || !s.weight)
-                : !duration || Number(duration) <= 0 // Cardio only needs duration
+                : // Cardio validation - check sessions
+                  !exercise ||
+                  cardioSessions.some(
+                    (s) => !s.duration || parseFloat(s.duration) <= 0,
+                  ) ||
+                  (["treadmill", "cycle", "airbike"].includes(cardioType) &&
+                    cardioSessions.some(
+                      (s) => !s.speed || parseFloat(s.speed) <= 0,
+                    ))
             }
           >
             {editingWorkout ? "Update Workout" : "Add Workout"}
