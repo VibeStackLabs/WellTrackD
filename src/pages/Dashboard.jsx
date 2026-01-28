@@ -42,6 +42,7 @@ import {
   SpeedDialAction,
   ButtonGroup,
   InputAdornment,
+  Chip,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
@@ -49,6 +50,9 @@ import ScaleIcon from "@mui/icons-material/Scale";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import DirectionsRunIcon from "@mui/icons-material/DirectionsRun";
+import WhatshotIcon from "@mui/icons-material/Whatshot";
 import IconButton from "@mui/material/IconButton";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
@@ -98,6 +102,19 @@ export default function Dashboard() {
   const [distanceUnit, setDistanceUnit] = useState("km"); // "km" or "miles"
   const [intensity, setIntensity] = useState("moderate"); // "light", "moderate", "vigorous"
   const [isDistanceEdited, setIsDistanceEdited] = useState(false); // State to track if user manually edited distance
+
+  // Table styles
+  const tableStyles = {
+    "& .MuiTableRow-root:hover": {
+      backgroundColor: "#fafafa",
+    },
+    "& .MuiTableCell-root": {
+      py: 1.5,
+    },
+    "& .MuiChip-root": {
+      maxWidth: "100%",
+    },
+  };
 
   // Cardio Session States
   const [cardioSessions, setCardioSessions] = useState([
@@ -345,6 +362,8 @@ export default function Dashboard() {
     let totalDuration = 0;
     let totalDistance = 0;
     let avgSpeed = 0;
+    let totalSpeed = 0;
+    let speedCount = 0;
 
     cardioSessions.forEach((session) => {
       const dur = parseFloat(session.duration) || 0;
@@ -355,11 +374,18 @@ export default function Dashboard() {
       if (dur > 0 && spd > 0) {
         const sessionDistance = spd * (dur / 60);
         totalDistance += sessionDistance;
+        totalSpeed += spd;
+        speedCount++;
       }
     });
 
     if (totalDuration > 0) {
       avgSpeed = totalDistance / (totalDuration / 60) || 0;
+    }
+
+    // Calculate simple average speed if we have speed data (for cycle and airbike)
+    if (speedCount > 0 && avgSpeed === 0) {
+      avgSpeed = totalSpeed / speedCount;
     }
 
     return {
@@ -857,8 +883,13 @@ export default function Dashboard() {
         resistance: parseFloat(session.resistance) || null,
       }));
 
-      // Save average speed for display
-      if (totals.avgSpeed > 0) {
+      // Save average speed for display when relevant
+      if (
+        totals.avgSpeed > 0 &&
+        (cardioType === "treadmill" ||
+          cardioType === "cycle" ||
+          cardioType === "airbike")
+      ) {
         cardioPayload.avgSpeed = totals.avgSpeed;
       }
 
@@ -1607,21 +1638,18 @@ export default function Dashboard() {
           >
             Today
           </Button>
-
           <Button
             variant={workoutFilter === "week" ? "contained" : "outlined"}
             onClick={() => setWorkoutFilter("week")}
           >
             This Week
           </Button>
-
           <Button
             variant={workoutFilter === "month" ? "contained" : "outlined"}
             onClick={() => setWorkoutFilter("month")}
           >
             This Month
           </Button>
-
           <Button
             variant={workoutFilter === "all" ? "contained" : "outlined"}
             onClick={() => setWorkoutFilter("all")}
@@ -1630,25 +1658,45 @@ export default function Dashboard() {
           </Button>
         </Box>
 
-        <TableContainer component={Paper}>
+        <TableContainer component={Paper} sx={tableStyles}>
           <Table>
             <TableHead>
-              <TableRow>
-                <TableCell>Date</TableCell>
-                <TableCell>Exercise</TableCell>
-                <TableCell>Details</TableCell>
-                <TableCell>Total Reps</TableCell>
-                <TableCell>Total Weight (kg)</TableCell>
-                <TableCell>Calories</TableCell>
-                <TableCell>Actions</TableCell>
+              <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+                <TableCell sx={{ fontWeight: "bold", pr: 8 }}>Date</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Exercise</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Details</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }} align="center">
+                  Total Reps
+                </TableCell>
+                <TableCell sx={{ fontWeight: "bold" }} align="center">
+                  Total Weight
+                </TableCell>
+                <TableCell sx={{ fontWeight: "bold" }} align="center">
+                  Calories
+                </TableCell>
+                <TableCell sx={{ fontWeight: "bold" }} align="center">
+                  Actions
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {/* No workouts found message */}
               {getFilteredWorkouts().length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    No workouts found for this period 💤
+                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                    <Box sx={{ textAlign: "center" }}>
+                      <Typography color="text.secondary" sx={{ mb: 1 }}>
+                        No workouts found for this period 💤
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        startIcon={<FitnessCenterIcon />}
+                        onClick={() => setOpenWorkout(true)}
+                        size="small"
+                      >
+                        Add Your First Workout
+                      </Button>
+                    </Box>
                   </TableCell>
                 </TableRow>
               )}
@@ -1663,7 +1711,9 @@ export default function Dashboard() {
                           colSpan={7}
                           sx={{
                             fontWeight: "bold",
-                            backgroundColor: "#f0f0f0",
+                            backgroundColor: "#e8f4fd",
+                            fontSize: "0.95rem",
+                            py: 1,
                           }}
                         >
                           {day}
@@ -1671,201 +1721,463 @@ export default function Dashboard() {
                       </TableRow>
 
                       {/* Workout rows */}
-                      {getFilteredWorkouts().map((row) => (
+                      {workouts.map((row) => (
                         <TableRow key={row.id} hover>
                           <TableCell>
-                            {format(parseISO(row.date), "dd-MM-yyyy")}
+                            <Typography variant="body2" fontWeight="medium">
+                              {format(parseISO(row.date), "dd-MM-yyyy")}
+                            </Typography>
                           </TableCell>
+
                           <TableCell>
                             <Box>
-                              <Typography variant="body2">
+                              <Typography variant="body2" fontWeight="medium">
                                 {row.exercise || "--"}
                               </Typography>
-                              {row.workoutType === "cardio"}
                             </Box>
                           </TableCell>
+
                           <TableCell>
                             {row.workoutType === "strength" ? (
                               row.sets ? (
                                 <Box>
-                                  <Typography variant="body2">
-                                    {row.sets.length} sets
-                                  </Typography>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                  >
-                                    {row.sets.map((set, idx) => (
-                                      <span key={idx}>
-                                        {set.reps}×{set.weight?.toFixed(1)}
-                                        {idx < row.sets.length - 1 ? ", " : ""}
-                                      </span>
-                                    ))}
-                                  </Typography>
+                                  {/* Duration/Stats Row */}
+                                  <Box sx={{ mb: 1 }}>
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 1,
+                                        mb: 0.5,
+                                      }}
+                                    >
+                                      <Chip
+                                        label={
+                                          <>
+                                            {row.sets.length}{" "}
+                                            {row.sets.length === 1
+                                              ? "set"
+                                              : "sets"}
+                                          </>
+                                        }
+                                        size="small"
+                                        variant="outlined"
+                                        color="warning"
+                                        icon={
+                                          <FitnessCenterIcon
+                                            fontSize="small"
+                                            color="warning"
+                                          />
+                                        }
+                                      />
+                                    </Box>
+                                  </Box>
+
+                                  {/* Sets Display - Paper Style */}
+                                  {row.sets && (
+                                    <Box sx={{ mb: 1 }}>
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        display="block"
+                                        sx={{ mb: 0.5 }}
+                                      >
+                                        {row.sets.length}{" "}
+                                        {row.sets.length === 1 ? "set" : "sets"}
+                                        :
+                                      </Typography>
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          flexDirection: "column",
+                                          gap: 0.5,
+                                          maxHeight:
+                                            row.sets.length > 3
+                                              ? "120px"
+                                              : "none",
+                                          overflowY:
+                                            row.sets.length > 3
+                                              ? "auto"
+                                              : "visible",
+                                          pr: row.sets.length > 3 ? 1 : 0,
+                                        }}
+                                      >
+                                        {row.sets.map((set, idx) => (
+                                          <Paper
+                                            key={idx}
+                                            variant="outlined"
+                                            sx={{
+                                              p: 0.5,
+                                              backgroundColor: "#f9f9f9",
+                                              borderLeft: "3px solid",
+                                              borderLeftColor:
+                                                idx % 2 === 0
+                                                  ? "#1976d2"
+                                                  : "#2e7d32",
+                                            }}
+                                          >
+                                            <Typography
+                                              variant="caption"
+                                              component="div"
+                                            >
+                                              <Box
+                                                sx={{
+                                                  display: "flex",
+                                                  alignItems: "center",
+                                                  gap: 1,
+                                                  flexWrap: "wrap",
+                                                }}
+                                              >
+                                                <span
+                                                  style={{
+                                                    fontWeight: "bold",
+                                                    minWidth: "40px",
+                                                  }}
+                                                >
+                                                  Set {set.setNumber}
+                                                </span>
+
+                                                <span>•</span>
+                                                <span
+                                                  style={{ fontWeight: "bold" }}
+                                                >
+                                                  {set.reps} reps
+                                                </span>
+
+                                                <span>×</span>
+                                                <span
+                                                  style={{
+                                                    fontWeight: "bold",
+                                                    color: "#1976d2",
+                                                  }}
+                                                >
+                                                  {set.weight?.toFixed(1)} kg
+                                                </span>
+
+                                                {/* Optional: Show total for this set */}
+                                                {set.reps && set.weight && (
+                                                  <>
+                                                    <span>•</span>
+                                                    <span
+                                                      style={{
+                                                        color: "#2e7d32",
+                                                      }}
+                                                    >
+                                                      Total:{" "}
+                                                      {(
+                                                        set.reps * set.weight
+                                                      ).toFixed(1)}{" "}
+                                                      kg
+                                                    </span>
+                                                  </>
+                                                )}
+                                              </Box>
+                                            </Typography>
+                                          </Paper>
+                                        ))}
+                                      </Box>
+                                    </Box>
+                                  )}
+
+                                  {/* Calories with color coding */}
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 0.5,
+                                      mt: 0.5,
+                                    }}
+                                  ></Box>
                                 </Box>
                               ) : (
                                 "--"
                               )
                             ) : (
                               <Box>
-                                {row.sessions ? (
-                                  // Show sessions if available
-                                  <Box>
-                                    <Typography variant="body2">
-                                      {row.duration} min total
-                                      {row.avgSpeed &&
-                                        row.cardioType === "treadmill" &&
-                                        ` • Avg ${row.avgSpeed} ${row.speedUnit || "km/h"}`}
-                                    </Typography>
+                                {/* Duration and Stats Row */}
+                                <Box sx={{ mb: 1 }}>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 1,
+                                      mb: 0.5,
+                                    }}
+                                  >
+                                    <Chip
+                                      label={`${row.duration} ${"mins"}`}
+                                      size="small"
+                                      variant="outlined"
+                                      color="primary"
+                                      icon={<AccessTimeIcon fontSize="small" />}
+                                    />
+
+                                    {/* Average Speed for relevant equipment */}
+                                    {row.avgSpeed &&
+                                      row.avgSpeed > 0 &&
+                                      (row.cardioType === "treadmill" ||
+                                        row.cardioType === "cycle" ||
+                                        row.cardioType === "airbike") && (
+                                        <Chip
+                                          label={`Avg ${row.avgSpeed.toFixed(1)} ${
+                                            row.cardioType === "treadmill"
+                                              ? row.speedUnit || "km/h"
+                                              : "RPM"
+                                          }`}
+                                          size="small"
+                                          variant="outlined"
+                                          color="primary"
+                                        />
+                                      )}
+
+                                    {/* Distance if available */}
+                                    {row.distance && (
+                                      <Chip
+                                        label={`${row.distance} ${row.distanceUnit}`}
+                                        size="small"
+                                        variant="outlined"
+                                        color="success"
+                                        icon={
+                                          <DirectionsRunIcon fontSize="small" />
+                                        }
+                                      />
+                                    )}
+                                  </Box>
+                                </Box>
+
+                                {/* Sessions */}
+                                {row.sessions && (
+                                  <Box sx={{ mb: 1 }}>
                                     <Typography
                                       variant="caption"
                                       color="text.secondary"
                                       display="block"
+                                      sx={{ mb: 0.5 }}
                                     >
-                                      {row.sessions.length} session
-                                      {row.sessions.length > 1 ? "s" : ""}:
-                                      {row.sessions.map((session, idx) => {
-                                        const sessionParts = [];
-
-                                        // Duration (always shown)
-                                        sessionParts.push(
-                                          `${session.duration}min`,
-                                        );
-
-                                        // Speed - only for treadmill, cycle, and airbike when speed exists
-                                        if (
-                                          (row.cardioType === "treadmill" ||
-                                            row.cardioType === "cycle" ||
-                                            row.cardioType === "airbike") &&
-                                          session.speed
-                                        ) {
-                                          const speedUnit =
-                                            row.speedUnit ||
-                                            (row.cardioType === "treadmill"
-                                              ? "km/h"
-                                              : "RPM");
-                                          sessionParts.push(
-                                            `@ ${session.speed} ${speedUnit}`,
-                                          );
-                                        }
-
-                                        // Incline - only for treadmill when incline exists
-                                        if (
-                                          row.cardioType === "treadmill" &&
-                                          session.incline
-                                        ) {
-                                          sessionParts.push(
-                                            `${session.incline}%`,
-                                          );
-                                        }
-
-                                        // Resistance - for equipment that supports it, when resistance exists
-                                        const resistanceEquipment = [
-                                          "crosstrainer",
-                                          "cycle",
-                                          "airbike",
-                                          "stairmaster",
-                                          "rowing",
-                                        ];
-                                        if (
-                                          resistanceEquipment.includes(
-                                            row.cardioType,
-                                          ) &&
-                                          session.resistance
-                                        ) {
-                                          sessionParts.push(
-                                            `Level ${session.resistance}`,
-                                          );
-                                        }
-
-                                        return (
-                                          <span key={idx}>
-                                            {sessionParts.join(" ")}
-                                            {idx < row.sessions.length - 1
-                                              ? " + "
-                                              : ""}
-                                          </span>
-                                        );
-                                      })}
+                                      {row.sessions.length}{" "}
+                                      {row.sessions.length === 1
+                                        ? "session"
+                                        : "sessions"}
+                                      :
                                     </Typography>
-                                    {row.distance && (
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                      >
-                                        {row.distance} {row.distanceUnit}
-                                      </Typography>
-                                    )}
-                                  </Box>
-                                ) : (
-                                  // Fallback to single session display
-                                  <Box>
-                                    <Typography variant="body2">
-                                      {row.duration} min
-                                      {row.speed &&
-                                        (row.cardioType === "treadmill" ||
-                                          row.cardioType === "cycle" ||
-                                          row.cardioType === "airbike") &&
-                                        ` • ${row.speed} ${row.speedUnit || (row.cardioType === "treadmill" ? "km/h" : "RPM")}`}
-                                      {row.incline &&
-                                        row.cardioType === "treadmill" &&
-                                        ` • ${row.incline}% incline`}
-                                      {row.resistance &&
-                                        (row.cardioType === "crosstrainer" ||
-                                          row.cardioType === "cycle" ||
-                                          row.cardioType === "airbike" ||
-                                          row.cardioType === "stairmaster" ||
-                                          row.cardioType === "rowing") &&
-                                        ` • Level ${row.resistance}`}
-                                    </Typography>
-                                    {row.distance && (
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                      >
-                                        {row.distance} {row.distanceUnit}
-                                      </Typography>
-                                    )}
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: 0.5,
+                                        maxHeight:
+                                          row.sessions.length > 3
+                                            ? "120px"
+                                            : "none",
+                                        overflowY:
+                                          row.sessions.length > 3
+                                            ? "auto"
+                                            : "visible",
+                                        pr: row.sessions.length > 3 ? 1 : 0,
+                                      }}
+                                    >
+                                      {row.sessions.map((session, idx) => (
+                                        <Paper
+                                          key={idx}
+                                          variant="outlined"
+                                          sx={{
+                                            p: 0.5,
+                                            backgroundColor: "#f9f9f9",
+                                            borderLeft: "3px solid",
+                                            borderLeftColor:
+                                              idx % 2 === 0
+                                                ? "#1976d2"
+                                                : "#2e7d32",
+                                          }}
+                                        >
+                                          <Typography
+                                            variant="caption"
+                                            component="div"
+                                          >
+                                            <Box
+                                              sx={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 1,
+                                                flexWrap: "wrap",
+                                              }}
+                                            >
+                                              <span
+                                                style={{
+                                                  fontWeight: "bold",
+                                                  minWidth: "40px",
+                                                }}
+                                              >
+                                                {session.duration} min
+                                              </span>
+
+                                              {(row.cardioType ===
+                                                "treadmill" ||
+                                                row.cardioType === "cycle" ||
+                                                row.cardioType === "airbike") &&
+                                                session.speed && (
+                                                  <>
+                                                    <span>@</span>
+                                                    <span
+                                                      style={{
+                                                        fontWeight: "bold",
+                                                      }}
+                                                    >
+                                                      {session.speed}{" "}
+                                                      {row.cardioType ===
+                                                      "treadmill"
+                                                        ? row.speedUnit ||
+                                                          "km/h"
+                                                        : "RPM"}
+                                                    </span>
+                                                  </>
+                                                )}
+
+                                              {row.cardioType === "treadmill" &&
+                                                session.incline && (
+                                                  <>
+                                                    <span>•</span>
+                                                    <span>
+                                                      {session.incline}% incline
+                                                    </span>
+                                                  </>
+                                                )}
+
+                                              {session.resistance && (
+                                                <>
+                                                  <span>•</span>
+                                                  <span>
+                                                    Level {session.resistance}
+                                                  </span>
+                                                </>
+                                              )}
+                                            </Box>
+                                          </Typography>
+                                        </Paper>
+                                      ))}
+                                    </Box>
                                   </Box>
                                 )}
-                                <Typography
-                                  variant="caption"
-                                  display="block"
-                                  color="text.secondary"
+                                {/* Intensity with color coding */}
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
+                                    mt: 0.5,
+                                  }}
                                 >
-                                  {row.intensity} intensity
-                                </Typography>
+                                  <WhatshotIcon
+                                    fontSize="small"
+                                    sx={{
+                                      color:
+                                        row.intensity === "vigorous"
+                                          ? "error.main"
+                                          : row.intensity === "moderate"
+                                            ? "warning.main"
+                                            : "success.main",
+                                    }}
+                                  />
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      fontWeight: "medium",
+                                      color:
+                                        row.intensity === "vigorous"
+                                          ? "error.main"
+                                          : row.intensity === "moderate"
+                                            ? "warning.main"
+                                            : "success.main",
+                                      textTransform: "capitalize",
+                                    }}
+                                  >
+                                    {row.intensity} intensity
+                                  </Typography>
+                                </Box>
                               </Box>
                             )}
                           </TableCell>
-                          <TableCell>
-                            {row.workoutType === "strength"
-                              ? row.totalReps || "--"
-                              : "--"}
+
+                          <TableCell align="center">
+                            {row.workoutType === "strength" ? (
+                              <Typography variant="body2" fontWeight="medium">
+                                {row.totalReps || "--"}
+                              </Typography>
+                            ) : (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                --
+                              </Typography>
+                            )}
                           </TableCell>
-                          <TableCell>
-                            {row.workoutType === "strength"
-                              ? row.totalWeight?.toFixed(1) || "--"
-                              : "--"}
+
+                          <TableCell align="center">
+                            {row.workoutType === "strength" ? (
+                              <Typography variant="body2" fontWeight="medium">
+                                {row.totalWeight?.toFixed(1) || "--"} kg
+                              </Typography>
+                            ) : (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                --
+                              </Typography>
+                            )}
                           </TableCell>
-                          <TableCell>{row.calories || "--"}</TableCell>
-                          <TableCell>
-                            <IconButton
-                              disabled={!isToday(row.date)}
-                              size="small"
-                              color="primary"
-                              onClick={() => openEditWorkout(row)}
+
+                          <TableCell align="center">
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
                             >
-                              <EditIcon />
-                            </IconButton>
-                            <IconButton
-                              disabled={!isToday(row.date)}
-                              size="small"
-                              color="error"
-                              onClick={() => setDeleteTarget(row)}
+                              <WhatshotIcon
+                                fontSize="small"
+                                color="error"
+                                sx={{ mr: 0.5 }}
+                              />
+                              <Typography
+                                variant="body2"
+                                fontWeight="medium"
+                                color="error.main"
+                              >
+                                {row.calories || "--"}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+
+                          <TableCell align="center">
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "center",
+                                gap: 0.5,
+                              }}
                             >
-                              <DeleteIcon />
-                            </IconButton>
+                              <IconButton
+                                disabled={!isToday(row.date)}
+                                size="small"
+                                color="primary"
+                                onClick={() => openEditWorkout(row)}
+                                title="Edit workout"
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                disabled={!isToday(row.date)}
+                                size="small"
+                                color="error"
+                                onClick={() => setDeleteTarget(row)}
+                                title="Delete workout"
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -2271,9 +2583,10 @@ export default function Dashboard() {
                     }}
                   />
                   <IconButton
-                    onClick={() => removeSet(index)}
                     disabled={sets.length === 1}
                     size="small"
+                    color="error"
+                    onClick={() => removeSet(index)}
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
@@ -2384,8 +2697,9 @@ export default function Dashboard() {
                       </Typography>
                       {cardioSessions.length > 1 && (
                         <IconButton
-                          onClick={() => removeCardioSession(session.id)}
                           size="small"
+                          color="error"
+                          onClick={() => removeCardioSession(session.id)}
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
