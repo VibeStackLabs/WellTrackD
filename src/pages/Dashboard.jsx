@@ -523,63 +523,130 @@ export default function Dashboard() {
     const totals = calculateCardioTotals();
     let totalDistance = totals.totalDistance;
 
-    // Adjust for incline if treadmill
-    if (cardioType === "treadmill") {
-      // Calculate weighted incline for all sessions
-      let totalInclineEffect = 0;
-      let totalWeightedDuration = 0;
+    // If we have speed-based distance, use it
+    if (totalDistance > 0) {
+      // Adjust for incline if treadmill
+      if (cardioType === "treadmill") {
+        // Calculate weighted incline for all sessions
+        let totalInclineEffect = 0;
+        let totalWeightedDuration = 0;
+
+        cardioSessions.forEach((session) => {
+          const dur = parseFloat(session.duration) || 0;
+          const inc = parseFloat(session.incline) || 0;
+
+          if (dur > 0) {
+            totalInclineEffect += inc * dur;
+            totalWeightedDuration += dur;
+          }
+        });
+
+        // Calculate average incline
+        const avgIncline =
+          totalWeightedDuration > 0
+            ? totalInclineEffect / totalWeightedDuration
+            : 0;
+
+        // Apply incline factor to total distance
+        if (avgIncline > 0) {
+          const inclineFactor = 1 + avgIncline * 0.008;
+          totalDistance *= inclineFactor;
+        }
+      }
+
+      // Convert to selected distance unit
+      const calculatedDistance = Math.round(totalDistance * 100) / 100;
+
+      // If speed is in mph but distance unit is km, convert
+      if (speedUnit === "mph" && distanceUnit === "km") {
+        return Math.round(calculatedDistance * 1.60934 * 100) / 100;
+      }
+
+      // If speed is in km/h but distance unit is miles, convert
+      if (speedUnit === "km/h" && distanceUnit === "miles") {
+        return Math.round(calculatedDistance * 0.621371 * 100) / 100;
+      }
+
+      return calculatedDistance;
+    }
+
+    // For equipment without speed, calculate distance based on resistance and duration
+    if (
+      ["crosstrainer", "stairmaster", "rowing", "cycle", "airbike"].includes(
+        cardioType,
+      )
+    ) {
+      let estimatedDistance = 0;
 
       cardioSessions.forEach((session) => {
         const dur = parseFloat(session.duration) || 0;
-        const inc = parseFloat(session.incline) || 0;
+        const res = parseFloat(session.resistance) || 1;
 
-        if (dur > 0) {
-          totalInclineEffect += inc * dur;
-          totalWeightedDuration += dur;
+        if (dur <= 0) return;
+
+        // Different distance estimation formulas for each equipment
+        switch (cardioType) {
+          case "crosstrainer":
+            // Elliptical: resistance affects stride length
+            estimatedDistance += (dur / 60) * (2.0 + res * 0.3); // km per hour estimation
+            break;
+          case "stairmaster":
+            // Stair climber: resistance affects steps per minute
+            estimatedDistance += (dur / 60) * (0.5 + res * 0.15); // vertical km estimation
+            break;
+          case "rowing":
+            // Rowing machine: resistance affects meters per stroke
+            estimatedDistance += (dur / 60) * (3.0 + res * 0.4); // km per hour estimation
+            break;
+          case "cycle":
+            // Stationary bike: resistance affects simulated distance
+            estimatedDistance += (dur / 60) * (15 + res * 2); // km per hour estimation
+            break;
+          case "airbike":
+            // Air bike: resistance and speed affect distance
+            const spd = parseFloat(session.speed) || 0;
+            estimatedDistance += (dur / 60) * (spd * 0.06 + res * 0.5); // km per hour estimation
+            break;
         }
       });
 
-      // Calculate average incline
-      const avgIncline =
-        totalWeightedDuration > 0
-          ? totalInclineEffect / totalWeightedDuration
-          : 0;
+      if (estimatedDistance > 0) {
+        // Convert to selected distance unit
+        const calculatedDistance = Math.round(estimatedDistance * 100) / 100;
 
-      // Apply incline factor to total distance
-      if (avgIncline > 0) {
-        const inclineFactor = 1 + avgIncline * 0.008;
-        totalDistance *= inclineFactor;
+        if (distanceUnit === "miles") {
+          return Math.round(calculatedDistance * 0.621371 * 100) / 100;
+        }
+        return calculatedDistance;
       }
     }
 
-    // Convert to selected distance unit
-    const calculatedDistance = Math.round(totalDistance * 100) / 100;
-
-    // If speed is in mph but distance unit is km, convert
-    if (speedUnit === "mph" && distanceUnit === "km") {
-      return Math.round(calculatedDistance * 1.60934 * 100) / 100;
-    }
-
-    // If speed is in km/h but distance unit is miles, convert
-    if (speedUnit === "km/h" && distanceUnit === "miles") {
-      return Math.round(calculatedDistance * 0.621371 * 100) / 100;
-    }
-
-    return calculatedDistance;
+    return "";
   };
 
   useEffect(() => {
     if (workoutType === "cardio") {
-      // Always using sessions now
       // Check if any session has valid data for distance calculation
       let hasValidDataForDistance = false;
 
       cardioSessions.forEach((session) => {
         const dur = parseFloat(session.duration) || 0;
         const spd = parseFloat(session.speed) || 0;
+        const res = parseFloat(session.resistance) || 0;
 
-        if (dur > 0 && spd > 0) {
-          hasValidDataForDistance = true;
+        // For speed-based equipment: need duration AND speed
+        if (["treadmill", "cycle", "airbike"].includes(cardioType)) {
+          if (dur > 0 && spd > 0) {
+            hasValidDataForDistance = true;
+          }
+        }
+        // For resistance-only equipment: need duration
+        else if (
+          ["crosstrainer", "stairmaster", "rowing"].includes(cardioType)
+        ) {
+          if (dur > 0) {
+            hasValidDataForDistance = true;
+          }
         }
       });
 
@@ -594,6 +661,16 @@ export default function Dashboard() {
       }
     }
   }, [cardioType, workoutType, isDistanceEdited, cardioSessions]);
+
+  // useEffect to recalculate distance when sessions change
+  useEffect(() => {
+    if (workoutType === "cardio" && !isDistanceEdited) {
+      const calculatedDist = calculateAutoDistance();
+      if (calculatedDist) {
+        setDistance(calculatedDist.toString());
+      }
+    }
+  }, [cardioSessions, cardioType, speedUnit]);
 
   useEffect(() => {
     if (workoutType === "strength") {
@@ -1637,7 +1714,8 @@ export default function Dashboard() {
                                     <Typography variant="body2">
                                       {row.duration} min total
                                       {row.avgSpeed &&
-                                        ` • Avg ${row.avgSpeed} ${row.speedUnit || (row.cardioType === "treadmill" ? "km/h" : "RPM")}`}
+                                        row.cardioType === "treadmill" &&
+                                        ` • Avg ${row.avgSpeed} ${row.speedUnit || "km/h"}`}
                                     </Typography>
                                     <Typography
                                       variant="caption"
@@ -1646,27 +1724,78 @@ export default function Dashboard() {
                                     >
                                       {row.sessions.length} session
                                       {row.sessions.length > 1 ? "s" : ""}:
-                                      {row.sessions.map((session, idx) => (
-                                        <span key={idx}>
-                                          {session.duration}min @{" "}
-                                          {session.speed || "?"}
-                                          {row.speedUnit
-                                            ? ` ${row.speedUnit}`
-                                            : row.cardioType === "treadmill"
-                                              ? " km/h"
-                                              : " RPM"}
-                                          {session.incline
-                                            ? ` ${session.incline}%`
-                                            : ""}
-                                          {session.resistance
-                                            ? ` • Level ${session.resistance}`
-                                            : ""}
-                                          {idx < row.sessions.length - 1
-                                            ? " + "
-                                            : ""}
-                                        </span>
-                                      ))}
+                                      {row.sessions.map((session, idx) => {
+                                        const sessionParts = [];
+
+                                        // Duration (always shown)
+                                        sessionParts.push(
+                                          `${session.duration}min`,
+                                        );
+
+                                        // Speed - only for treadmill, cycle, and airbike when speed exists
+                                        if (
+                                          (row.cardioType === "treadmill" ||
+                                            row.cardioType === "cycle" ||
+                                            row.cardioType === "airbike") &&
+                                          session.speed
+                                        ) {
+                                          const speedUnit =
+                                            row.speedUnit ||
+                                            (row.cardioType === "treadmill"
+                                              ? "km/h"
+                                              : "RPM");
+                                          sessionParts.push(
+                                            `@ ${session.speed} ${speedUnit}`,
+                                          );
+                                        }
+
+                                        // Incline - only for treadmill when incline exists
+                                        if (
+                                          row.cardioType === "treadmill" &&
+                                          session.incline
+                                        ) {
+                                          sessionParts.push(
+                                            `${session.incline}%`,
+                                          );
+                                        }
+
+                                        // Resistance - for equipment that supports it, when resistance exists
+                                        const resistanceEquipment = [
+                                          "crosstrainer",
+                                          "cycle",
+                                          "airbike",
+                                          "stairmaster",
+                                          "rowing",
+                                        ];
+                                        if (
+                                          resistanceEquipment.includes(
+                                            row.cardioType,
+                                          ) &&
+                                          session.resistance
+                                        ) {
+                                          sessionParts.push(
+                                            `Level ${session.resistance}`,
+                                          );
+                                        }
+
+                                        return (
+                                          <span key={idx}>
+                                            {sessionParts.join(" ")}
+                                            {idx < row.sessions.length - 1
+                                              ? " + "
+                                              : ""}
+                                          </span>
+                                        );
+                                      })}
                                     </Typography>
+                                    {row.distance && (
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        {row.distance} {row.distanceUnit}
+                                      </Typography>
+                                    )}
                                   </Box>
                                 ) : (
                                   // Fallback to single session display
@@ -2454,13 +2583,24 @@ export default function Dashboard() {
                       {calculateCardioTotals().totalDuration} min
                     </Typography>
                   </Box>
-                  {cardioType === "treadmill" && (
+                  {cardioType === "treadmill" &&
+                    calculateCardioTotals().avgSpeed > 0 && (
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Average Speed
+                        </Typography>
+                        <Typography variant="body1">
+                          {calculateCardioTotals().avgSpeed} km/h
+                        </Typography>
+                      </Box>
+                    )}
+                  {distance && (
                     <Box>
                       <Typography variant="caption" color="text.secondary">
-                        Average Speed
+                        Estimated Distance
                       </Typography>
                       <Typography variant="body1">
-                        {calculateCardioTotals().avgSpeed} km/h
+                        {distance} {distanceUnit}
                       </Typography>
                     </Box>
                   )}
