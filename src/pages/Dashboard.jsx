@@ -958,7 +958,9 @@ export default function Dashboard() {
     setWorkouts((prev) => prev.filter((w) => w.id !== deleteTarget.id));
 
     const deleted = deleteTarget;
+    setLastDeleted(deleteTarget);
     setDeleteTarget(null);
+    setSnackbarOpen(true);
 
     try {
       await deleteDoc(doc(db, "users", userId, "workouts", deleted.id));
