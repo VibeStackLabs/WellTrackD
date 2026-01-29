@@ -1290,7 +1290,6 @@ export default function Dashboard() {
             mb: 3,
             borderLeft: "6px solid",
             borderColor: "warning.main",
-            backgroundColor: "warning.light",
           }}
         >
           <CardContent>
@@ -1336,7 +1335,7 @@ export default function Dashboard() {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 1.8 }}>
+        <Grid size={{ xs: 12, sm: 2 }}>
           <Card
             variant="outlined"
             sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
@@ -1361,7 +1360,7 @@ export default function Dashboard() {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 2.2 }}>
+        <Grid size={{ xs: 12, sm: 2.4 }}>
           <Card
             variant="outlined"
             sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
@@ -1384,7 +1383,7 @@ export default function Dashboard() {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 2 }}>
+        <Grid size={{ xs: 12, sm: 2.3 }}>
           <Card
             variant="outlined"
             sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
