@@ -1612,11 +1612,15 @@ export default function Dashboard() {
                 label={{ value: "BMI", angle: 90, position: "insideRight" }}
               />
               <Tooltip
-                formatter={(value, name) =>
-                  name === "weight"
-                    ? [`${Number(value).toFixed(1)} kg`, "Weight"]
-                    : [Number(value).toFixed(1), "BMI"]
-                }
+                formatter={(value, name) => {
+                  // Explicitly handle each data series
+                  if (name === "weight") {
+                    return [`${Number(value).toFixed(1)} kg`, "Weight"];
+                  } else if (name === "bmi") {
+                    return [Number(value).toFixed(1), "BMI"];
+                  }
+                  return [value, name];
+                }}
                 labelFormatter={(label) =>
                   format(new Date(label), "dd-MM-yyyy")
                 }
