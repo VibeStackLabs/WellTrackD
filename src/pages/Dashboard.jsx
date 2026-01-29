@@ -1,6 +1,6 @@
 import React from "react";
 import { useState, useEffect } from "react";
-import { db, auth } from "../firebase";
+import { db, auth, enableOfflineSupport, isOnline } from "../firebase";
 import {
   collection,
   addDoc,
@@ -43,6 +43,8 @@ import {
   ButtonGroup,
   InputAdornment,
   Chip,
+  CircularProgress,
+  Divider,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
@@ -54,6 +56,10 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import DirectionsRunIcon from "@mui/icons-material/DirectionsRun";
 import WhatshotIcon from "@mui/icons-material/Whatshot";
 import IconButton from "@mui/material/IconButton";
+import { ListItemIcon, ListItemText } from "@mui/material";
+import SyncIcon from "@mui/icons-material/Sync";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import LogoutIcon from "@mui/icons-material/Logout";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import {
@@ -136,6 +142,17 @@ export default function Dashboard() {
   const [openBMI, setOpenBMI] = useState(false);
   const [openWorkout, setOpenWorkout] = useState(false);
 
+  // Sync State
+  const [isOffline, setIsOffline] = useState(false);
+  const [hasPersistentData, setHasPersistentData] = useState(false);
+  const [syncQueue, setSyncQueue] = useState([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [localCache, setLocalCache] = useState({
+    workouts: [],
+    bmiEntries: [],
+    profile: null,
+  });
+
   // Listen to auth
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((user) => {
@@ -145,7 +162,54 @@ export default function Dashboard() {
     return () => unsub();
   }, []);
 
-  // Fetch Profile
+  // Offline support initialization and network listener
+  useEffect(() => {
+    // Offline support initialization and network listener
+    const initializeOfflineSupport = async () => {
+      try {
+        await enableOfflineSupport();
+
+        // Check if we have cached data in localStorage (for our custom cache)
+        const cachedWorkouts = localStorage.getItem("cachedWorkouts");
+        const cachedBMI = localStorage.getItem("cachedBMI");
+        const cachedProfile = localStorage.getItem("cachedProfile");
+
+        if (cachedWorkouts || cachedBMI || cachedProfile) {
+          setHasPersistentData(true);
+        }
+      } catch (err) {
+        console.error("Error initializing offline support:", err);
+      }
+    };
+
+    initializeOfflineSupport();
+
+    // Set up network status listeners
+    const handleOnline = () => {
+      setIsOffline(false);
+      // Try to sync queued operations when coming back online
+      if (syncQueue.length > 0) {
+        processSyncQueue();
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOffline(true);
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    // Set initial network status
+    setIsOffline(!isOnline());
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [syncQueue]);
+
+  // Fetch Profile with offline support
   const fetchProfile = async () => {
     if (!userId) return;
     try {
@@ -154,6 +218,10 @@ export default function Dashboard() {
       if (snap.exists()) {
         const p = snap.data();
         setProfile(p);
+
+        // Cache profile
+        localStorage.setItem("cachedProfile", JSON.stringify(p));
+        setLocalCache((prev) => ({ ...prev, profile: p }));
 
         if (p.heightUnit === "cm") {
           setHeightCm(p.heightCm || "");
@@ -166,14 +234,129 @@ export default function Dashboard() {
       }
     } catch (err) {
       console.error("Error fetching profile:", err);
+
+      // Try to load from cache
+      if (isOffline || err.code === "unavailable") {
+        const cachedProfile = localStorage.getItem("cachedProfile");
+        if (cachedProfile) {
+          const p = JSON.parse(cachedProfile);
+          setProfile(p);
+          // Apply height settings from cache
+          if (p.heightUnit === "cm") {
+            setHeightCm(p.heightCm || "");
+            setHeightUnit("cm");
+          } else if (p.heightUnit === "ft/in") {
+            setHeightFt(p.heightFt || "");
+            setHeightIn(p.heightIn || "");
+            setHeightUnit("ft/in");
+          }
+        }
+      }
     }
   };
 
-  // Fetch Data
+  // Process queued operations when back online
+  const processSyncQueue = async () => {
+    if (!userId || !syncQueue.length || isSyncing) return;
+
+    setIsSyncing(true);
+
+    try {
+      for (const operation of syncQueue) {
+        switch (operation.type) {
+          case "addWorkout":
+            await addDoc(
+              collection(db, "users", userId, "workouts"),
+              operation.data,
+            );
+            break;
+
+          case "updateWorkout":
+            await updateDoc(
+              doc(db, "users", userId, "workouts", operation.id),
+              operation.data,
+            );
+            break;
+
+          case "deleteWorkout":
+            await deleteDoc(doc(db, "users", userId, "workouts", operation.id));
+            break;
+
+          case "addBMI":
+            await addDoc(
+              collection(db, "users", userId, "bodyMetrics"),
+              operation.data,
+            );
+            break;
+
+          case "updateProfile":
+            await setDoc(doc(db, "users", userId), operation.data, {
+              merge: true,
+            });
+            break;
+        }
+      }
+
+      // Clear the queue after successful sync
+      setSyncQueue([]);
+      // Refresh data from server
+      fetchData();
+    } catch (err) {
+      console.error("Error syncing queued operations:", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Clear cache function
+  const clearLocalCache = () => {
+    if (
+      window.confirm(
+        "Clear all locally cached data?\n\n" +
+          "This will remove: \n" +
+          "• Cached workouts\n" +
+          "• Cached BMI data\n" +
+          "• Cached profile\n" +
+          "• Sync queue\n\n" +
+          "You'll need internet connection to reload data.",
+      )
+    ) {
+      // Clear localStorage
+      localStorage.removeItem("cachedWorkouts");
+      localStorage.removeItem("cachedBMI");
+      localStorage.removeItem("cachedProfile");
+
+      // Clear sync queue
+      setSyncQueue([]);
+
+      // Update state
+      setHasPersistentData(false);
+
+      // Show success message in snackbar
+      setSnackbarMessage("Cache cleared successfully");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+
+      // If online, fetch fresh data
+      if (isOnline()) {
+        fetchData();
+      }
+    }
+  };
+
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  const [cacheMenuAnchor, setCacheMenuAnchor] = useState(null);
+
+  // Fetch Data with offline support
   const fetchData = async () => {
     if (!userId) return;
     setLoading(true);
+
     try {
+      // Try to fetch from network first
+      const networkAvailable = isOnline();
+
       // Workouts
       const workoutSnap = await getDocs(
         collection(db, "users", userId, "workouts"),
@@ -181,7 +364,11 @@ export default function Dashboard() {
       const workoutData = workoutSnap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
         .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      // Cache the data locally
+      localStorage.setItem("cachedWorkouts", JSON.stringify(workoutData));
       setWorkouts(workoutData);
+      setLocalCache((prev) => ({ ...prev, workouts: workoutData }));
 
       // BMI
       const bmiQuery = query(
@@ -192,9 +379,38 @@ export default function Dashboard() {
       const bmiSnap = await getDocs(bmiQuery);
 
       const bmiData = bmiSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+      // Cache BMI data
+      localStorage.setItem("cachedBMI", JSON.stringify(bmiData));
       setBmiEntries(bmiData);
+      setLocalCache((prev) => ({ ...prev, bmiEntries: bmiData }));
     } catch (err) {
-      console.error("Error fetching data:", err);
+      console.error("Error fetching data from network:", err);
+
+      // If network fails, try to load from cache
+      if (isOffline || err.code === "unavailable") {
+        console.log("Loading from cache...");
+
+        try {
+          // Load workouts from cache
+          const cachedWorkouts = localStorage.getItem("cachedWorkouts");
+          if (cachedWorkouts) {
+            const workoutData = JSON.parse(cachedWorkouts);
+            setWorkouts(workoutData);
+          }
+
+          // Load BMI from cache
+          const cachedBMI = localStorage.getItem("cachedBMI");
+          if (cachedBMI) {
+            const bmiData = JSON.parse(cachedBMI);
+            setBmiEntries(bmiData);
+          }
+
+          setHasPersistentData(true);
+        } catch (cacheErr) {
+          console.error("Error loading from cache:", cacheErr);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -231,7 +447,8 @@ export default function Dashboard() {
     if (bmi === null) return alert("Enter a valid height");
 
     try {
-      await addDoc(collection(db, "users", userId, "bodyMetrics"), {
+      const networkAvailable = isOnline();
+      const bmiData = {
         bodyweight:
           weightUnit === "lbs" ? Number(weight) * 0.453592 : Number(weight),
         height:
@@ -239,30 +456,56 @@ export default function Dashboard() {
             ? Number(heightCm) || null
             : (Number(heightFt) * 12 + Number(heightIn)) * 2.54 || null,
         bmi: Number(bmi),
-        createdAt: serverTimestamp(),
+        createdAt: networkAvailable ? serverTimestamp() : new Date(),
         date: new Date().toISOString().split("T")[0],
-      });
+      };
 
       // Save height permanently
-      if (heightUnit === "cm" && heightCm) {
-        await setDoc(
-          doc(db, "users", userId),
-          { heightUnit: "cm", heightCm },
-          { merge: true },
-        );
-      } else if (heightUnit === "ft/in" && (heightFt || heightIn)) {
-        await setDoc(
-          doc(db, "users", userId),
-          { heightUnit: "ft/in", heightFt, heightIn },
-          { merge: true },
-        );
+      const heightData =
+        heightUnit === "cm" && heightCm
+          ? { heightUnit: "cm", heightCm }
+          : { heightUnit: "ft/in", heightFt, heightIn };
+
+      if (networkAvailable) {
+        // Online - save to Firestore
+        await addDoc(collection(db, "users", userId, "bodyMetrics"), bmiData);
+
+        await setDoc(doc(db, "users", userId), heightData, { merge: true });
+
+        // Update local cache
+        const updatedBMI = [...bmiEntries, { id: "temp", ...bmiData }];
+        localStorage.setItem("cachedBMI", JSON.stringify(updatedBMI));
+      } else {
+        // Offline - queue for sync
+        setSyncQueue((prev) => [
+          ...prev,
+          {
+            type: "addBMI",
+            data: bmiData,
+            timestamp: new Date().toISOString(),
+          },
+          {
+            type: "updateProfile",
+            data: heightData,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+
+        // Update local state optimistically
+        setBmiEntries((prev) => [...prev, { id: "temp-offline", ...bmiData }]);
+        setProfile((prev) => ({ ...prev, ...heightData }));
+
+        alert("✅ BMI entry saved locally. Will sync when online.");
       }
 
       clearBMIForm();
       setOpenBMI(false);
-      fetchData();
+      if (networkAvailable) fetchData();
     } catch (err) {
       console.error("Error adding BMI:", err);
+      if (!isOffline) {
+        alert("Error saving BMI entry. Please try again.");
+      }
     }
   };
 
@@ -923,23 +1166,65 @@ export default function Dashboard() {
     }
 
     try {
-      if (editingWorkout) {
-        await updateDoc(
-          doc(db, "users", userId, "workouts", editingWorkout.id),
-          payload,
-        );
-      } else {
-        const docRef = await addDoc(
-          collection(db, "users", userId, "workouts"),
-          payload,
-        );
+      const networkAvailable = isOnline();
 
-        // Replace temp ID with real one
-        setWorkouts((prev) =>
-          prev.map((w) =>
-            w.id === "temp" ? { id: docRef.id, ...payload } : w,
-          ),
-        );
+      if (networkAvailable) {
+        // Online - save directly
+        if (editingWorkout) {
+          await updateDoc(
+            doc(db, "users", userId, "workouts", editingWorkout.id),
+            payload,
+          );
+        } else {
+          const docRef = await addDoc(
+            collection(db, "users", userId, "workouts"),
+            payload,
+          );
+
+          // Replace temp ID with real one
+          setWorkouts((prev) =>
+            prev.map((w) =>
+              w.id === "temp" ? { id: docRef.id, ...payload } : w,
+            ),
+          );
+        }
+
+        // Update cache
+        const updatedWorkouts = editingWorkout
+          ? workouts.map((w) =>
+              w.id === editingWorkout.id ? { ...w, ...payload } : w,
+            )
+          : [
+              ...workouts.filter((w) => w.id !== "temp"),
+              { id: editingWorkout ? editingWorkout.id : "new", ...payload },
+            ];
+
+        localStorage.setItem("cachedWorkouts", JSON.stringify(updatedWorkouts));
+      } else {
+        // Offline - queue for later sync
+        if (editingWorkout) {
+          setSyncQueue((prev) => [
+            ...prev,
+            {
+              type: "updateWorkout",
+              id: editingWorkout.id,
+              data: payload,
+              timestamp: new Date().toISOString(),
+            },
+          ]);
+        } else {
+          setSyncQueue((prev) => [
+            ...prev,
+            {
+              type: "addWorkout",
+              data: payload,
+              timestamp: new Date().toISOString(),
+            },
+          ]);
+        }
+
+        // Show offline success message
+        alert("✅ Workout saved locally. Will sync when you're back online.");
       }
 
       clearWorkoutForm();
@@ -947,7 +1232,13 @@ export default function Dashboard() {
       setOpenWorkout(false);
     } catch (err) {
       console.error("Save failed:", err);
-      fetchData(); // restore from server
+
+      if (err.code === "unavailable" || isOffline) {
+        // Even if network fails, keep optimistic update
+        alert("⚠️ Network issue. Your workout has been saved locally.");
+      } else {
+        fetchData(); // restore from server only if it's not a network issue
+      }
     }
   };
 
@@ -963,7 +1254,29 @@ export default function Dashboard() {
     setSnackbarOpen(true);
 
     try {
-      await deleteDoc(doc(db, "users", userId, "workouts", deleted.id));
+      const networkAvailable = isOnline();
+
+      if (networkAvailable) {
+        await deleteDoc(doc(db, "users", userId, "workouts", deleted.id));
+
+        // Update cache
+        const updatedWorkouts = workouts.filter(
+          (w) => w.id !== deleteTarget.id,
+        );
+        localStorage.setItem("cachedWorkouts", JSON.stringify(updatedWorkouts));
+      } else {
+        // Queue delete for sync
+        setSyncQueue((prev) => [
+          ...prev,
+          {
+            type: "deleteWorkout",
+            id: deleted.id,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+
+        alert("🗑️ Workout deleted locally. Will sync when online.");
+      }
     } catch (err) {
       console.error("Delete failed, reverting:", err);
       setWorkouts((prev) => [...prev, deleted]); // rollback
@@ -1269,6 +1582,7 @@ export default function Dashboard() {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {loading && <LinearProgress sx={{ mb: 2 }} />}
+
       <Box
         display="flex"
         justifyContent="space-between"
@@ -1277,11 +1591,192 @@ export default function Dashboard() {
       >
         <Typography variant="h4" fontWeight="bold">
           Welcome, {profile?.name || "User"}
+          {isOffline && (
+            <Chip
+              label="Offline"
+              size="small"
+              color="warning"
+              variant="outlined"
+              sx={{ ml: 2, fontSize: "0.7rem", verticalAlign: "middle" }}
+            />
+          )}
         </Typography>
-        <Button variant="contained" color="error" onClick={() => signOut(auth)}>
-          Logout
-        </Button>
+
+        <Box display="flex" gap={2} alignItems="center">
+          {/* Sync & Cache Menu Button */}
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={(e) => setCacheMenuAnchor(e.currentTarget)}
+            disabled={isOffline || loading}
+            startIcon={<RefreshIcon />}
+            sx={{
+              textTransform: "none",
+              minWidth: "auto",
+              px: 2,
+              position: "relative",
+            }}
+          >
+            Refresh
+            {syncQueue.length > 0 && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: -6,
+                  right: -6,
+                  backgroundColor: "error.main",
+                  color: "white",
+                  borderRadius: "50%",
+                  width: 18,
+                  height: 18,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "0.7rem",
+                  fontWeight: "bold",
+                  border: "2px solid white",
+                }}
+              >
+                {syncQueue.length}
+              </Box>
+            )}
+          </Button>
+
+          {/* Logout Button */}
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={() => signOut(auth)}
+            disabled={isOffline || loading}
+            startIcon={<LogoutIcon />}
+            sx={{
+              textTransform: "none",
+              minWidth: "auto",
+              px: 2,
+            }}
+          >
+            Logout
+          </Button>
+        </Box>
       </Box>
+
+      {/* Sync & Cache Menu */}
+      <Menu
+        anchorEl={cacheMenuAnchor}
+        open={Boolean(cacheMenuAnchor)}
+        onClose={() => setCacheMenuAnchor(null)}
+      >
+        {/* Sync Now Option */}
+        <MenuItem
+          onClick={() => {
+            setCacheMenuAnchor(null);
+            processSyncQueue();
+          }}
+          disabled={isOffline || isSyncing || syncQueue.length === 0}
+        >
+          <ListItemIcon>
+            {isSyncing ? (
+              <CircularProgress size={20} />
+            ) : (
+              <SyncIcon fontSize="small" />
+            )}
+          </ListItemIcon>
+          <ListItemText
+            primary="Sync Now"
+            secondary={
+              syncQueue.length > 0
+                ? `${syncQueue.length} pending changes`
+                : "All synced"
+            }
+          />
+        </MenuItem>
+
+        {/* Refresh Data Option */}
+        <MenuItem
+          onClick={() => {
+            setCacheMenuAnchor(null);
+            fetchData();
+            setSnackbarMessage("Refreshing data...");
+            setSnackbarSeverity("info");
+            setSnackbarOpen(true);
+          }}
+          disabled={isOffline}
+        >
+          <ListItemIcon>
+            <RefreshIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Refresh Data" />
+        </MenuItem>
+
+        <Divider />
+
+        {/* Clear Cache Option */}
+        <MenuItem
+          onClick={() => {
+            setCacheMenuAnchor(null);
+            clearLocalCache();
+            // Show a confirmation snackbar instead of alert
+            setSnackbarMessage("Cache cleared successfully");
+            setSnackbarSeverity("success");
+            setSnackbarOpen(true);
+          }}
+          disabled={!hasPersistentData && syncQueue.length === 0}
+        >
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary="Clear Local Cache"
+            secondary={
+              hasPersistentData ? "Remove cached data" : "No cache available"
+            }
+          />
+        </MenuItem>
+      </Menu>
+
+      {/* Offline Status Indicator */}
+      {isOffline && (
+        <Card
+          sx={{
+            mb: 3,
+            borderLeft: "6px solid",
+            borderColor: "warning.main",
+          }}
+        >
+          <CardContent>
+            <Box display="flex" alignItems="center" gap={2}>
+              <Typography fontWeight="bold">⚠️ You're offline</Typography>
+              <Typography variant="body2">
+                {hasPersistentData
+                  ? "Using cached data. Changes will sync when you're back online."
+                  : "No cached data available. Please connect to the internet."}
+              </Typography>
+              {syncQueue.length > 0 && (
+                <Chip
+                  size="small"
+                  label={`${syncQueue.length} pending sync`}
+                  color="warning"
+                  variant="outlined"
+                />
+              )}
+              {isSyncing && (
+                <Chip
+                  size="small"
+                  label="Syncing..."
+                  variant="outlined"
+                  color="info"
+                  icon={<CircularProgress size={16} />}
+                  sx={{
+                    textTransform: "none",
+                    minWidth: "auto",
+                    px: 2,
+                  }}
+                />
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Streak Reminder */}
       {showStreakReminder && (
@@ -2250,6 +2745,14 @@ export default function Dashboard() {
         >
           Workout deleted
         </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={5000}
+        onClose={() => setSnackbarOpen(false)}
+      >
+        <Alert severity={snackbarSeverity}>{snackbarMessage}</Alert>
       </Snackbar>
 
       {/* FAB */}
