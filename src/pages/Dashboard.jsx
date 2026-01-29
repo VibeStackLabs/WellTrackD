@@ -1076,18 +1076,35 @@ export default function Dashboard() {
       }
 
       if (workoutFilter === "week") {
-        const weekAgo = new Date(now);
-        weekAgo.setDate(now.getDate() - 7);
-        return workoutDate >= weekAgo;
+        // Get the start of the current week (Sunday)
+        const startOfWeek = new Date(now);
+        const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+        // Calculate Sunday of this week
+        startOfWeek.setDate(now.getDate() - day);
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        // Get end of week (Saturday)
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        return workoutDate >= startOfWeek && workoutDate <= endOfWeek;
       }
 
       if (workoutFilter === "month") {
-        const monthAgo = new Date(now);
-        monthAgo.setDate(now.getDate() - 30);
-        return workoutDate >= monthAgo;
+        // Get the start of the current month
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        // Get end of current month
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        endOfMonth.setHours(23, 59, 59, 999);
+
+        return workoutDate >= startOfMonth && workoutDate <= endOfMonth;
       }
 
-      return true;
+      return true; // "all" filter
     });
   };
 
@@ -1656,7 +1673,7 @@ export default function Dashboard() {
             variant={workoutFilter === "all" ? "contained" : "outlined"}
             onClick={() => setWorkoutFilter("all")}
           >
-            All
+            All Time
           </Button>
         </Box>
 
