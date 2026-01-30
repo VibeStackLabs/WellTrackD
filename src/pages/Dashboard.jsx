@@ -1249,8 +1249,12 @@ export default function Dashboard() {
     setWorkouts((prev) => prev.filter((w) => w.id !== deleteTarget.id));
 
     const deleted = deleteTarget;
-    setLastDeleted(deleteTarget);
+    setLastDeleted(deleted);
     setDeleteTarget(null);
+
+    // Set delete message
+    setSnackbarMessage("Workout deleted");
+    setSnackbarSeverity("info");
     setSnackbarOpen(true);
 
     try {
@@ -1275,11 +1279,17 @@ export default function Dashboard() {
           },
         ]);
 
-        alert("🗑️ Workout deleted locally. Will sync when online.");
+        setSnackbarMessage("Workout deleted locally. Will sync when online.");
+        setSnackbarSeverity("warning");
+        setSnackbarOpen(true);
       }
     } catch (err) {
       console.error("Delete failed, reverting:", err);
       setWorkouts((prev) => [...prev, deleted]); // rollback
+      setSnackbarMessage("Failed to delete workout");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+      setLastDeleted(null);
     }
   };
 
@@ -1288,10 +1298,19 @@ export default function Dashboard() {
 
     const { id, ...data } = lastDeleted;
 
-    await setDoc(doc(db, "users", userId, "workouts", id), data);
-    setLastDeleted(null);
-    setSnackbarOpen(false);
-    fetchData();
+    try {
+      await setDoc(doc(db, "users", userId, "workouts", id), data);
+      setSnackbarMessage("Workout restored");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+    } catch (err) {
+      setSnackbarMessage("Failed to restore workout");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setLastDeleted(null);
+      fetchData();
+    }
   };
 
   const openEditWorkout = (row) => {
@@ -2733,26 +2752,30 @@ export default function Dashboard() {
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={5000}
-        onClose={() => setSnackbarOpen(false)}
+        onClose={() => {
+          setSnackbarOpen(false);
+          setSnackbarMessage("");
+        }}
       >
         <Alert
-          severity="info"
+          severity={snackbarSeverity}
           action={
-            <Button color="inherit" size="small" onClick={undoDelete}>
-              UNDO
-            </Button>
+            lastDeleted ? (
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => {
+                  undoDelete();
+                  setSnackbarOpen(false);
+                }}
+              >
+                UNDO
+              </Button>
+            ) : null
           }
         >
-          Workout deleted
+          {snackbarMessage}
         </Alert>
-      </Snackbar>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={5000}
-        onClose={() => setSnackbarOpen(false)}
-      >
-        <Alert severity={snackbarSeverity}>{snackbarMessage}</Alert>
       </Snackbar>
 
       {/* FAB */}
