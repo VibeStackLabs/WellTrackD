@@ -535,6 +535,7 @@ export default function Dashboard() {
           }));
     }
 
+    // For filtered periods, return only entries within the period
     return bmiEntries
       .filter((entry) => {
         const entryDate = entry.createdAt?.toDate?.() || new Date(entry.date);
@@ -546,6 +547,37 @@ export default function Dashboard() {
         weight: entry.bodyweight,
         bmi: entry.bmi,
       }));
+  };
+
+  // Get starting and current weight from all data
+  const getWeightStats = () => {
+    if (bmiEntries.length === 0) {
+      return {
+        startingWeight: null,
+        currentWeight: null,
+        change: null,
+      };
+    }
+
+    // Sort all entries by date (oldest first)
+    const sortedEntries = [...bmiEntries].sort(
+      (a, b) => new Date(a.date) - new Date(b.date),
+    );
+
+    // Get the absolute starting weight (oldest entry)
+    const startingWeight = sortedEntries[0]?.bodyweight;
+
+    // Get the absolute current weight (latest entry)
+    const currentWeight = sortedEntries[sortedEntries.length - 1]?.bodyweight;
+
+    const change =
+      currentWeight && startingWeight ? currentWeight - startingWeight : null;
+
+    return {
+      startingWeight,
+      currentWeight,
+      change,
+    };
   };
 
   // --- Workout ---
@@ -2042,7 +2074,7 @@ export default function Dashboard() {
                 Starting Weight
               </Typography>
               <Typography variant="h6" color="primary">
-                {getFilteredChartData()[0]?.weight?.toFixed(1) || "--"} kg
+                {getWeightStats().startingWeight?.toFixed(1) || "--"} kg
               </Typography>
             </Box>
             <Box>
@@ -2050,30 +2082,29 @@ export default function Dashboard() {
                 Current Weight
               </Typography>
               <Typography variant="h6" color="primary">
-                {getFilteredChartData()[
-                  getFilteredChartData().length - 1
-                ]?.weight?.toFixed(1) || "--"}{" "}
-                kg
+                {getWeightStats().currentWeight?.toFixed(1) || "--"} kg
               </Typography>
             </Box>
             <Box>
               <Typography variant="caption" color="text.secondary">
-                Change
+                Overall Change
               </Typography>
               <Typography
                 variant="h6"
                 sx={{
                   color:
-                    getFilteredChartData()[0]?.weight <
-                    getFilteredChartData()[getFilteredChartData().length - 1]
-                      ?.weight
+                    getWeightStats().change > 0
                       ? "error.main"
-                      : "success.main",
+                      : getWeightStats().change < 0
+                        ? "success.main"
+                        : "text.primary",
                 }}
               >
-                {getFilteredChartData().length > 1
-                  ? `${(getFilteredChartData()[getFilteredChartData().length - 1]?.weight - getFilteredChartData()[0]?.weight).toFixed(1)} kg`
-                  : "-- kg"}
+                {getWeightStats().change !== null
+                  ? `${Math.abs(getWeightStats().change).toFixed(1)} kg ${
+                      getWeightStats().change > 0 ? "↗" : "↘"
+                    }`
+                  : "--"}
               </Typography>
             </Box>
           </Box>
