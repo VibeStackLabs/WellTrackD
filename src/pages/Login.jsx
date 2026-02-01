@@ -1,5 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+} from "firebase/auth";
 import { auth } from "../firebase";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -16,6 +19,8 @@ import {
   DialogContentText,
   DialogActions,
   Fade,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
@@ -27,6 +32,11 @@ export default function Login() {
   const [error, setError] = useState(""); // store user-friendly error
   const [open, setOpen] = useState(false); // dialog open state
   const [showMessage, setShowMessage] = useState(false); // for fade-in
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false); // forgot password dialog
+  const [resetEmail, setResetEmail] = useState(""); // email for password reset
+  const [resetSent, setResetSent] = useState(false); // reset email sent state
+  const [snackbarOpen, setSnackbarOpen] = useState(false); // snackbar for success message
+  const [snackbarMessage, setSnackbarMessage] = useState(""); // snackbar message
 
   const navigate = useNavigate();
 
@@ -82,7 +92,56 @@ export default function Login() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!resetEmail) {
+      setError("Please enter your email address.");
+      setOpen(true);
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      setResetSent(true);
+      setSnackbarMessage(
+        `Password reset email sent to ${resetEmail}. Check your inbox!`,
+      );
+      setSnackbarOpen(true);
+
+      // Close the dialog after 2 seconds
+      setTimeout(() => {
+        setForgotPasswordOpen(false);
+        setResetSent(false);
+        setResetEmail("");
+      }, 2000);
+    } catch (err) {
+      let friendlyMessage;
+
+      switch (err.code) {
+        case "auth/invalid-email":
+          friendlyMessage = "Please enter a valid email address.";
+          break;
+        case "auth/user-not-found":
+          friendlyMessage = "No account found with this email.";
+          break;
+        case "auth/too-many-requests":
+          friendlyMessage = "Too many attempts. Please try again later.";
+          break;
+        default:
+          friendlyMessage = "Failed to send reset email. Please try again.";
+          break;
+      }
+
+      setError(friendlyMessage);
+      setOpen(true);
+    }
+  };
+
   const handleClose = () => setOpen(false);
+  const handleForgotPasswordClose = () => {
+    setForgotPasswordOpen(false);
+    setResetSent(false);
+    setResetEmail("");
+  };
 
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword);
@@ -90,6 +149,10 @@ export default function Login() {
 
   const handleMouseDownPassword = (event) => {
     event.preventDefault();
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
   };
 
   return (
@@ -150,6 +213,18 @@ export default function Login() {
                   ),
                 }}
               />
+              <Box sx={{ textAlign: "right", mb: 1 }}>
+                <Button
+                  variant="outlined"
+                  sx={{
+                    textTransform: "none",
+                    color: "primary.main",
+                  }}
+                  onClick={() => setForgotPasswordOpen(true)}
+                >
+                  Forgot password?
+                </Button>
+              </Box>
               <Button
                 variant="contained"
                 color="primary"
@@ -189,6 +264,78 @@ export default function Login() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={forgotPasswordOpen} onClose={handleForgotPasswordClose}>
+        <DialogTitle>Reset Your Password</DialogTitle>
+        <DialogContent>
+          {!resetSent ? (
+            <>
+              <DialogContentText sx={{ mb: 2 }}>
+                Enter your email address and we'll send you a link to reset your
+                password. We'll only send the link if the email exists in our
+                database.
+              </DialogContentText>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="Email Address"
+                type="email"
+                fullWidth
+                variant="outlined"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                sx={{ mb: 1 }}
+              />
+            </>
+          ) : (
+            <Box sx={{ textAlign: "center", py: 2 }}>
+              <Typography color="success.main" sx={{ mb: 2 }}>
+                ✓ Reset email sent successfully!
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Check your inbox for the password reset link. The link will
+                expire after a short time.
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          {!resetSent ? (
+            <>
+              <Button onClick={handleForgotPasswordClose}>Cancel</Button>
+              <Button
+                onClick={handleForgotPassword}
+                variant="contained"
+                disabled={!resetEmail}
+              >
+                Send Reset Link
+              </Button>
+            </>
+          ) : (
+            <Button onClick={handleForgotPasswordClose} variant="contained">
+              Close
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={4000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity="success"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
