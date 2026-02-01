@@ -3505,45 +3505,114 @@ export default function Dashboard() {
 
           {/* Exercise Name */}
           {workoutType === "strength" ? (
-            // Strength Training
-            <Autocomplete
-              freeSolo
-              value={exercise}
-              onChange={(event, newValue) => {
-                setExercise(newValue || "");
-              }}
-              onInputChange={(event, newInputValue) => {
-                setExercise(newInputValue);
-              }}
-              // Sort alphabetically for simple grouping
-              options={[...PREDEFINED_STRENGTH_WORKOUTS].sort((a, b) =>
-                a.localeCompare(b),
-              )}
-              groupBy={(option) => option.charAt(0).toUpperCase()}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Exercise Name"
-                  margin="normal"
-                  helperText={
-                    editingWorkout
-                      ? "Exercise name can be edited"
-                      : "Select from list or type your own"
-                  }
-                />
-              )}
-              renderOption={(props, option) => (
-                <li {...props} key={option}>
-                  <Box sx={{ display: "flex", alignItems: "center" }}>
-                    <FitnessCenterIcon
-                      fontSize="small"
-                      sx={{ mr: 1, opacity: 0.7 }}
-                    />
-                    {option}
+            // Strength Training with Autocomplete and Simple Quick Chips
+            <Box sx={{ position: "relative" }}>
+              <Autocomplete
+                freeSolo
+                value={exercise}
+                onChange={(event, newValue) => {
+                  setExercise(newValue || "");
+                }}
+                onInputChange={(event, newInputValue) => {
+                  setExercise(newInputValue);
+                }}
+                options={[...PREDEFINED_STRENGTH_WORKOUTS].sort((a, b) =>
+                  a.localeCompare(b),
+                )}
+                groupBy={(option) => option.charAt(0).toUpperCase()}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Exercise Name"
+                    margin="normal"
+                    helperText={
+                      editingWorkout
+                        ? "Exercise name can be edited"
+                        : "Select from list, use quick chips, or type your own"
+                    }
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {exercise && (
+                            <InputAdornment position="end">
+                              <IconButton
+                                size="small"
+                                onClick={() => setExercise("")}
+                                edge="end"
+                                sx={{ mr: 1 }}
+                              ></IconButton>
+                            </InputAdornment>
+                          )}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <li {...props} key={option}>
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <FitnessCenterIcon
+                        fontSize="small"
+                        sx={{ mr: 1, opacity: 0.7 }}
+                      />
+                      {option}
+                    </Box>
+                  </li>
+                )}
+              />
+
+              {/* Simple quick select chips for popular exercises */}
+              {!exercise && !editingWorkout && (
+                <Box sx={{ position: "relative" }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    display="block"
+                    sx={{ mb: 1, pl: 0.5 }}
+                  >
+                    Quick select popular exercises:
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 0.5,
+                      mb: 1.5,
+                    }}
+                  >
+                    {[
+                      "Bench Press",
+                      "Squat",
+                      "Deadlift",
+                      "Pull-ups",
+                      "Shoulder Press",
+                      "Barbell Row",
+                      "Lunges",
+                      "Bicep Curls",
+                      "Tricep Extensions",
+                      "Leg Press",
+                    ].map((workout) => (
+                      <Chip
+                        key={workout}
+                        label={workout}
+                        size="small"
+                        onClick={() => setExercise(workout)}
+                        variant="outlined"
+                        sx={{
+                          fontSize: "0.75rem",
+                          "&:hover": {
+                            backgroundColor: "primary.light",
+                            color: "primary.main",
+                          },
+                        }}
+                      />
+                    ))}
                   </Box>
-                </li>
+                </Box>
               )}
-            />
+            </Box>
           ) : (
             // Cardio
             <TextField
