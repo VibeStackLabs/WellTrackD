@@ -9,9 +9,9 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate", // automatically updates SW
       manifest: {
-        name: "Workout Tracker",
-        short_name: "Workout Tracker",
-        description: "Workout Tracker App",
+        name: "WellTrackD",
+        short_name: "WellTrackD",
+        description: "WellTrackD App",
         start_url: "/",
         display: "standalone",
         theme_color: "#000000",
