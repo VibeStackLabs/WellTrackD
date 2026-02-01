@@ -60,6 +60,7 @@ import { ListItemIcon, ListItemText } from "@mui/material";
 import SyncIcon from "@mui/icons-material/Sync";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import LogoutIcon from "@mui/icons-material/Logout";
+import BedIcon from "@mui/icons-material/Bed";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import {
@@ -152,6 +153,89 @@ export default function Dashboard() {
     bmiEntries: [],
     profile: null,
   });
+
+  // Rest Day State
+  const [restDays, setRestDays] = useState([]);
+
+  const addRestDay = async (date = new Date().toISOString().split("T")[0]) => {
+    if (!userId) return;
+
+    try {
+      const networkAvailable = isOnline();
+
+      // Create the data object (without id for Firestore)
+      const restDayData = {
+        type: "rest",
+        date,
+        createdAt: networkAvailable ? serverTimestamp() : new Date(),
+        notes: "Rest day",
+      };
+
+      if (networkAvailable) {
+        // Online - save to Firestore
+        const docRef = await addDoc(
+          collection(db, "users", userId, "workouts"),
+          restDayData,
+        );
+
+        // Update local state with the real Firestore ID
+        const newRestDay = {
+          id: docRef.id,
+          ...restDayData,
+          createdAt: restDayData.createdAt.toDate
+            ? restDayData.createdAt.toDate()
+            : new Date(),
+        };
+
+        setWorkouts((prev) => [...prev, newRestDay]);
+        setRestDays((prev) => [...prev, date]);
+
+        // Update cache with real ID
+        const updatedWorkouts = [...workouts, newRestDay];
+        localStorage.setItem("cachedWorkouts", JSON.stringify(updatedWorkouts));
+      } else {
+        // Offline - generate a consistent temporary ID
+        const tempId = `offline-rest-${date}-${Date.now()}`;
+
+        // Add to sync queue
+        setSyncQueue((prev) => [
+          ...prev,
+          {
+            type: "addWorkout",
+            data: restDayData,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+
+        // Optimistic update with consistent temp ID
+        const tempRestDay = {
+          id: tempId,
+          ...restDayData,
+        };
+
+        setWorkouts((prev) => [...prev, tempRestDay]);
+        setRestDays((prev) => [...prev, date]);
+
+        // Update cache with temp ID
+        const cachedWorkouts = JSON.parse(
+          localStorage.getItem("cachedWorkouts") || "[]",
+        );
+        cachedWorkouts.push(tempRestDay);
+        localStorage.setItem("cachedWorkouts", JSON.stringify(cachedWorkouts));
+
+        alert("✅ Rest day logged locally. Will sync when online.");
+      }
+
+      setSnackbarMessage("Rest day added successfully");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+    } catch (err) {
+      console.error("Error adding rest day:", err);
+      setSnackbarMessage("Failed to add rest day");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    }
+  };
 
   // Listen to auth
   useEffect(() => {
@@ -262,13 +346,47 @@ export default function Dashboard() {
     setIsSyncing(true);
 
     try {
+      const processedOperations = [];
+
       for (const operation of syncQueue) {
         switch (operation.type) {
           case "addWorkout":
-            await addDoc(
+            const docRef = await addDoc(
               collection(db, "users", userId, "workouts"),
               operation.data,
             );
+
+            // Update local cache with real Firestore ID
+            const cachedWorkouts = JSON.parse(
+              localStorage.getItem("cachedWorkouts") || "[]",
+            );
+            const tempWorkoutIndex = cachedWorkouts.findIndex(
+              (w) =>
+                w.date === operation.data.date &&
+                w.type === operation.data.type &&
+                w.id &&
+                w.id.startsWith("offline-"),
+            );
+
+            if (tempWorkoutIndex !== -1) {
+              cachedWorkouts[tempWorkoutIndex].id = docRef.id;
+              localStorage.setItem(
+                "cachedWorkouts",
+                JSON.stringify(cachedWorkouts),
+              );
+
+              // Update state with real ID
+              setWorkouts((prev) =>
+                prev.map((w) =>
+                  w.date === operation.data.date &&
+                  w.type === operation.data.type &&
+                  w.id &&
+                  w.id.startsWith("offline-")
+                    ? { ...w, id: docRef.id }
+                    : w,
+                ),
+              );
+            }
             break;
 
           case "updateWorkout":
@@ -295,14 +413,33 @@ export default function Dashboard() {
             });
             break;
         }
+
+        processedOperations.push(operation);
       }
 
-      // Clear the queue after successful sync
-      setSyncQueue([]);
+      // Remove processed operations from queue
+      setSyncQueue((prev) =>
+        prev.filter(
+          (op) =>
+            !processedOperations.some(
+              (processed) =>
+                processed.timestamp === op.timestamp &&
+                processed.type === op.type,
+            ),
+        ),
+      );
+
       // Refresh data from server
-      fetchData();
+      await fetchData();
+
+      setSnackbarMessage("Sync completed successfully");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
     } catch (err) {
       console.error("Error syncing queued operations:", err);
+      setSnackbarMessage("Sync failed. Will retry later.");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
     } finally {
       setIsSyncing(false);
     }
@@ -365,6 +502,13 @@ export default function Dashboard() {
         .map((d) => ({ id: d.id, ...d.data() }))
         .sort((a, b) => new Date(a.date) - new Date(b.date));
 
+      // Extract rest days
+      const restDays = workoutData
+        .filter((w) => w.type === "rest")
+        .map((w) => w.date);
+
+      setRestDays(restDays);
+
       // Cache the data locally
       localStorage.setItem("cachedWorkouts", JSON.stringify(workoutData));
       setWorkouts(workoutData);
@@ -397,6 +541,12 @@ export default function Dashboard() {
           if (cachedWorkouts) {
             const workoutData = JSON.parse(cachedWorkouts);
             setWorkouts(workoutData);
+
+            // Extract rest days from cache
+            const restDays = workoutData
+              .filter((w) => w.type === "rest")
+              .map((w) => w.date);
+            setRestDays(restDays);
           }
 
           // Load BMI from cache
@@ -1277,15 +1427,43 @@ export default function Dashboard() {
   const confirmDeleteWorkout = async () => {
     if (!userId || !deleteTarget) return;
 
-    // Optimistic UI
-    setWorkouts((prev) => prev.filter((w) => w.id !== deleteTarget.id));
+    // Find the exact workout to delete
+    const workoutToDelete = workouts.find((w) => {
+      // If it's a rest day, match by date and type
+      if (deleteTarget.type === "rest") {
+        return w.date === deleteTarget.date && w.type === "rest";
+      }
+      // Otherwise match by ID
+      return w.id === deleteTarget.id;
+    });
 
-    const deleted = deleteTarget;
-    setLastDeleted(deleted);
+    if (!workoutToDelete) {
+      console.error("Workout not found for deletion");
+      setDeleteTarget(null);
+      return;
+    }
+
+    const isRestDay = workoutToDelete.type === "rest";
+
+    // Store the workout before optimistic removal
+    const deletedWorkout = { ...workoutToDelete };
+
+    // Optimistic UI removal
+    setWorkouts((prev) => prev.filter((w) => w.id !== workoutToDelete.id));
+
+    if (isRestDay) {
+      setRestDays((prev) => prev.filter((d) => d !== workoutToDelete.date));
+    }
+
+    // Set lastDeleted for undo
+    if (!isRestDay) {
+      setLastDeleted(deletedWorkout);
+    }
+
     setDeleteTarget(null);
 
     // Set delete message
-    setSnackbarMessage("Workout deleted");
+    setSnackbarMessage(isRestDay ? "Rest day deleted" : "Workout deleted");
     setSnackbarSeverity("info");
     setSnackbarOpen(true);
 
@@ -1293,35 +1471,80 @@ export default function Dashboard() {
       const networkAvailable = isOnline();
 
       if (networkAvailable) {
-        await deleteDoc(doc(db, "users", userId, "workouts", deleted.id));
-
-        // Update cache
-        const updatedWorkouts = workouts.filter(
-          (w) => w.id !== deleteTarget.id,
+        // Online - delete from Firestore
+        await deleteDoc(
+          doc(db, "users", userId, "workouts", workoutToDelete.id),
         );
-        localStorage.setItem("cachedWorkouts", JSON.stringify(updatedWorkouts));
+
+        // Remove from cache
+        const cachedWorkouts = JSON.parse(
+          localStorage.getItem("cachedWorkouts") || "[]",
+        );
+        const updatedCache = cachedWorkouts.filter(
+          (w) => w.id !== workoutToDelete.id,
+        );
+        localStorage.setItem("cachedWorkouts", JSON.stringify(updatedCache));
+
+        // Clear lastDeleted after successful deletion
+        if (!isRestDay) {
+          setTimeout(() => setLastDeleted(null), 5000); // Clear after 5 seconds
+        }
       } else {
-        // Queue delete for sync
+        // Offline - queue for sync
         setSyncQueue((prev) => [
           ...prev,
           {
             type: "deleteWorkout",
-            id: deleted.id,
+            id: workoutToDelete.id,
             timestamp: new Date().toISOString(),
           },
         ]);
 
-        setSnackbarMessage("Workout deleted locally. Will sync when online.");
+        // Update local cache
+        const cachedWorkouts = JSON.parse(
+          localStorage.getItem("cachedWorkouts") || "[]",
+        );
+        const updatedCache = cachedWorkouts.filter(
+          (w) => w.id !== workoutToDelete.id,
+        );
+        localStorage.setItem("cachedWorkouts", JSON.stringify(updatedCache));
+
+        setSnackbarMessage(
+          isRestDay
+            ? "Rest day deleted locally. Will sync when online."
+            : "Workout deleted locally. Will sync when online.",
+        );
         setSnackbarSeverity("warning");
         setSnackbarOpen(true);
+
+        // For offline deletions, we should still allow undo within the snackbar timeout
+        if (!isRestDay) {
+          // Clear lastDeleted after snackbar timeout
+          setTimeout(() => setLastDeleted(null), 5000);
+        }
       }
     } catch (err) {
       console.error("Delete failed, reverting:", err);
-      setWorkouts((prev) => [...prev, deleted]); // rollback
-      setSnackbarMessage("Failed to delete workout");
+
+      // Revert optimistic update
+      setWorkouts((prev) => [...prev, deletedWorkout]);
+      if (isRestDay) {
+        setRestDays((prev) => [...prev, deletedWorkout.date]);
+      }
+
+      // Restore cache
+      const cachedWorkouts = JSON.parse(
+        localStorage.getItem("cachedWorkouts") || "[]",
+      );
+      cachedWorkouts.push(deletedWorkout);
+      localStorage.setItem("cachedWorkouts", JSON.stringify(cachedWorkouts));
+
+      // Clear lastDeleted since we reverted
+      setLastDeleted(null);
+
+      setSnackbarMessage("Failed to delete");
       setSnackbarSeverity("error");
       setSnackbarOpen(true);
-      setLastDeleted(null);
     }
   };
 
@@ -1329,19 +1552,59 @@ export default function Dashboard() {
     if (!lastDeleted || !userId) return;
 
     const { id, ...data } = lastDeleted;
+    const isRestDay = data.type === "rest";
 
     try {
-      await setDoc(doc(db, "users", userId, "workouts", id), data);
-      setSnackbarMessage("Workout restored");
+      const networkAvailable = isOnline();
+
+      if (networkAvailable) {
+        // Online - restore to Firestore
+        await setDoc(doc(db, "users", userId, "workouts", id), data);
+
+        // Update local state
+        setWorkouts((prev) => [...prev, { id, ...data }]);
+
+        if (isRestDay) {
+          setRestDays((prev) => [...prev, data.date]);
+        }
+      } else {
+        // Offline - add back to sync queue
+        setSyncQueue((prev) => [
+          ...prev,
+          {
+            type: "addWorkout",
+            data: data,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+
+        // Optimistic restore
+        setWorkouts((prev) => [...prev, { id, ...data }]);
+
+        if (isRestDay) {
+          setRestDays((prev) => [...prev, data.date]);
+        }
+      }
+
+      // Update cache
+      const cachedWorkouts = JSON.parse(
+        localStorage.getItem("cachedWorkouts") || "[]",
+      );
+      cachedWorkouts.push({ id, ...data });
+      localStorage.setItem("cachedWorkouts", JSON.stringify(cachedWorkouts));
+
+      setSnackbarMessage(`${isRestDay ? "Rest day" : "Workout"} restored`);
       setSnackbarSeverity("success");
       setSnackbarOpen(true);
     } catch (err) {
-      setSnackbarMessage("Failed to restore workout");
+      console.error("Error restoring workout:", err);
+      setSnackbarMessage(
+        `Failed to restore ${isRestDay ? "rest day" : "workout"}`,
+      );
       setSnackbarSeverity("error");
       setSnackbarOpen(true);
     } finally {
       setLastDeleted(null);
-      fetchData();
     }
   };
 
@@ -1432,11 +1695,11 @@ export default function Dashboard() {
     now.setHours(0, 0, 0, 0);
 
     return workouts.filter((w) => {
-      const workoutDate = new Date(w.date);
-      workoutDate.setHours(0, 0, 0, 0);
+      const activityDate = new Date(w.date);
+      activityDate.setHours(0, 0, 0, 0);
 
       if (workoutFilter === "today") {
-        return workoutDate.getTime() === now.getTime();
+        return activityDate.getTime() === now.getTime();
       }
 
       if (workoutFilter === "week") {
@@ -1453,7 +1716,7 @@ export default function Dashboard() {
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);
 
-        return workoutDate >= startOfWeek && workoutDate <= endOfWeek;
+        return activityDate >= startOfWeek && activityDate <= endOfWeek;
       }
 
       if (workoutFilter === "month") {
@@ -1465,10 +1728,10 @@ export default function Dashboard() {
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         endOfMonth.setHours(23, 59, 59, 999);
 
-        return workoutDate >= startOfMonth && workoutDate <= endOfMonth;
+        return activityDate >= startOfMonth && activityDate <= endOfMonth;
       }
 
-      return true; // "all" filter
+      return true;
     });
   };
 
@@ -1534,33 +1797,34 @@ export default function Dashboard() {
   const sortedWorkouts = workouts
     .slice()
     .sort((a, b) => new Date(a.date) - new Date(b.date));
-  let streak = 0;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  let streak = 0;
   let expectedDate = new Date(today);
 
-  // Check if there's a workout today
-  const hasWorkoutToday = sortedWorkouts.some((w) => {
+  // Check if there's any activity today (workout OR rest day)
+  const hasActivityToday = sortedWorkouts.some((w) => {
     const d = new Date(w.date);
     d.setHours(0, 0, 0, 0);
     return d.getTime() === today.getTime();
   });
 
-  // If no workout today, start from yesterday
-  if (!hasWorkoutToday) {
+  // If no activity today, start from yesterday
+  if (!hasActivityToday) {
     expectedDate.setDate(expectedDate.getDate() - 1);
   }
 
+  // Count consecutive days with any activity (workout or rest)
   for (let i = sortedWorkouts.length - 1; i >= 0; i--) {
-    const workoutDate = new Date(sortedWorkouts[i].date);
-    workoutDate.setHours(0, 0, 0, 0);
+    const activityDate = new Date(sortedWorkouts[i].date);
+    activityDate.setHours(0, 0, 0, 0);
 
-    if (workoutDate.getTime() === expectedDate.getTime()) {
+    if (activityDate.getTime() === expectedDate.getTime()) {
       streak++;
       expectedDate.setDate(expectedDate.getDate() - 1);
-    } else if (workoutDate.getTime() < expectedDate.getTime()) {
+    } else if (activityDate.getTime() < expectedDate.getTime()) {
       break;
     }
   }
@@ -2252,25 +2516,54 @@ export default function Dashboard() {
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                     <Box sx={{ textAlign: "center" }}>
-                      <Typography color="text.secondary" sx={{ mb: 1 }}>
-                        No workouts found for this period 💤
+                      <Typography color="text.secondary" sx={{ mb: 2 }}>
+                        {workoutFilter === "today" ? (
+                          <>
+                            No activities found for today 💤
+                            <br />
+                            <Typography variant="caption">
+                              Taking a rest day? Log it to maintain your streak!
+                            </Typography>
+                          </>
+                        ) : (
+                          "No activities found for this period 💤"
+                        )}
                       </Typography>
-                      <Button
-                        variant="outlined"
-                        startIcon={<FitnessCenterIcon />}
-                        onClick={() => setOpenWorkout(true)}
-                        size="small"
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 1,
+                          justifyContent: "center",
+                        }}
                       >
-                        Add Your First Workout
-                      </Button>
+                        <Button
+                          variant="outlined"
+                          startIcon={<FitnessCenterIcon />}
+                          onClick={() => setOpenWorkout(true)}
+                          size="small"
+                        >
+                          Add Workout
+                        </Button>
+                        {workoutFilter === "today" && (
+                          <Button
+                            variant="outlined"
+                            color="info"
+                            startIcon={<BedIcon />}
+                            onClick={() => addRestDay()}
+                            size="small"
+                          >
+                            Log Rest Day
+                          </Button>
+                        )}
+                      </Box>
                     </Box>
                   </TableCell>
                 </TableRow>
               )}
 
               {Object.entries(getWorkoutsByWeekday()).map(
-                ([day, workouts]) =>
-                  workouts.length > 0 && (
+                ([day, dayWorkouts]) =>
+                  dayWorkouts.length > 0 && (
                     <React.Fragment key={day}>
                       {/* Day header row */}
                       <TableRow>
@@ -2288,466 +2581,586 @@ export default function Dashboard() {
                       </TableRow>
 
                       {/* Workout rows */}
-                      {workouts.map((row) => (
-                        <TableRow key={row.id} hover>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight="medium">
-                              {format(parseISO(row.date), "dd-MM-yyyy")}
-                            </Typography>
-                          </TableCell>
+                      {dayWorkouts.map((row) => {
+                        // Check if it's a rest day
+                        const isRestDay = row.type === "rest";
 
-                          <TableCell>
-                            <Box>
+                        return (
+                          <TableRow
+                            key={row.id}
+                            hover={!isRestDay}
+                            sx={{
+                              backgroundColor: isRestDay
+                                ? "#f9f9f9"
+                                : "inherit",
+                              "&:hover": {
+                                backgroundColor: isRestDay
+                                  ? "#f0f0f0"
+                                  : "#fafafa",
+                              },
+                            }}
+                          >
+                            <TableCell>
                               <Typography variant="body2" fontWeight="medium">
-                                {row.exercise || "--"}
+                                {format(parseISO(row.date), "dd-MM-yyyy")}
                               </Typography>
-                            </Box>
-                          </TableCell>
+                            </TableCell>
 
-                          <TableCell>
-                            {row.workoutType === "strength" ? (
-                              row.sets ? (
-                                <Box>
-                                  {/* Duration/Stats Row */}
-                                  <Box sx={{ mb: 1 }}>
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 1,
-                                        mb: 0.5,
-                                      }}
-                                    >
-                                      <Chip
-                                        label={
-                                          <>
-                                            {row.sets.length}{" "}
-                                            {row.sets.length === 1
-                                              ? "set"
-                                              : "sets"}
-                                          </>
-                                        }
-                                        size="small"
-                                        variant="outlined"
-                                        color="warning"
-                                        icon={
-                                          <FitnessCenterIcon
-                                            fontSize="small"
-                                            color="warning"
-                                          />
-                                        }
-                                      />
-                                    </Box>
-                                  </Box>
-
-                                  {/* Sets Display - Paper Style */}
-                                  {row.sets && (
-                                    <Box sx={{ mb: 1 }}>
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                        display="block"
-                                        sx={{ mb: 0.5 }}
-                                      >
-                                        {row.sets.length}{" "}
-                                        {row.sets.length === 1 ? "set" : "sets"}
-                                        :
-                                      </Typography>
-                                      <Box
-                                        sx={{
-                                          display: "flex",
-                                          flexDirection: "column",
-                                          gap: 0.5,
-                                          maxHeight:
-                                            row.sets.length > 3
-                                              ? "120px"
-                                              : "none",
-                                          overflowY:
-                                            row.sets.length > 3
-                                              ? "auto"
-                                              : "visible",
-                                          pr: row.sets.length > 3 ? 1 : 0,
-                                        }}
-                                      >
-                                        {row.sets.map((set, idx) => (
-                                          <Paper
-                                            key={idx}
-                                            variant="outlined"
-                                            sx={{
-                                              p: 0.5,
-                                              backgroundColor: "#f9f9f9",
-                                              borderLeft: "3px solid",
-                                              borderLeftColor:
-                                                idx % 2 === 0
-                                                  ? "#1976d2"
-                                                  : "#2e7d32",
-                                            }}
-                                          >
-                                            <Typography
-                                              variant="caption"
-                                              component="div"
-                                            >
-                                              <Box
-                                                sx={{
-                                                  display: "flex",
-                                                  alignItems: "center",
-                                                  gap: 1,
-                                                  flexWrap: "wrap",
-                                                }}
-                                              >
-                                                <span
-                                                  style={{
-                                                    fontWeight: "bold",
-                                                    minWidth: "40px",
-                                                  }}
-                                                >
-                                                  Set {set.setNumber}
-                                                </span>
-
-                                                <span>•</span>
-                                                <span
-                                                  style={{ fontWeight: "bold" }}
-                                                >
-                                                  {set.reps} reps
-                                                </span>
-
-                                                <span>×</span>
-                                                <span
-                                                  style={{
-                                                    fontWeight: "bold",
-                                                    color: "#1976d2",
-                                                  }}
-                                                >
-                                                  {set.weight?.toFixed(1)} kg
-                                                </span>
-
-                                                {/* Optional: Show total for this set */}
-                                                {set.reps && set.weight && (
-                                                  <>
-                                                    <span>•</span>
-                                                    <span
-                                                      style={{
-                                                        color: "#2e7d32",
-                                                      }}
-                                                    >
-                                                      Total:{" "}
-                                                      {(
-                                                        set.reps * set.weight
-                                                      ).toFixed(1)}{" "}
-                                                      kg
-                                                    </span>
-                                                  </>
-                                                )}
-                                              </Box>
-                                            </Typography>
-                                          </Paper>
-                                        ))}
-                                      </Box>
-                                    </Box>
-                                  )}
-
-                                  {/* Calories with color coding */}
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 0.5,
-                                      mt: 0.5,
-                                    }}
-                                  ></Box>
-                                </Box>
-                              ) : (
-                                "--"
-                              )
-                            ) : (
-                              <Box>
-                                {/* Duration and Stats Row */}
-                                <Box sx={{ mb: 1 }}>
+                            {isRestDay ? (
+                              // Rest Day Display
+                              <>
+                                <TableCell>
                                   <Box
                                     sx={{
                                       display: "flex",
                                       alignItems: "center",
                                       gap: 1,
-                                      mb: 0.5,
                                     }}
                                   >
-                                    <Chip
-                                      label={`${row.duration} ${"mins"}`}
-                                      size="small"
-                                      variant="outlined"
-                                      color="primary"
-                                      icon={<AccessTimeIcon fontSize="small" />}
-                                    />
-
-                                    {/* Average Speed for relevant equipment */}
-                                    {row.avgSpeed &&
-                                      row.avgSpeed > 0 &&
-                                      (row.cardioType === "treadmill" ||
-                                        row.cardioType === "cycle" ||
-                                        row.cardioType === "airbike") && (
-                                        <Chip
-                                          label={`Avg ${row.avgSpeed.toFixed(1)} ${
-                                            row.cardioType === "treadmill"
-                                              ? row.speedUnit || "km/h"
-                                              : "RPM"
-                                          }`}
-                                          size="small"
-                                          variant="outlined"
-                                          color="primary"
-                                        />
-                                      )}
-
-                                    {/* Distance if available */}
-                                    {row.distance && (
-                                      <Chip
-                                        label={`${row.distance} ${row.distanceUnit}`}
-                                        size="small"
-                                        variant="outlined"
-                                        color="success"
-                                        icon={
-                                          <DirectionsRunIcon fontSize="small" />
-                                        }
-                                      />
-                                    )}
-                                  </Box>
-                                </Box>
-
-                                {/* Sessions */}
-                                {row.sessions && (
-                                  <Box sx={{ mb: 1 }}>
+                                    <BedIcon color="info" fontSize="small" />
                                     <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      display="block"
-                                      sx={{ mb: 0.5 }}
+                                      variant="body2"
+                                      color="info.main"
+                                      fontWeight="medium"
                                     >
-                                      {row.sessions.length}{" "}
-                                      {row.sessions.length === 1
-                                        ? "session"
-                                        : "sessions"}
-                                      :
+                                      Rest Day
                                     </Typography>
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        gap: 0.5,
-                                        maxHeight:
-                                          row.sessions.length > 3
-                                            ? "120px"
-                                            : "none",
-                                        overflowY:
-                                          row.sessions.length > 3
-                                            ? "auto"
-                                            : "visible",
-                                        pr: row.sessions.length > 3 ? 1 : 0,
-                                      }}
+                                  </Box>
+                                </TableCell>
+                                <TableCell>
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
+                                    {row.notes || "Active recovery"}
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
+                                    --
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
+                                    --
+                                  </Typography>
+                                </TableCell>
+                                <TableCell align="center">
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
+                                    --
+                                  </Typography>
+                                </TableCell>
+                              </>
+                            ) : (
+                              // Workout Display
+                              <>
+                                <TableCell>
+                                  <Box>
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight="medium"
                                     >
-                                      {row.sessions.map((session, idx) => (
-                                        <Paper
-                                          key={idx}
-                                          variant="outlined"
-                                          sx={{
-                                            p: 0.5,
-                                            backgroundColor: "#f9f9f9",
-                                            borderLeft: "3px solid",
-                                            borderLeftColor:
-                                              idx % 2 === 0
-                                                ? "#1976d2"
-                                                : "#2e7d32",
-                                          }}
-                                        >
-                                          <Typography
-                                            variant="caption"
-                                            component="div"
+                                      {row.exercise || "--"}
+                                    </Typography>
+                                  </Box>
+                                </TableCell>
+
+                                <TableCell>
+                                  {row.workoutType === "strength" ? (
+                                    row.sets ? (
+                                      <Box>
+                                        {/* Duration/Stats Row */}
+                                        <Box sx={{ mb: 1 }}>
+                                          <Box
+                                            sx={{
+                                              display: "flex",
+                                              alignItems: "center",
+                                              gap: 1,
+                                              mb: 0.5,
+                                            }}
                                           >
+                                            <Chip
+                                              label={
+                                                <>
+                                                  {row.sets.length}{" "}
+                                                  {row.sets.length === 1
+                                                    ? "set"
+                                                    : "sets"}
+                                                </>
+                                              }
+                                              size="small"
+                                              variant="outlined"
+                                              color="warning"
+                                              icon={
+                                                <FitnessCenterIcon
+                                                  fontSize="small"
+                                                  color="warning"
+                                                />
+                                              }
+                                            />
+                                          </Box>
+                                        </Box>
+
+                                        {/* Sets Display - Paper Style */}
+                                        {row.sets && (
+                                          <Box sx={{ mb: 1 }}>
+                                            <Typography
+                                              variant="caption"
+                                              color="text.secondary"
+                                              display="block"
+                                              sx={{ mb: 0.5 }}
+                                            >
+                                              {row.sets.length}{" "}
+                                              {row.sets.length === 1
+                                                ? "set"
+                                                : "sets"}
+                                              :
+                                            </Typography>
                                             <Box
                                               sx={{
                                                 display: "flex",
-                                                alignItems: "center",
-                                                gap: 1,
-                                                flexWrap: "wrap",
+                                                flexDirection: "column",
+                                                gap: 0.5,
+                                                maxHeight:
+                                                  row.sets.length > 3
+                                                    ? "120px"
+                                                    : "none",
+                                                overflowY:
+                                                  row.sets.length > 3
+                                                    ? "auto"
+                                                    : "visible",
+                                                pr: row.sets.length > 3 ? 1 : 0,
                                               }}
                                             >
-                                              <span
-                                                style={{
-                                                  fontWeight: "bold",
-                                                  minWidth: "40px",
-                                                }}
-                                              >
-                                                {session.duration} min
-                                              </span>
-
-                                              {(row.cardioType ===
-                                                "treadmill" ||
-                                                row.cardioType === "cycle" ||
-                                                row.cardioType === "airbike") &&
-                                                session.speed && (
-                                                  <>
-                                                    <span>@</span>
-                                                    <span
-                                                      style={{
-                                                        fontWeight: "bold",
+                                              {row.sets.map((set, idx) => (
+                                                <Paper
+                                                  key={idx}
+                                                  variant="outlined"
+                                                  sx={{
+                                                    p: 0.5,
+                                                    backgroundColor: "#f9f9f9",
+                                                    borderLeft: "3px solid",
+                                                    borderLeftColor:
+                                                      idx % 2 === 0
+                                                        ? "#1976d2"
+                                                        : "#2e7d32",
+                                                  }}
+                                                >
+                                                  <Typography
+                                                    variant="caption"
+                                                    component="div"
+                                                  >
+                                                    <Box
+                                                      sx={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 1,
+                                                        flexWrap: "wrap",
                                                       }}
                                                     >
-                                                      {session.speed}{" "}
-                                                      {row.cardioType ===
-                                                      "treadmill"
-                                                        ? row.speedUnit ||
-                                                          "km/h"
-                                                        : "RPM"}
-                                                    </span>
-                                                  </>
-                                                )}
+                                                      <span
+                                                        style={{
+                                                          fontWeight: "bold",
+                                                          minWidth: "40px",
+                                                        }}
+                                                      >
+                                                        Set {set.setNumber}
+                                                      </span>
 
-                                              {row.cardioType === "treadmill" &&
-                                                session.incline && (
-                                                  <>
-                                                    <span>•</span>
-                                                    <span>
-                                                      {session.incline}% incline
-                                                    </span>
-                                                  </>
-                                                )}
+                                                      <span>•</span>
+                                                      <span
+                                                        style={{
+                                                          fontWeight: "bold",
+                                                        }}
+                                                      >
+                                                        {set.reps} reps
+                                                      </span>
 
-                                              {session.resistance && (
-                                                <>
-                                                  <span>•</span>
-                                                  <span>
-                                                    Level {session.resistance}
-                                                  </span>
-                                                </>
-                                              )}
+                                                      <span>×</span>
+                                                      <span
+                                                        style={{
+                                                          fontWeight: "bold",
+                                                          color: "#1976d2",
+                                                        }}
+                                                      >
+                                                        {set.weight?.toFixed(1)}{" "}
+                                                        kg
+                                                      </span>
+
+                                                      {/* Optional: Show total for this set */}
+                                                      {set.reps &&
+                                                        set.weight && (
+                                                          <>
+                                                            <span>•</span>
+                                                            <span
+                                                              style={{
+                                                                color:
+                                                                  "#2e7d32",
+                                                              }}
+                                                            >
+                                                              Total:{" "}
+                                                              {(
+                                                                set.reps *
+                                                                set.weight
+                                                              ).toFixed(1)}{" "}
+                                                              kg
+                                                            </span>
+                                                          </>
+                                                        )}
+                                                    </Box>
+                                                  </Typography>
+                                                </Paper>
+                                              ))}
                                             </Box>
+                                          </Box>
+                                        )}
+                                      </Box>
+                                    ) : (
+                                      "--"
+                                    )
+                                  ) : (
+                                    <Box>
+                                      {/* Duration and Stats Row */}
+                                      <Box sx={{ mb: 1 }}>
+                                        <Box
+                                          sx={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 1,
+                                            mb: 0.5,
+                                          }}
+                                        >
+                                          <Chip
+                                            label={`${row.duration} ${"mins"}`}
+                                            size="small"
+                                            variant="outlined"
+                                            color="primary"
+                                            icon={
+                                              <AccessTimeIcon fontSize="small" />
+                                            }
+                                          />
+
+                                          {/* Average Speed for relevant equipment */}
+                                          {row.avgSpeed &&
+                                            row.avgSpeed > 0 &&
+                                            (row.cardioType === "treadmill" ||
+                                              row.cardioType === "cycle" ||
+                                              row.cardioType === "airbike") && (
+                                              <Chip
+                                                label={`Avg ${row.avgSpeed.toFixed(1)} ${
+                                                  row.cardioType === "treadmill"
+                                                    ? row.speedUnit || "km/h"
+                                                    : "RPM"
+                                                }`}
+                                                size="small"
+                                                variant="outlined"
+                                                color="primary"
+                                              />
+                                            )}
+
+                                          {/* Distance if available */}
+                                          {row.distance && (
+                                            <Chip
+                                              label={`${row.distance} ${row.distanceUnit}`}
+                                              size="small"
+                                              variant="outlined"
+                                              color="success"
+                                              icon={
+                                                <DirectionsRunIcon fontSize="small" />
+                                              }
+                                            />
+                                          )}
+                                        </Box>
+                                      </Box>
+
+                                      {/* Sessions */}
+                                      {row.sessions && (
+                                        <Box sx={{ mb: 1 }}>
+                                          <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                            display="block"
+                                            sx={{ mb: 0.5 }}
+                                          >
+                                            {row.sessions.length}{" "}
+                                            {row.sessions.length === 1
+                                              ? "session"
+                                              : "sessions"}
+                                            :
                                           </Typography>
-                                        </Paper>
-                                      ))}
+                                          <Box
+                                            sx={{
+                                              display: "flex",
+                                              flexDirection: "column",
+                                              gap: 0.5,
+                                              maxHeight:
+                                                row.sessions.length > 3
+                                                  ? "120px"
+                                                  : "none",
+                                              overflowY:
+                                                row.sessions.length > 3
+                                                  ? "auto"
+                                                  : "visible",
+                                              pr:
+                                                row.sessions.length > 3 ? 1 : 0,
+                                            }}
+                                          >
+                                            {row.sessions.map(
+                                              (session, idx) => (
+                                                <Paper
+                                                  key={idx}
+                                                  variant="outlined"
+                                                  sx={{
+                                                    p: 0.5,
+                                                    backgroundColor: "#f9f9f9",
+                                                    borderLeft: "3px solid",
+                                                    borderLeftColor:
+                                                      idx % 2 === 0
+                                                        ? "#1976d2"
+                                                        : "#2e7d32",
+                                                  }}
+                                                >
+                                                  <Typography
+                                                    variant="caption"
+                                                    component="div"
+                                                  >
+                                                    <Box
+                                                      sx={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 1,
+                                                        flexWrap: "wrap",
+                                                      }}
+                                                    >
+                                                      <span
+                                                        style={{
+                                                          fontWeight: "bold",
+                                                          minWidth: "40px",
+                                                        }}
+                                                      >
+                                                        {session.duration} min
+                                                      </span>
+
+                                                      {(row.cardioType ===
+                                                        "treadmill" ||
+                                                        row.cardioType ===
+                                                          "cycle" ||
+                                                        row.cardioType ===
+                                                          "airbike") &&
+                                                        session.speed && (
+                                                          <>
+                                                            <span>@</span>
+                                                            <span
+                                                              style={{
+                                                                fontWeight:
+                                                                  "bold",
+                                                              }}
+                                                            >
+                                                              {session.speed}{" "}
+                                                              {row.cardioType ===
+                                                              "treadmill"
+                                                                ? row.speedUnit ||
+                                                                  "km/h"
+                                                                : "RPM"}
+                                                            </span>
+                                                          </>
+                                                        )}
+
+                                                      {row.cardioType ===
+                                                        "treadmill" &&
+                                                        session.incline && (
+                                                          <>
+                                                            <span>•</span>
+                                                            <span>
+                                                              {session.incline}%
+                                                              incline
+                                                            </span>
+                                                          </>
+                                                        )}
+
+                                                      {session.resistance && (
+                                                        <>
+                                                          <span>•</span>
+                                                          <span>
+                                                            Level{" "}
+                                                            {session.resistance}
+                                                          </span>
+                                                        </>
+                                                      )}
+                                                    </Box>
+                                                  </Typography>
+                                                </Paper>
+                                              ),
+                                            )}
+                                          </Box>
+                                        </Box>
+                                      )}
+                                      {/* Intensity with color coding */}
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 0.5,
+                                          mt: 0.5,
+                                        }}
+                                      >
+                                        <WhatshotIcon
+                                          fontSize="small"
+                                          sx={{
+                                            color:
+                                              row.intensity === "vigorous"
+                                                ? "error.main"
+                                                : row.intensity === "moderate"
+                                                  ? "warning.main"
+                                                  : "success.main",
+                                          }}
+                                        />
+                                        <Typography
+                                          variant="caption"
+                                          sx={{
+                                            fontWeight: "medium",
+                                            color:
+                                              row.intensity === "vigorous"
+                                                ? "error.main"
+                                                : row.intensity === "moderate"
+                                                  ? "warning.main"
+                                                  : "success.main",
+                                            textTransform: "capitalize",
+                                          }}
+                                        >
+                                          {row.intensity} intensity
+                                        </Typography>
+                                      </Box>
                                     </Box>
-                                  </Box>
-                                )}
-                                {/* Intensity with color coding */}
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 0.5,
-                                    mt: 0.5,
-                                  }}
-                                >
-                                  <WhatshotIcon
-                                    fontSize="small"
+                                  )}
+                                </TableCell>
+
+                                <TableCell align="center">
+                                  {row.workoutType === "strength" ? (
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight="medium"
+                                    >
+                                      {row.totalReps || "--"}
+                                    </Typography>
+                                  ) : (
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                    >
+                                      --
+                                    </Typography>
+                                  )}
+                                </TableCell>
+
+                                <TableCell align="center">
+                                  {row.workoutType === "strength" ? (
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight="medium"
+                                    >
+                                      {row.totalWeight?.toFixed(1) || "--"} kg
+                                    </Typography>
+                                  ) : (
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                    >
+                                      --
+                                    </Typography>
+                                  )}
+                                </TableCell>
+
+                                <TableCell align="center">
+                                  <Box
                                     sx={{
-                                      color:
-                                        row.intensity === "vigorous"
-                                          ? "error.main"
-                                          : row.intensity === "moderate"
-                                            ? "warning.main"
-                                            : "success.main",
-                                    }}
-                                  />
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      fontWeight: "medium",
-                                      color:
-                                        row.intensity === "vigorous"
-                                          ? "error.main"
-                                          : row.intensity === "moderate"
-                                            ? "warning.main"
-                                            : "success.main",
-                                      textTransform: "capitalize",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
                                     }}
                                   >
-                                    {row.intensity} intensity
-                                  </Typography>
-                                </Box>
+                                    <WhatshotIcon
+                                      fontSize="small"
+                                      color="error"
+                                      sx={{ mr: 0.5 }}
+                                    />
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight="medium"
+                                      color="error.main"
+                                    >
+                                      {row.calories || "--"}
+                                    </Typography>
+                                  </Box>
+                                </TableCell>
+                              </>
+                            )}
+
+                            <TableCell align="center">
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "center",
+                                  gap: 0.5,
+                                }}
+                              >
+                                {isRestDay ? (
+                                  <>
+                                    <IconButton
+                                      disabled={isRestDay}
+                                      size="small"
+                                      color="primary"
+                                      onClick={() => openEditWorkout(row)}
+                                      title="Edit rest day"
+                                    >
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                    <IconButton
+                                      disabled={!isToday(row.date)}
+                                      size="small"
+                                      color="error"
+                                      onClick={() => setDeleteTarget(row)}
+                                      title="Delete rest day"
+                                    >
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </>
+                                ) : (
+                                  <>
+                                    <IconButton
+                                      disabled={!isToday(row.date)}
+                                      size="small"
+                                      color="primary"
+                                      onClick={() => openEditWorkout(row)}
+                                      title="Edit workout"
+                                    >
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                    <IconButton
+                                      disabled={!isToday(row.date)}
+                                      size="small"
+                                      color="error"
+                                      onClick={() => setDeleteTarget(row)}
+                                      title="Delete workout"
+                                    >
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </>
+                                )}
                               </Box>
-                            )}
-                          </TableCell>
-
-                          <TableCell align="center">
-                            {row.workoutType === "strength" ? (
-                              <Typography variant="body2" fontWeight="medium">
-                                {row.totalReps || "--"}
-                              </Typography>
-                            ) : (
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                --
-                              </Typography>
-                            )}
-                          </TableCell>
-
-                          <TableCell align="center">
-                            {row.workoutType === "strength" ? (
-                              <Typography variant="body2" fontWeight="medium">
-                                {row.totalWeight?.toFixed(1) || "--"} kg
-                              </Typography>
-                            ) : (
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                --
-                              </Typography>
-                            )}
-                          </TableCell>
-
-                          <TableCell align="center">
-                            <Box
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            >
-                              <WhatshotIcon
-                                fontSize="small"
-                                color="error"
-                                sx={{ mr: 0.5 }}
-                              />
-                              <Typography
-                                variant="body2"
-                                fontWeight="medium"
-                                color="error.main"
-                              >
-                                {row.calories || "--"}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-
-                          <TableCell align="center">
-                            <Box
-                              sx={{
-                                display: "flex",
-                                justifyContent: "center",
-                                gap: 0.5,
-                              }}
-                            >
-                              <IconButton
-                                disabled={!isToday(row.date)}
-                                size="small"
-                                color="primary"
-                                onClick={() => openEditWorkout(row)}
-                                title="Edit workout"
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                disabled={!isToday(row.date)}
-                                size="small"
-                                color="error"
-                                onClick={() => setDeleteTarget(row)}
-                                title="Delete workout"
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </React.Fragment>
                   ),
               )}
@@ -2765,8 +3178,18 @@ export default function Dashboard() {
         <DialogContent>
           <Typography>
             Are you sure you want to delete{" "}
-            <strong>{deleteTarget?.exercise}</strong>?
+            <strong>
+              {deleteTarget?.type === "rest"
+                ? "rest day"
+                : deleteTarget?.exercise}
+            </strong>
+            ?
           </Typography>
+          {deleteTarget?.type === "rest" && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Note: Deleting rest days may affect your streak.
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
@@ -2786,12 +3209,16 @@ export default function Dashboard() {
         onClose={() => {
           setSnackbarOpen(false);
           setSnackbarMessage("");
+          // Only clear lastDeleted if not showing undo
+          if (!lastDeleted) {
+            setSnackbarMessage("");
+          }
         }}
       >
         <Alert
           severity={snackbarSeverity}
           action={
-            lastDeleted ? (
+            lastDeleted && lastDeleted.type !== "rest" ? (
               <Button
                 color="inherit"
                 size="small"
