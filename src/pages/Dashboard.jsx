@@ -45,6 +45,7 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  Autocomplete,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
@@ -74,6 +75,49 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import CountUp from "react-countup";
+
+const PREDEFINED_STRENGTH_WORKOUTS = [
+  "Bench Press",
+  "Squat",
+  "Deadlift",
+  "Overhead Press",
+  "Barbell Row",
+  "Pull-ups",
+  "Push-ups",
+  "Dumbbell Curls",
+  "Tricep Extensions",
+  "Leg Press",
+  "Lunges",
+  "Shoulder Press",
+  "Lat Pulldown",
+  "Chest Fly",
+  "Leg Curls",
+  "Calf Raises",
+  "Bicep Curls",
+  "Tricep Pushdown",
+  "Face Pulls",
+  "Plank",
+  "Incline Bench Press",
+  "Decline Bench Press",
+  "Front Squat",
+  "Romanian Deadlift",
+  "Bent Over Row",
+  "T-Bar Row",
+  "Seated Row",
+  "Dips",
+  "Skull Crushers",
+  "Hammer Curls",
+  "Lateral Raises",
+  "Front Raises",
+  "Rear Delt Fly",
+  "Leg Extension",
+  "Hip Thrust",
+  "Glute Bridge",
+  "Cable Crossover",
+  "Pullovers",
+  "Shrugs",
+  "Farmer's Walk",
+];
 
 export default function Dashboard() {
   const [userId, setUserId] = useState(null);
@@ -3460,21 +3504,64 @@ export default function Dashboard() {
           )}
 
           {/* Exercise Name */}
-          <TextField
-            label="Exercise Name"
-            value={exercise}
-            onChange={(e) => setExercise(e.target.value)}
-            fullWidth
-            margin="normal"
-            helperText={
-              editingWorkout
-                ? "Exercise name can be edited"
-                : "e.g., Bench Press, Running, Cycling"
-            }
-            InputProps={{
-              readOnly: editingWorkout && workoutType === "cardio", // Read-only for cardio when editing
-            }}
-          />
+          {workoutType === "strength" ? (
+            // Strength Training
+            <Autocomplete
+              freeSolo
+              value={exercise}
+              onChange={(event, newValue) => {
+                setExercise(newValue || "");
+              }}
+              onInputChange={(event, newInputValue) => {
+                setExercise(newInputValue);
+              }}
+              // Sort alphabetically for simple grouping
+              options={[...PREDEFINED_STRENGTH_WORKOUTS].sort((a, b) =>
+                a.localeCompare(b),
+              )}
+              groupBy={(option) => option.charAt(0).toUpperCase()}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Exercise Name"
+                  margin="normal"
+                  helperText={
+                    editingWorkout
+                      ? "Exercise name can be edited"
+                      : "Select from list or type your own"
+                  }
+                />
+              )}
+              renderOption={(props, option) => (
+                <li {...props} key={option}>
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <FitnessCenterIcon
+                      fontSize="small"
+                      sx={{ mr: 1, opacity: 0.7 }}
+                    />
+                    {option}
+                  </Box>
+                </li>
+              )}
+            />
+          ) : (
+            // Cardio
+            <TextField
+              label="Exercise Name"
+              value={exercise}
+              onChange={(e) => setExercise(e.target.value)}
+              fullWidth
+              margin="normal"
+              helperText={
+                editingWorkout
+                  ? "Exercise name can be edited"
+                  : "Auto-filled based on equipment type"
+              }
+              InputProps={{
+                readOnly: editingWorkout && workoutType === "cardio",
+              }}
+            />
+          )}
 
           {/* Workout Type Toggle */}
           <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
