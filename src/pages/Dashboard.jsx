@@ -3485,6 +3485,11 @@ export default function Dashboard() {
                   ? "Today"
                   : `Logging for ${format(new Date(workoutDate), "dd-MM-yyyy")}`
               }
+              FormHelperTextProps={{
+                sx: {
+                  ml: "4px", // aligns with outlined input text
+                },
+              }}
             />
           )}
 
@@ -3530,6 +3535,11 @@ export default function Dashboard() {
                         ? "Exercise name can be edited"
                         : "Select from list, use quick chips, or type your own"
                     }
+                    FormHelperTextProps={{
+                      sx: {
+                        ml: "4px", // aligns with outlined input text
+                      },
+                    }}
                     InputProps={{
                       ...params.InputProps,
                       endAdornment: (
