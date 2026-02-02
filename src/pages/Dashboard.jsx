@@ -67,6 +67,8 @@ import BedIcon from "@mui/icons-material/Bed";
 import ListIcon from "@mui/icons-material/List";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import SecurityIcon from "@mui/icons-material/Security";
+import { Link } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -80,6 +82,7 @@ import { format, parseISO } from "date-fns";
 import CountUp from "react-countup";
 import WorkoutPlans from "./WorkoutPlans";
 import AddToWorkoutHandler from "./AddToWorkoutHandler";
+import { useAdmin } from "../contexts/AdminContext";
 
 const PREDEFINED_STRENGTH_WORKOUTS = [
   "Bench Press",
@@ -125,6 +128,7 @@ const PREDEFINED_STRENGTH_WORKOUTS = [
 ];
 
 export default function Dashboard() {
+  const { isAdmin } = useAdmin();
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0); // 0 for Workout, 1 for Workout Plans, 2 for Health Metrics
@@ -2135,6 +2139,25 @@ export default function Dashboard() {
               </Box>
             )}
           </Button>
+
+          {/* Admin Panel Button */}
+          {isAdmin && (
+            <Button
+              variant="outlined"
+              color="success"
+              component={Link}
+              to="/admin"
+              disabled={isOffline || loading}
+              startIcon={<SecurityIcon />}
+              sx={{
+                textTransform: "none",
+                minWidth: "auto",
+                px: 2,
+              }}
+            >
+              Admin Panel
+            </Button>
+          )}
 
           {/* Logout Button */}
           <Button
