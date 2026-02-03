@@ -46,6 +46,8 @@ import {
   CircularProgress,
   Divider,
   Autocomplete,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
@@ -122,6 +124,7 @@ const PREDEFINED_STRENGTH_WORKOUTS = [
 export default function Dashboard() {
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(0); // 0 for BMI, 1 for Workout
 
   // Profile State
   const [profile, setProfile] = useState(null);
@@ -2329,889 +2332,950 @@ export default function Dashboard() {
         </Grid>
       </Grid>
 
-      {/* Chart */}
-      <Card variant="outlined" sx={{ p: 3, mb: 4 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 2,
-          }}
+      {/* Tab Navigation */}
+      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
+        <Tabs
+          value={activeTab}
+          onChange={(e, newValue) => setActiveTab(newValue)}
         >
-          <Typography variant="h6">Weight & BMI Progress</Typography>
+          <Tab label="BMI & Weight Tracking" />
+          <Tab label="Workout History" />
+        </Tabs>
+      </Box>
 
-          {/* Chart Filter Buttons */}
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <Button
-              size="small"
-              variant={chartFilter === "week" ? "contained" : "outlined"}
-              onClick={() => setChartFilter("week")}
+      {/* BMI Tab Content */}
+      {activeTab === 0 && (
+        <>
+          {/* Chart */}
+          <Card variant="outlined" sx={{ p: 3, mb: 4 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
             >
-              Last 7 days
-            </Button>
-            <Button
-              size="small"
-              variant={chartFilter === "month" ? "contained" : "outlined"}
-              onClick={() => setChartFilter("month")}
-            >
-              Last 30 days
-            </Button>
-            <Button
-              size="small"
-              variant={chartFilter === "3months" ? "contained" : "outlined"}
-              onClick={() => setChartFilter("3months")}
-            >
-              Last 90 days
-            </Button>
-            <Button
-              size="small"
-              variant={chartFilter === "all" ? "contained" : "outlined"}
-              onClick={() => setChartFilter("all")}
-            >
-              All time
-            </Button>
-          </Box>
-        </Box>
+              <Typography variant="h6">Weight & BMI Progress</Typography>
 
-        {/* Statistics Summary */}
-        {getFilteredChartData().length > 0 && (
-          <Box sx={{ display: "flex", gap: 3, mb: 3, flexWrap: "wrap" }}>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Starting Weight
-              </Typography>
-              <Typography variant="h6" color="primary">
-                {getWeightStats().startingWeight?.toFixed(1) || "--"} kg
-              </Typography>
+              {/* Chart Filter Buttons */}
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button
+                  size="small"
+                  variant={chartFilter === "week" ? "contained" : "outlined"}
+                  onClick={() => setChartFilter("week")}
+                >
+                  Last 7 days
+                </Button>
+                <Button
+                  size="small"
+                  variant={chartFilter === "month" ? "contained" : "outlined"}
+                  onClick={() => setChartFilter("month")}
+                >
+                  Last 30 days
+                </Button>
+                <Button
+                  size="small"
+                  variant={chartFilter === "3months" ? "contained" : "outlined"}
+                  onClick={() => setChartFilter("3months")}
+                >
+                  Last 90 days
+                </Button>
+                <Button
+                  size="small"
+                  variant={chartFilter === "all" ? "contained" : "outlined"}
+                  onClick={() => setChartFilter("all")}
+                >
+                  All time
+                </Button>
+              </Box>
             </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Current Weight
-              </Typography>
-              <Typography variant="h6" color="primary">
-                {getWeightStats().currentWeight?.toFixed(1) || "--"} kg
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Overall Change
-              </Typography>
-              <Typography
-                variant="h6"
+
+            {/* Statistics Summary */}
+            {getFilteredChartData().length > 0 && (
+              <Box sx={{ display: "flex", gap: 3, mb: 3, flexWrap: "wrap" }}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Starting Weight
+                  </Typography>
+                  <Typography variant="h6" color="primary">
+                    {getWeightStats().startingWeight?.toFixed(1) || "--"} kg
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Current Weight
+                  </Typography>
+                  <Typography variant="h6" color="primary">
+                    {getWeightStats().currentWeight?.toFixed(1) || "--"} kg
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Overall Change
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color:
+                        getWeightStats().change > 0
+                          ? "error.main"
+                          : getWeightStats().change < 0
+                            ? "success.main"
+                            : "text.primary",
+                    }}
+                  >
+                    {getWeightStats().change !== null
+                      ? `${Math.abs(getWeightStats().change).toFixed(1)} kg ${
+                          getWeightStats().change > 0 ? "↗" : "↘"
+                        }`
+                      : "--"}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+
+            {/* Show message if no data for selected period */}
+            {getFilteredChartData().length === 0 ? (
+              <Box
                 sx={{
-                  color:
-                    getWeightStats().change > 0
-                      ? "error.main"
-                      : getWeightStats().change < 0
-                        ? "success.main"
-                        : "text.primary",
+                  height: 300,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                {getWeightStats().change !== null
-                  ? `${Math.abs(getWeightStats().change).toFixed(1)} kg ${
-                      getWeightStats().change > 0 ? "↗" : "↘"
-                    }`
-                  : "--"}
-              </Typography>
-            </Box>
-          </Box>
-        )}
+                <Typography color="text.secondary">
+                  {chartFilter === "all"
+                    ? "No BMI data available. Add your first BMI entry!"
+                    : `No BMI data available for the selected period (${chartFilter}).`}
+                </Typography>
+              </Box>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart
+                  data={getFilteredChartData()}
+                  margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(date) => format(new Date(date), "d-MM-yy")}
+                  />
+                  <YAxis
+                    yAxisId="left"
+                    orientation="left"
+                    stroke="#1976d2"
+                    domain={["dataMin - 5", "dataMax + 5"]}
+                    label={{
+                      value: "Weight (kg)",
+                      angle: -90,
+                      position: "insideLeft",
+                    }}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    stroke="#2e7d32"
+                    domain={["dataMin - 2", "dataMax + 2"]}
+                    label={{ value: "BMI", angle: 90, position: "insideRight" }}
+                  />
+                  <Tooltip
+                    formatter={(value, name) => {
+                      // Explicitly handle each data series
+                      if (name === "weight") {
+                        return [`${Number(value).toFixed(1)} kg`, "Weight"];
+                      } else if (name === "bmi") {
+                        return [Number(value).toFixed(1), "BMI"];
+                      }
+                      return [value, name];
+                    }}
+                    labelFormatter={(label) =>
+                      format(new Date(label), "dd-MM-yyyy")
+                    }
+                  />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="weight"
+                    stroke="#1976d2"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    name="Weight"
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="bmi"
+                    stroke="#2e7d32"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    name="BMI"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </Card>
+        </>
+      )}
 
-        {/* Show message if no data for selected period */}
-        {getFilteredChartData().length === 0 ? (
-          <Box
-            sx={{
-              height: 300,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Typography color="text.secondary">
-              {chartFilter === "all"
-                ? "No BMI data available. Add your first BMI entry!"
-                : `No BMI data available for the selected period (${chartFilter}).`}
+      {/* Workout Tab Content */}
+      {activeTab === 1 && (
+        <>
+          {/* Workout Table */}
+          <Card variant="outlined" sx={{ p: 3, mb: 10 }}>
+            <Typography variant="h6" mb={2}>
+              Workout History
             </Typography>
-          </Box>
-        ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart
-              data={getFilteredChartData()}
-              margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={(date) => format(new Date(date), "d-MM-yy")}
-              />
-              <YAxis
-                yAxisId="left"
-                orientation="left"
-                stroke="#1976d2"
-                domain={["dataMin - 5", "dataMax + 5"]}
-                label={{
-                  value: "Weight (kg)",
-                  angle: -90,
-                  position: "insideLeft",
-                }}
-              />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                stroke="#2e7d32"
-                domain={["dataMin - 2", "dataMax + 2"]}
-                label={{ value: "BMI", angle: 90, position: "insideRight" }}
-              />
-              <Tooltip
-                formatter={(value, name) => {
-                  // Explicitly handle each data series
-                  if (name === "weight") {
-                    return [`${Number(value).toFixed(1)} kg`, "Weight"];
-                  } else if (name === "bmi") {
-                    return [Number(value).toFixed(1), "BMI"];
-                  }
-                  return [value, name];
-                }}
-                labelFormatter={(label) =>
-                  format(new Date(label), "dd-MM-yyyy")
-                }
-              />
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="weight"
-                stroke="#1976d2"
-                strokeWidth={2}
-                dot={{ r: 4 }}
-                name="Weight"
-              />
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="bmi"
-                stroke="#2e7d32"
-                strokeWidth={2}
-                dot={{ r: 4 }}
-                name="BMI"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
-      </Card>
 
-      {/* Workout Table */}
-      <Card variant="outlined" sx={{ p: 3, mb: 10 }}>
-        <Typography variant="h6" mb={2}>
-          Workout History
-        </Typography>
+            <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+              <Button
+                variant={workoutFilter === "today" ? "contained" : "outlined"}
+                onClick={() => setWorkoutFilter("today")}
+              >
+                Today
+              </Button>
+              <Button
+                variant={workoutFilter === "week" ? "contained" : "outlined"}
+                onClick={() => setWorkoutFilter("week")}
+              >
+                This Week
+              </Button>
+              <Button
+                variant={workoutFilter === "month" ? "contained" : "outlined"}
+                onClick={() => setWorkoutFilter("month")}
+              >
+                This Month
+              </Button>
+              <Button
+                variant={workoutFilter === "all" ? "contained" : "outlined"}
+                onClick={() => setWorkoutFilter("all")}
+              >
+                All Time
+              </Button>
+            </Box>
 
-        <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
-          <Button
-            variant={workoutFilter === "today" ? "contained" : "outlined"}
-            onClick={() => setWorkoutFilter("today")}
-          >
-            Today
-          </Button>
-          <Button
-            variant={workoutFilter === "week" ? "contained" : "outlined"}
-            onClick={() => setWorkoutFilter("week")}
-          >
-            This Week
-          </Button>
-          <Button
-            variant={workoutFilter === "month" ? "contained" : "outlined"}
-            onClick={() => setWorkoutFilter("month")}
-          >
-            This Month
-          </Button>
-          <Button
-            variant={workoutFilter === "all" ? "contained" : "outlined"}
-            onClick={() => setWorkoutFilter("all")}
-          >
-            All Time
-          </Button>
-        </Box>
-
-        <TableContainer component={Paper} sx={tableStyles}>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
-                <TableCell sx={{ fontWeight: "bold", pr: 8 }}>Date</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Exercise</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Details</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }} align="center">
-                  Total Reps
-                </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }} align="center">
-                  Total Weight
-                </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }} align="center">
-                  Calories
-                </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }} align="center">
-                  Actions
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {/* No workouts found message */}
-              {getFilteredWorkouts().length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                    <Box sx={{ textAlign: "center" }}>
-                      <Typography color="text.secondary" sx={{ mb: 2 }}>
-                        {workoutFilter === "today" ? (
-                          <>
-                            No activities found for today 💤
-                            <br />
-                            <Typography variant="caption">
-                              Taking a rest day? Log it to maintain your streak!
-                            </Typography>
-                          </>
-                        ) : (
-                          "No activities found for this period 💤"
-                        )}
-                      </Typography>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          gap: 1,
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Button
-                          variant="outlined"
-                          startIcon={<FitnessCenterIcon />}
-                          onClick={() => setOpenWorkout(true)}
-                          size="small"
-                        >
-                          Add Workout
-                        </Button>
-                        {workoutFilter === "today" && (
-                          <Button
-                            variant="outlined"
-                            color="info"
-                            startIcon={<BedIcon />}
-                            onClick={() => addRestDay()}
-                            size="small"
-                          >
-                            Log Rest Day
-                          </Button>
-                        )}
-                      </Box>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              )}
-
-              {Object.entries(getWorkoutsByWeekday()).map(
-                ([day, dayWorkouts]) =>
-                  dayWorkouts.length > 0 && (
-                    <React.Fragment key={day}>
-                      {/* Day header row */}
-                      <TableRow>
-                        <TableCell
-                          colSpan={7}
-                          sx={{
-                            fontWeight: "bold",
-                            backgroundColor: "#e8f4fd",
-                            fontSize: "0.95rem",
-                            py: 1,
-                          }}
-                        >
-                          {day}
-                        </TableCell>
-                      </TableRow>
-
-                      {/* Workout rows */}
-                      {dayWorkouts.map((row) => {
-                        // Check if it's a rest day
-                        const isRestDay = row.type === "rest";
-
-                        return (
-                          <TableRow
-                            key={row.id}
-                            hover={!isRestDay}
-                            sx={{
-                              backgroundColor: isRestDay
-                                ? "#f9f9f9"
-                                : "inherit",
-                              "&:hover": {
-                                backgroundColor: isRestDay
-                                  ? "#f0f0f0"
-                                  : "#fafafa",
-                              },
-                            }}
-                          >
-                            <TableCell>
-                              <Typography variant="body2" fontWeight="medium">
-                                {format(parseISO(row.date), "dd-MM-yyyy")}
-                              </Typography>
-                            </TableCell>
-
-                            {isRestDay ? (
-                              // Rest Day Display
+            <TableContainer component={Paper} sx={tableStyles}>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+                    <TableCell sx={{ fontWeight: "bold", pr: 8 }}>
+                      Date
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Exercise</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>Details</TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }} align="center">
+                      Total Reps
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }} align="center">
+                      Total Weight
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }} align="center">
+                      Calories
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }} align="center">
+                      Actions
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {/* No workouts found message */}
+                  {getFilteredWorkouts().length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                        <Box sx={{ textAlign: "center" }}>
+                          <Typography color="text.secondary" sx={{ mb: 2 }}>
+                            {workoutFilter === "today" ? (
                               <>
-                                <TableCell>
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 1,
-                                    }}
-                                  >
-                                    <BedIcon color="info" fontSize="small" />
-                                    <Typography
-                                      variant="body2"
-                                      color="info.main"
-                                      fontWeight="medium"
-                                    >
-                                      Rest Day
-                                    </Typography>
-                                  </Box>
-                                </TableCell>
-                                <TableCell>
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    {row.notes || "Active recovery"}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align="center">
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    --
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align="center">
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    --
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align="center">
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    --
-                                  </Typography>
-                                </TableCell>
+                                No activities found for today 💤
+                                <br />
+                                <Typography variant="caption">
+                                  Taking a rest day? Log it to maintain your
+                                  streak!
+                                </Typography>
                               </>
                             ) : (
-                              // Workout Display
-                              <>
+                              "No activities found for this period 💤"
+                            )}
+                          </Typography>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              gap: 1,
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Button
+                              variant="outlined"
+                              startIcon={<FitnessCenterIcon />}
+                              onClick={() => setOpenWorkout(true)}
+                              size="small"
+                            >
+                              Add Workout
+                            </Button>
+                            {workoutFilter === "today" && (
+                              <Button
+                                variant="outlined"
+                                color="info"
+                                startIcon={<BedIcon />}
+                                onClick={() => addRestDay()}
+                                size="small"
+                              >
+                                Log Rest Day
+                              </Button>
+                            )}
+                          </Box>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  )}
+
+                  {Object.entries(getWorkoutsByWeekday()).map(
+                    ([day, dayWorkouts]) =>
+                      dayWorkouts.length > 0 && (
+                        <React.Fragment key={day}>
+                          {/* Day header row */}
+                          <TableRow>
+                            <TableCell
+                              colSpan={7}
+                              sx={{
+                                fontWeight: "bold",
+                                backgroundColor: "#e8f4fd",
+                                fontSize: "0.95rem",
+                                py: 1,
+                              }}
+                            >
+                              {day}
+                            </TableCell>
+                          </TableRow>
+
+                          {/* Workout rows */}
+                          {dayWorkouts.map((row) => {
+                            // Check if it's a rest day
+                            const isRestDay = row.type === "rest";
+
+                            return (
+                              <TableRow
+                                key={row.id}
+                                hover={!isRestDay}
+                                sx={{
+                                  backgroundColor: isRestDay
+                                    ? "#f9f9f9"
+                                    : "inherit",
+                                  "&:hover": {
+                                    backgroundColor: isRestDay
+                                      ? "#f0f0f0"
+                                      : "#fafafa",
+                                  },
+                                }}
+                              >
                                 <TableCell>
-                                  <Box>
-                                    <Typography
-                                      variant="body2"
-                                      fontWeight="medium"
-                                    >
-                                      {row.exercise || "--"}
-                                    </Typography>
-                                  </Box>
+                                  <Typography
+                                    variant="body2"
+                                    fontWeight="medium"
+                                  >
+                                    {format(parseISO(row.date), "dd-MM-yyyy")}
+                                  </Typography>
                                 </TableCell>
 
-                                <TableCell>
-                                  {row.workoutType === "strength" ? (
-                                    row.sets ? (
-                                      <Box>
-                                        {/* Duration/Stats Row */}
-                                        <Box sx={{ mb: 1 }}>
-                                          <Box
-                                            sx={{
-                                              display: "flex",
-                                              alignItems: "center",
-                                              gap: 1,
-                                              mb: 0.5,
-                                            }}
-                                          >
-                                            <Chip
-                                              label={
-                                                <>
-                                                  {row.sets.length}{" "}
-                                                  {row.sets.length === 1
-                                                    ? "set"
-                                                    : "sets"}
-                                                </>
-                                              }
-                                              size="small"
-                                              variant="outlined"
-                                              color="warning"
-                                              icon={
-                                                <FitnessCenterIcon
-                                                  fontSize="small"
-                                                  color="warning"
-                                                />
-                                              }
-                                            />
-                                          </Box>
-                                        </Box>
-
-                                        {/* Sets Display - Paper Style */}
-                                        {row.sets && (
-                                          <Box sx={{ mb: 1 }}>
-                                            <Typography
-                                              variant="caption"
-                                              color="text.secondary"
-                                              display="block"
-                                              sx={{ mb: 0.5 }}
-                                            >
-                                              {row.sets.length}{" "}
-                                              {row.sets.length === 1
-                                                ? "set"
-                                                : "sets"}
-                                              :
-                                            </Typography>
-                                            <Box
-                                              sx={{
-                                                display: "flex",
-                                                flexDirection: "column",
-                                                gap: 0.5,
-                                                maxHeight:
-                                                  row.sets.length > 3
-                                                    ? "120px"
-                                                    : "none",
-                                                overflowY:
-                                                  row.sets.length > 3
-                                                    ? "auto"
-                                                    : "visible",
-                                                pr: row.sets.length > 3 ? 1 : 0,
-                                              }}
-                                            >
-                                              {row.sets.map((set, idx) => (
-                                                <Paper
-                                                  key={idx}
-                                                  variant="outlined"
-                                                  sx={{
-                                                    p: 0.5,
-                                                    backgroundColor: "#f9f9f9",
-                                                    borderLeft: "3px solid",
-                                                    borderLeftColor:
-                                                      idx % 2 === 0
-                                                        ? "#1976d2"
-                                                        : "#2e7d32",
-                                                  }}
-                                                >
-                                                  <Typography
-                                                    variant="caption"
-                                                    component="div"
-                                                  >
-                                                    <Box
-                                                      sx={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: 1,
-                                                        flexWrap: "wrap",
-                                                      }}
-                                                    >
-                                                      <span
-                                                        style={{
-                                                          fontWeight: "bold",
-                                                          minWidth: "40px",
-                                                        }}
-                                                      >
-                                                        Set {set.setNumber}
-                                                      </span>
-
-                                                      <span>•</span>
-                                                      <span
-                                                        style={{
-                                                          fontWeight: "bold",
-                                                        }}
-                                                      >
-                                                        {set.reps} reps
-                                                      </span>
-
-                                                      <span>×</span>
-                                                      <span
-                                                        style={{
-                                                          fontWeight: "bold",
-                                                          color: "#1976d2",
-                                                        }}
-                                                      >
-                                                        {set.weight?.toFixed(1)}{" "}
-                                                        kg
-                                                      </span>
-
-                                                      {/* Optional: Show total for this set */}
-                                                      {set.reps &&
-                                                        set.weight && (
-                                                          <>
-                                                            <span>•</span>
-                                                            <span
-                                                              style={{
-                                                                color:
-                                                                  "#2e7d32",
-                                                              }}
-                                                            >
-                                                              Total:{" "}
-                                                              {(
-                                                                set.reps *
-                                                                set.weight
-                                                              ).toFixed(1)}{" "}
-                                                              kg
-                                                            </span>
-                                                          </>
-                                                        )}
-                                                    </Box>
-                                                  </Typography>
-                                                </Paper>
-                                              ))}
-                                            </Box>
-                                          </Box>
-                                        )}
-                                      </Box>
-                                    ) : (
-                                      "--"
-                                    )
-                                  ) : (
-                                    <Box>
-                                      {/* Duration and Stats Row */}
-                                      <Box sx={{ mb: 1 }}>
-                                        <Box
-                                          sx={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: 1,
-                                            mb: 0.5,
-                                          }}
-                                        >
-                                          <Chip
-                                            label={`${row.duration} ${"mins"}`}
-                                            size="small"
-                                            variant="outlined"
-                                            color="primary"
-                                            icon={
-                                              <AccessTimeIcon fontSize="small" />
-                                            }
-                                          />
-
-                                          {/* Average Speed for relevant equipment */}
-                                          {row.avgSpeed &&
-                                            row.avgSpeed > 0 &&
-                                            (row.cardioType === "treadmill" ||
-                                              row.cardioType === "cycle" ||
-                                              row.cardioType === "airbike") && (
-                                              <Chip
-                                                label={`Avg ${row.avgSpeed.toFixed(1)} ${
-                                                  row.cardioType === "treadmill"
-                                                    ? row.speedUnit || "km/h"
-                                                    : "RPM"
-                                                }`}
-                                                size="small"
-                                                variant="outlined"
-                                                color="primary"
-                                              />
-                                            )}
-
-                                          {/* Distance if available */}
-                                          {row.distance && (
-                                            <Chip
-                                              label={`${row.distance} ${row.distanceUnit}`}
-                                              size="small"
-                                              variant="outlined"
-                                              color="success"
-                                              icon={
-                                                <DirectionsRunIcon fontSize="small" />
-                                              }
-                                            />
-                                          )}
-                                        </Box>
-                                      </Box>
-
-                                      {/* Sessions */}
-                                      {row.sessions && (
-                                        <Box sx={{ mb: 1 }}>
-                                          <Typography
-                                            variant="caption"
-                                            color="text.secondary"
-                                            display="block"
-                                            sx={{ mb: 0.5 }}
-                                          >
-                                            {row.sessions.length}{" "}
-                                            {row.sessions.length === 1
-                                              ? "session"
-                                              : "sessions"}
-                                            :
-                                          </Typography>
-                                          <Box
-                                            sx={{
-                                              display: "flex",
-                                              flexDirection: "column",
-                                              gap: 0.5,
-                                              maxHeight:
-                                                row.sessions.length > 3
-                                                  ? "120px"
-                                                  : "none",
-                                              overflowY:
-                                                row.sessions.length > 3
-                                                  ? "auto"
-                                                  : "visible",
-                                              pr:
-                                                row.sessions.length > 3 ? 1 : 0,
-                                            }}
-                                          >
-                                            {row.sessions.map(
-                                              (session, idx) => (
-                                                <Paper
-                                                  key={idx}
-                                                  variant="outlined"
-                                                  sx={{
-                                                    p: 0.5,
-                                                    backgroundColor: "#f9f9f9",
-                                                    borderLeft: "3px solid",
-                                                    borderLeftColor:
-                                                      idx % 2 === 0
-                                                        ? "#1976d2"
-                                                        : "#2e7d32",
-                                                  }}
-                                                >
-                                                  <Typography
-                                                    variant="caption"
-                                                    component="div"
-                                                  >
-                                                    <Box
-                                                      sx={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: 1,
-                                                        flexWrap: "wrap",
-                                                      }}
-                                                    >
-                                                      <span
-                                                        style={{
-                                                          fontWeight: "bold",
-                                                          minWidth: "40px",
-                                                        }}
-                                                      >
-                                                        {session.duration} min
-                                                      </span>
-
-                                                      {(row.cardioType ===
-                                                        "treadmill" ||
-                                                        row.cardioType ===
-                                                          "cycle" ||
-                                                        row.cardioType ===
-                                                          "airbike") &&
-                                                        session.speed && (
-                                                          <>
-                                                            <span>@</span>
-                                                            <span
-                                                              style={{
-                                                                fontWeight:
-                                                                  "bold",
-                                                              }}
-                                                            >
-                                                              {session.speed}{" "}
-                                                              {row.cardioType ===
-                                                              "treadmill"
-                                                                ? row.speedUnit ||
-                                                                  "km/h"
-                                                                : "RPM"}
-                                                            </span>
-                                                          </>
-                                                        )}
-
-                                                      {row.cardioType ===
-                                                        "treadmill" &&
-                                                        session.incline && (
-                                                          <>
-                                                            <span>•</span>
-                                                            <span>
-                                                              {session.incline}%
-                                                              incline
-                                                            </span>
-                                                          </>
-                                                        )}
-
-                                                      {session.resistance && (
-                                                        <>
-                                                          <span>•</span>
-                                                          <span>
-                                                            Level{" "}
-                                                            {session.resistance}
-                                                          </span>
-                                                        </>
-                                                      )}
-                                                    </Box>
-                                                  </Typography>
-                                                </Paper>
-                                              ),
-                                            )}
-                                          </Box>
-                                        </Box>
-                                      )}
-                                      {/* Intensity with color coding */}
+                                {isRestDay ? (
+                                  // Rest Day Display
+                                  <>
+                                    <TableCell>
                                       <Box
                                         sx={{
                                           display: "flex",
                                           alignItems: "center",
-                                          gap: 0.5,
-                                          mt: 0.5,
+                                          gap: 1,
+                                        }}
+                                      >
+                                        <BedIcon
+                                          color="info"
+                                          fontSize="small"
+                                        />
+                                        <Typography
+                                          variant="body2"
+                                          color="info.main"
+                                          fontWeight="medium"
+                                        >
+                                          Rest Day
+                                        </Typography>
+                                      </Box>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                      >
+                                        {row.notes || "Active recovery"}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell align="center">
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                      >
+                                        --
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell align="center">
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                      >
+                                        --
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell align="center">
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                      >
+                                        --
+                                      </Typography>
+                                    </TableCell>
+                                  </>
+                                ) : (
+                                  // Workout Display
+                                  <>
+                                    <TableCell>
+                                      <Box>
+                                        <Typography
+                                          variant="body2"
+                                          fontWeight="medium"
+                                        >
+                                          {row.exercise || "--"}
+                                        </Typography>
+                                      </Box>
+                                    </TableCell>
+
+                                    <TableCell>
+                                      {row.workoutType === "strength" ? (
+                                        row.sets ? (
+                                          <Box>
+                                            {/* Duration/Stats Row */}
+                                            <Box sx={{ mb: 1 }}>
+                                              <Box
+                                                sx={{
+                                                  display: "flex",
+                                                  alignItems: "center",
+                                                  gap: 1,
+                                                  mb: 0.5,
+                                                }}
+                                              >
+                                                <Chip
+                                                  label={
+                                                    <>
+                                                      {row.sets.length}{" "}
+                                                      {row.sets.length === 1
+                                                        ? "set"
+                                                        : "sets"}
+                                                    </>
+                                                  }
+                                                  size="small"
+                                                  variant="outlined"
+                                                  color="warning"
+                                                  icon={
+                                                    <FitnessCenterIcon
+                                                      fontSize="small"
+                                                      color="warning"
+                                                    />
+                                                  }
+                                                />
+                                              </Box>
+                                            </Box>
+
+                                            {/* Sets Display - Paper Style */}
+                                            {row.sets && (
+                                              <Box sx={{ mb: 1 }}>
+                                                <Typography
+                                                  variant="caption"
+                                                  color="text.secondary"
+                                                  display="block"
+                                                  sx={{ mb: 0.5 }}
+                                                >
+                                                  {row.sets.length}{" "}
+                                                  {row.sets.length === 1
+                                                    ? "set"
+                                                    : "sets"}
+                                                  :
+                                                </Typography>
+                                                <Box
+                                                  sx={{
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    gap: 0.5,
+                                                    maxHeight:
+                                                      row.sets.length > 3
+                                                        ? "120px"
+                                                        : "none",
+                                                    overflowY:
+                                                      row.sets.length > 3
+                                                        ? "auto"
+                                                        : "visible",
+                                                    pr:
+                                                      row.sets.length > 3
+                                                        ? 1
+                                                        : 0,
+                                                  }}
+                                                >
+                                                  {row.sets.map((set, idx) => (
+                                                    <Paper
+                                                      key={idx}
+                                                      variant="outlined"
+                                                      sx={{
+                                                        p: 0.5,
+                                                        backgroundColor:
+                                                          "#f9f9f9",
+                                                        borderLeft: "3px solid",
+                                                        borderLeftColor:
+                                                          idx % 2 === 0
+                                                            ? "#1976d2"
+                                                            : "#2e7d32",
+                                                      }}
+                                                    >
+                                                      <Typography
+                                                        variant="caption"
+                                                        component="div"
+                                                      >
+                                                        <Box
+                                                          sx={{
+                                                            display: "flex",
+                                                            alignItems:
+                                                              "center",
+                                                            gap: 1,
+                                                            flexWrap: "wrap",
+                                                          }}
+                                                        >
+                                                          <span
+                                                            style={{
+                                                              fontWeight:
+                                                                "bold",
+                                                              minWidth: "40px",
+                                                            }}
+                                                          >
+                                                            Set {set.setNumber}
+                                                          </span>
+
+                                                          <span>•</span>
+                                                          <span
+                                                            style={{
+                                                              fontWeight:
+                                                                "bold",
+                                                            }}
+                                                          >
+                                                            {set.reps} reps
+                                                          </span>
+
+                                                          <span>×</span>
+                                                          <span
+                                                            style={{
+                                                              fontWeight:
+                                                                "bold",
+                                                              color: "#1976d2",
+                                                            }}
+                                                          >
+                                                            {set.weight?.toFixed(
+                                                              1,
+                                                            )}{" "}
+                                                            kg
+                                                          </span>
+
+                                                          {/* Optional: Show total for this set */}
+                                                          {set.reps &&
+                                                            set.weight && (
+                                                              <>
+                                                                <span>•</span>
+                                                                <span
+                                                                  style={{
+                                                                    color:
+                                                                      "#2e7d32",
+                                                                  }}
+                                                                >
+                                                                  Total:{" "}
+                                                                  {(
+                                                                    set.reps *
+                                                                    set.weight
+                                                                  ).toFixed(
+                                                                    1,
+                                                                  )}{" "}
+                                                                  kg
+                                                                </span>
+                                                              </>
+                                                            )}
+                                                        </Box>
+                                                      </Typography>
+                                                    </Paper>
+                                                  ))}
+                                                </Box>
+                                              </Box>
+                                            )}
+                                          </Box>
+                                        ) : (
+                                          "--"
+                                        )
+                                      ) : (
+                                        <Box>
+                                          {/* Duration and Stats Row */}
+                                          <Box sx={{ mb: 1 }}>
+                                            <Box
+                                              sx={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 1,
+                                                mb: 0.5,
+                                              }}
+                                            >
+                                              <Chip
+                                                label={`${row.duration} ${"mins"}`}
+                                                size="small"
+                                                variant="outlined"
+                                                color="primary"
+                                                icon={
+                                                  <AccessTimeIcon fontSize="small" />
+                                                }
+                                              />
+
+                                              {/* Average Speed for relevant equipment */}
+                                              {row.avgSpeed &&
+                                                row.avgSpeed > 0 &&
+                                                (row.cardioType ===
+                                                  "treadmill" ||
+                                                  row.cardioType === "cycle" ||
+                                                  row.cardioType ===
+                                                    "airbike") && (
+                                                  <Chip
+                                                    label={`Avg ${row.avgSpeed.toFixed(1)} ${
+                                                      row.cardioType ===
+                                                      "treadmill"
+                                                        ? row.speedUnit ||
+                                                          "km/h"
+                                                        : "RPM"
+                                                    }`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="primary"
+                                                  />
+                                                )}
+
+                                              {/* Distance if available */}
+                                              {row.distance && (
+                                                <Chip
+                                                  label={`${row.distance} ${row.distanceUnit}`}
+                                                  size="small"
+                                                  variant="outlined"
+                                                  color="success"
+                                                  icon={
+                                                    <DirectionsRunIcon fontSize="small" />
+                                                  }
+                                                />
+                                              )}
+                                            </Box>
+                                          </Box>
+
+                                          {/* Sessions */}
+                                          {row.sessions && (
+                                            <Box sx={{ mb: 1 }}>
+                                              <Typography
+                                                variant="caption"
+                                                color="text.secondary"
+                                                display="block"
+                                                sx={{ mb: 0.5 }}
+                                              >
+                                                {row.sessions.length}{" "}
+                                                {row.sessions.length === 1
+                                                  ? "session"
+                                                  : "sessions"}
+                                                :
+                                              </Typography>
+                                              <Box
+                                                sx={{
+                                                  display: "flex",
+                                                  flexDirection: "column",
+                                                  gap: 0.5,
+                                                  maxHeight:
+                                                    row.sessions.length > 3
+                                                      ? "120px"
+                                                      : "none",
+                                                  overflowY:
+                                                    row.sessions.length > 3
+                                                      ? "auto"
+                                                      : "visible",
+                                                  pr:
+                                                    row.sessions.length > 3
+                                                      ? 1
+                                                      : 0,
+                                                }}
+                                              >
+                                                {row.sessions.map(
+                                                  (session, idx) => (
+                                                    <Paper
+                                                      key={idx}
+                                                      variant="outlined"
+                                                      sx={{
+                                                        p: 0.5,
+                                                        backgroundColor:
+                                                          "#f9f9f9",
+                                                        borderLeft: "3px solid",
+                                                        borderLeftColor:
+                                                          idx % 2 === 0
+                                                            ? "#1976d2"
+                                                            : "#2e7d32",
+                                                      }}
+                                                    >
+                                                      <Typography
+                                                        variant="caption"
+                                                        component="div"
+                                                      >
+                                                        <Box
+                                                          sx={{
+                                                            display: "flex",
+                                                            alignItems:
+                                                              "center",
+                                                            gap: 1,
+                                                            flexWrap: "wrap",
+                                                          }}
+                                                        >
+                                                          <span
+                                                            style={{
+                                                              fontWeight:
+                                                                "bold",
+                                                              minWidth: "40px",
+                                                            }}
+                                                          >
+                                                            {session.duration}{" "}
+                                                            min
+                                                          </span>
+
+                                                          {(row.cardioType ===
+                                                            "treadmill" ||
+                                                            row.cardioType ===
+                                                              "cycle" ||
+                                                            row.cardioType ===
+                                                              "airbike") &&
+                                                            session.speed && (
+                                                              <>
+                                                                <span>@</span>
+                                                                <span
+                                                                  style={{
+                                                                    fontWeight:
+                                                                      "bold",
+                                                                  }}
+                                                                >
+                                                                  {
+                                                                    session.speed
+                                                                  }{" "}
+                                                                  {row.cardioType ===
+                                                                  "treadmill"
+                                                                    ? row.speedUnit ||
+                                                                      "km/h"
+                                                                    : "RPM"}
+                                                                </span>
+                                                              </>
+                                                            )}
+
+                                                          {row.cardioType ===
+                                                            "treadmill" &&
+                                                            session.incline && (
+                                                              <>
+                                                                <span>•</span>
+                                                                <span>
+                                                                  {
+                                                                    session.incline
+                                                                  }
+                                                                  % incline
+                                                                </span>
+                                                              </>
+                                                            )}
+
+                                                          {session.resistance && (
+                                                            <>
+                                                              <span>•</span>
+                                                              <span>
+                                                                Level{" "}
+                                                                {
+                                                                  session.resistance
+                                                                }
+                                                              </span>
+                                                            </>
+                                                          )}
+                                                        </Box>
+                                                      </Typography>
+                                                    </Paper>
+                                                  ),
+                                                )}
+                                              </Box>
+                                            </Box>
+                                          )}
+                                          {/* Intensity with color coding */}
+                                          <Box
+                                            sx={{
+                                              display: "flex",
+                                              alignItems: "center",
+                                              gap: 0.5,
+                                              mt: 0.5,
+                                            }}
+                                          >
+                                            <WhatshotIcon
+                                              fontSize="small"
+                                              sx={{
+                                                color:
+                                                  row.intensity === "vigorous"
+                                                    ? "error.main"
+                                                    : row.intensity ===
+                                                        "moderate"
+                                                      ? "warning.main"
+                                                      : "success.main",
+                                              }}
+                                            />
+                                            <Typography
+                                              variant="caption"
+                                              sx={{
+                                                fontWeight: "medium",
+                                                color:
+                                                  row.intensity === "vigorous"
+                                                    ? "error.main"
+                                                    : row.intensity ===
+                                                        "moderate"
+                                                      ? "warning.main"
+                                                      : "success.main",
+                                                textTransform: "capitalize",
+                                              }}
+                                            >
+                                              {row.intensity} intensity
+                                            </Typography>
+                                          </Box>
+                                        </Box>
+                                      )}
+                                    </TableCell>
+
+                                    <TableCell align="center">
+                                      {row.workoutType === "strength" ? (
+                                        <Typography
+                                          variant="body2"
+                                          fontWeight="medium"
+                                        >
+                                          {row.totalReps || "--"}
+                                        </Typography>
+                                      ) : (
+                                        <Typography
+                                          variant="body2"
+                                          color="text.secondary"
+                                        >
+                                          --
+                                        </Typography>
+                                      )}
+                                    </TableCell>
+
+                                    <TableCell align="center">
+                                      {row.workoutType === "strength" ? (
+                                        <Typography
+                                          variant="body2"
+                                          fontWeight="medium"
+                                        >
+                                          {row.totalWeight?.toFixed(1) || "--"}{" "}
+                                          kg
+                                        </Typography>
+                                      ) : (
+                                        <Typography
+                                          variant="body2"
+                                          color="text.secondary"
+                                        >
+                                          --
+                                        </Typography>
+                                      )}
+                                    </TableCell>
+
+                                    <TableCell align="center">
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
                                         }}
                                       >
                                         <WhatshotIcon
                                           fontSize="small"
-                                          sx={{
-                                            color:
-                                              row.intensity === "vigorous"
-                                                ? "error.main"
-                                                : row.intensity === "moderate"
-                                                  ? "warning.main"
-                                                  : "success.main",
-                                          }}
+                                          color="error"
+                                          sx={{ mr: 0.5 }}
                                         />
                                         <Typography
-                                          variant="caption"
-                                          sx={{
-                                            fontWeight: "medium",
-                                            color:
-                                              row.intensity === "vigorous"
-                                                ? "error.main"
-                                                : row.intensity === "moderate"
-                                                  ? "warning.main"
-                                                  : "success.main",
-                                            textTransform: "capitalize",
-                                          }}
+                                          variant="body2"
+                                          fontWeight="medium"
+                                          color="error.main"
                                         >
-                                          {row.intensity} intensity
+                                          {row.calories || "--"}
                                         </Typography>
                                       </Box>
-                                    </Box>
-                                  )}
-                                </TableCell>
-
-                                <TableCell align="center">
-                                  {row.workoutType === "strength" ? (
-                                    <Typography
-                                      variant="body2"
-                                      fontWeight="medium"
-                                    >
-                                      {row.totalReps || "--"}
-                                    </Typography>
-                                  ) : (
-                                    <Typography
-                                      variant="body2"
-                                      color="text.secondary"
-                                    >
-                                      --
-                                    </Typography>
-                                  )}
-                                </TableCell>
-
-                                <TableCell align="center">
-                                  {row.workoutType === "strength" ? (
-                                    <Typography
-                                      variant="body2"
-                                      fontWeight="medium"
-                                    >
-                                      {row.totalWeight?.toFixed(1) || "--"} kg
-                                    </Typography>
-                                  ) : (
-                                    <Typography
-                                      variant="body2"
-                                      color="text.secondary"
-                                    >
-                                      --
-                                    </Typography>
-                                  )}
-                                </TableCell>
+                                    </TableCell>
+                                  </>
+                                )}
 
                                 <TableCell align="center">
                                   <Box
                                     sx={{
                                       display: "flex",
-                                      alignItems: "center",
                                       justifyContent: "center",
+                                      gap: 0.5,
                                     }}
                                   >
-                                    <WhatshotIcon
-                                      fontSize="small"
-                                      color="error"
-                                      sx={{ mr: 0.5 }}
-                                    />
-                                    <Typography
-                                      variant="body2"
-                                      fontWeight="medium"
-                                      color="error.main"
-                                    >
-                                      {row.calories || "--"}
-                                    </Typography>
+                                    {isRestDay ? (
+                                      <>
+                                        <IconButton
+                                          disabled={isRestDay}
+                                          size="small"
+                                          color="primary"
+                                          onClick={() => openEditWorkout(row)}
+                                          title="Edit rest day"
+                                        >
+                                          <EditIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton
+                                          disabled={!isToday(row.date)}
+                                          size="small"
+                                          color="error"
+                                          onClick={() => setDeleteTarget(row)}
+                                          title="Delete rest day"
+                                        >
+                                          <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <IconButton
+                                          disabled={!isToday(row.date)}
+                                          size="small"
+                                          color="primary"
+                                          onClick={() => openEditWorkout(row)}
+                                          title="Edit workout"
+                                        >
+                                          <EditIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton
+                                          disabled={!isToday(row.date)}
+                                          size="small"
+                                          color="error"
+                                          onClick={() => setDeleteTarget(row)}
+                                          title="Delete workout"
+                                        >
+                                          <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                      </>
+                                    )}
                                   </Box>
                                 </TableCell>
-                              </>
-                            )}
-
-                            <TableCell align="center">
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  justifyContent: "center",
-                                  gap: 0.5,
-                                }}
-                              >
-                                {isRestDay ? (
-                                  <>
-                                    <IconButton
-                                      disabled={isRestDay}
-                                      size="small"
-                                      color="primary"
-                                      onClick={() => openEditWorkout(row)}
-                                      title="Edit rest day"
-                                    >
-                                      <EditIcon fontSize="small" />
-                                    </IconButton>
-                                    <IconButton
-                                      disabled={!isToday(row.date)}
-                                      size="small"
-                                      color="error"
-                                      onClick={() => setDeleteTarget(row)}
-                                      title="Delete rest day"
-                                    >
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                  </>
-                                ) : (
-                                  <>
-                                    <IconButton
-                                      disabled={!isToday(row.date)}
-                                      size="small"
-                                      color="primary"
-                                      onClick={() => openEditWorkout(row)}
-                                      title="Edit workout"
-                                    >
-                                      <EditIcon fontSize="small" />
-                                    </IconButton>
-                                    <IconButton
-                                      disabled={!isToday(row.date)}
-                                      size="small"
-                                      color="error"
-                                      onClick={() => setDeleteTarget(row)}
-                                      title="Delete workout"
-                                    >
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                  </>
-                                )}
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </React.Fragment>
-                  ),
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
+                              </TableRow>
+                            );
+                          })}
+                        </React.Fragment>
+                      ),
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Card>
+        </>
+      )}
 
       {/* Delete Dialog */}
       <Dialog
