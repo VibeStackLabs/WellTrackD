@@ -1932,12 +1932,18 @@ export default function Dashboard() {
     {
       icon: <ScaleIcon />,
       name: "Add/Update BMI",
-      onClick: () => setOpenBMI(true),
+      onClick: () => {
+        setActiveTab(1); // Switch to Health Metrics tab first
+        setOpenBMI(true); // Then open BMI dialog
+      },
     },
     {
       icon: <FitnessCenterIcon />,
       name: "Add Workout",
-      onClick: () => setOpenWorkout(true),
+      onClick: () => {
+        setActiveTab(0); // Switch to Workouts tab first
+        setOpenWorkout(true); // Then open workout dialog
+      },
     },
   ];
 
