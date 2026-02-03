@@ -124,7 +124,7 @@ const PREDEFINED_STRENGTH_WORKOUTS = [
 export default function Dashboard() {
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(0); // 0 for BMI, 1 for Workout
+  const [activeTab, setActiveTab] = useState(0); // 0 for Workout, 1 for Health Metrics
 
   // Profile State
   const [profile, setProfile] = useState(null);
@@ -2338,13 +2338,13 @@ export default function Dashboard() {
           value={activeTab}
           onChange={(e, newValue) => setActiveTab(newValue)}
         >
-          <Tab label="BMI & Weight Tracking" />
           <Tab label="Workout History" />
+          <Tab label="Health Metrics" />
         </Tabs>
       </Box>
 
-      {/* BMI Tab Content */}
-      {activeTab === 0 && (
+      {/* Health Metrics Tab Content */}
+      {activeTab === 1 && (
         <>
           {/* Chart */}
           <Card variant="outlined" sx={{ p: 3, mb: 4 }}>
@@ -2520,7 +2520,7 @@ export default function Dashboard() {
       )}
 
       {/* Workout Tab Content */}
-      {activeTab === 1 && (
+      {activeTab === 0 && (
         <>
           {/* Workout Table */}
           <Card variant="outlined" sx={{ p: 3, mb: 10 }}>
