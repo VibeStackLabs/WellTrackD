@@ -64,6 +64,7 @@ import SyncIcon from "@mui/icons-material/Sync";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import LogoutIcon from "@mui/icons-material/Logout";
 import BedIcon from "@mui/icons-material/Bed";
+import ListIcon from "@mui/icons-material/List";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import {
@@ -77,6 +78,8 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import CountUp from "react-countup";
+import WorkoutPlans from "./WorkoutPlans";
+import AddToWorkoutHandler from "./AddToWorkoutHandler";
 
 const PREDEFINED_STRENGTH_WORKOUTS = [
   "Bench Press",
@@ -283,6 +286,122 @@ export default function Dashboard() {
       setSnackbarOpen(true);
     }
   };
+
+  // Workout Plan States
+  const [showWorkoutPlans, setShowWorkoutPlans] = useState(false);
+  const [addingPlanExercises, setAddingPlanExercises] = useState([]);
+  const [addExercisesDialogOpen, setAddExercisesDialogOpen] = useState(false);
+  const [exercisesToAdd, setExercisesToAdd] = useState([]);
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [isProcessingBatch, setIsProcessingBatch] = useState(false);
+
+  const processExerciseAddition = (exerciseData) => {
+    // Clear any existing form data first
+    clearWorkoutForm();
+
+    // Set workout date to today
+    const today = new Date().toISOString().split("T")[0];
+    setWorkoutDate(today);
+
+    // Handle different exercise formats
+    if (typeof exerciseData === "string") {
+      // String format (legacy)
+      setExercise(exerciseData);
+      setWorkoutType("strength");
+      setSets([
+        { setNumber: 1, reps: "", weight: "" },
+        { setNumber: 2, reps: "", weight: "" },
+        { setNumber: 3, reps: "", weight: "" },
+      ]);
+    } else {
+      // Object format from workout plans
+      setExercise(exerciseData.name || "");
+      setWorkoutType("strength");
+
+      const setsCount = parseInt(exerciseData.sets) || 3;
+      const repsValue = exerciseData.reps?.toString() || "8";
+      const weightValue = exerciseData.weight?.toString() || "";
+
+      const newSets = Array.from({ length: setsCount }, (_, i) => ({
+        setNumber: i + 1,
+        reps: repsValue,
+        weight: weightValue,
+      }));
+
+      setSets(newSets);
+
+      if (exerciseData.weightUnit) {
+        setWorkoutUnit(exerciseData.weightUnit);
+      }
+    }
+
+    // Open the workout form
+    setOpenWorkout(true);
+  };
+
+  const processExerciseBatch = (exercises) => {
+    if (exercises.length === 0) return;
+
+    // Save exercises for sequential processing
+    setExercisesToAdd(exercises);
+    setCurrentExerciseIndex(0);
+    setIsProcessingBatch(true);
+
+    // Close the selection dialog
+    setAddExercisesDialogOpen(false);
+
+    // Process first exercise
+    processExerciseAddition(exercises[0]);
+
+    // Show info message
+    setSnackbarMessage(
+      `Adding ${exercises.length} exercises (1/${exercises.length})`,
+    );
+    setSnackbarSeverity("info");
+    setSnackbarOpen(true);
+  };
+
+  useEffect(() => {
+    // Check if we're processing a batch and the workout form was just closed
+    if (
+      isProcessingBatch &&
+      !openWorkout &&
+      exercisesToAdd.length > 0 &&
+      currentExerciseIndex >= 0
+    ) {
+      // Check if we have more exercises
+      const nextIndex = currentExerciseIndex + 1;
+
+      if (nextIndex < exercisesToAdd.length) {
+        // Process next exercise after a short delay
+        const timer = setTimeout(() => {
+          processExerciseAddition(exercisesToAdd[nextIndex]);
+          setCurrentExerciseIndex(nextIndex);
+
+          // Update snackbar message
+          setSnackbarMessage(
+            `Adding ${exercisesToAdd.length} exercises (${nextIndex + 1}/${exercisesToAdd.length})`,
+          );
+          setSnackbarSeverity("info");
+          setSnackbarOpen(true);
+        }, 1000); // 1 second delay between exercises
+
+        return () => clearTimeout(timer);
+      } else {
+        // All exercises processed
+        setSnackbarMessage(
+          `Successfully added ${exercisesToAdd.length} exercises!`,
+        );
+        setSnackbarSeverity("success");
+        setSnackbarOpen(true);
+
+        // Reset batch state
+        setExercisesToAdd([]);
+        setCurrentExerciseIndex(-1);
+        setIsProcessingBatch(false);
+      }
+    }
+  }, [openWorkout, isProcessingBatch, exercisesToAdd, currentExerciseIndex]);
 
   // Listen to auth
   useEffect(() => {
@@ -1945,6 +2064,13 @@ export default function Dashboard() {
         setOpenWorkout(true); // Then open workout dialog
       },
     },
+    {
+      icon: <ListIcon />,
+      name: "Workout Plans",
+      onClick: () => {
+        setActiveTab(2); // Switch to Workout Plans tab
+      },
+    },
   ];
 
   return (
@@ -2346,6 +2472,7 @@ export default function Dashboard() {
         >
           <Tab label="Workout History" />
           <Tab label="Health Metrics" />
+          <Tab label="Workout Plans" />
         </Tabs>
       </Box>
 
@@ -2609,6 +2736,7 @@ export default function Dashboard() {
                               display: "flex",
                               gap: 1,
                               justifyContent: "center",
+                              flexWrap: "wrap",
                             }}
                           >
                             <Button
@@ -2620,15 +2748,26 @@ export default function Dashboard() {
                               Add Workout
                             </Button>
                             {workoutFilter === "today" && (
-                              <Button
-                                variant="outlined"
-                                color="info"
-                                startIcon={<BedIcon />}
-                                onClick={() => addRestDay()}
-                                size="small"
-                              >
-                                Log Rest Day
-                              </Button>
+                              <>
+                                <Button
+                                  variant="outlined"
+                                  color="info"
+                                  startIcon={<BedIcon />}
+                                  onClick={() => addRestDay()}
+                                  size="small"
+                                >
+                                  Log Rest Day
+                                </Button>
+                                <Button
+                                  variant="outlined"
+                                  color="success"
+                                  startIcon={<ListIcon />}
+                                  onClick={() => setActiveTab(2)} // Switch to Workout Plans tab
+                                  size="small"
+                                >
+                                  Use Workout Plan
+                                </Button>
+                              </>
                             )}
                           </Box>
                         </Box>
@@ -3281,6 +3420,17 @@ export default function Dashboard() {
             </TableContainer>
           </Card>
         </>
+      )}
+
+      {/* Add Exercise Dialog */}
+      {activeTab === 2 && (
+        <WorkoutPlans
+          userId={userId}
+          onAddToToday={(exercises) => {
+            setAddingPlanExercises(exercises);
+            setAddExercisesDialogOpen(true);
+          }}
+        />
       )}
 
       {/* Delete Dialog */}
@@ -4216,6 +4366,17 @@ export default function Dashboard() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Add Exercises Dialog */}
+      <AddToWorkoutHandler
+        open={addExercisesDialogOpen}
+        onClose={() => {
+          setAddExercisesDialogOpen(false);
+          setAddingPlanExercises([]);
+        }}
+        exercises={addingPlanExercises}
+        onConfirm={processExerciseBatch}
+      />
     </Container>
   );
 }
