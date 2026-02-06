@@ -9,15 +9,26 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "./firebase";
+import { Box, CircularProgress, Typography } from "@mui/material";
 
 export default function App() {
   const [user, loading] = useAuthState(auth);
 
   if (loading)
     return (
-      <div className="flex justify-center items-center h-screen">
-        Loading...
-      </div>
+      <Box
+        display="flex"
+        flexDirection="column"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+        gap={2}
+      >
+        <CircularProgress size={60} />
+        <Typography variant="h6" color="text.secondary">
+          Loading WellTrackD...
+        </Typography>
+      </Box>
     );
 
   return (
