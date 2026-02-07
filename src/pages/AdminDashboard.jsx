@@ -45,6 +45,8 @@ import {
   Select,
   MenuItem,
   AlertTitle,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import {
   Delete as DeleteIcon,
@@ -60,10 +62,25 @@ import {
   Error as ErrorIcon,
   LockReset as LockResetIcon,
   Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
   CalendarToday as CalendarTodayIcon,
   People as PeopleIcon,
   TrendingUp as TrendingUpIcon,
+  Add as AddIcon,
+  Article as ArticleIcon,
+  DateRange as DateRangeIcon,
+  Upgrade as UpgradeIcon,
+  BugReport as BugReportIcon,
+  Build as BuildIcon,
 } from "@mui/icons-material";
+
+// Import changelog functions
+import {
+  getChangelogEntries,
+  addChangelogEntry,
+  updateChangelogEntry,
+  deleteChangelogEntry,
+} from "../utils/changelogFunctions";
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -93,6 +110,115 @@ function AdminDashboard() {
   const [openSuspendDialog, setOpenSuspendDialog] = useState(false);
   const [suspendUser, setSuspendUser] = useState(null);
 
+  // Changelog state
+  const [changelogEntries, setChangelogEntries] = useState([]);
+  const [openChangelogDialog, setOpenChangelogDialog] = useState(false);
+  const [changelogForm, setChangelogForm] = useState({
+    version: "",
+    title: "",
+    description: "",
+    type: "feature",
+    date: new Date().toISOString().split("T")[0],
+    published: true,
+  });
+  const [editingChangelog, setEditingChangelog] = useState(null);
+  const [changelogLoading, setChangelogLoading] = useState(false);
+
+  const loadChangelog = async () => {
+    setChangelogLoading(true);
+    try {
+      const entries = await getChangelogEntries();
+      setChangelogEntries(entries);
+    } catch (error) {
+      console.error("Error loading changelog:", error);
+      showSnackbar("Failed to load changelog", "error");
+    } finally {
+      setChangelogLoading(false);
+    }
+  };
+
+  const handleSaveChangelog = async () => {
+    if (
+      !changelogForm.version ||
+      !changelogForm.title ||
+      !changelogForm.description
+    ) {
+      showSnackbar("Please fill in all required fields", "error");
+      return;
+    }
+
+    try {
+      const entryData = {
+        version: changelogForm.version,
+        title: changelogForm.title,
+        description: changelogForm.description,
+        type: changelogForm.type,
+        date: changelogForm.date,
+        published: changelogForm.published,
+        author: adminData?.email || "Admin",
+      };
+
+      let result;
+      if (editingChangelog) {
+        result = await updateChangelogEntry(editingChangelog.id, entryData);
+      } else {
+        result = await addChangelogEntry(entryData);
+      }
+
+      if (result.success) {
+        showSnackbar(
+          `Changelog entry ${editingChangelog ? "updated" : "added"} successfully`,
+          "success",
+        );
+        setOpenChangelogDialog(false);
+        loadChangelog();
+
+        // Log the action
+        logAdminAction(
+          adminData?.uid,
+          editingChangelog ? "UPDATE_CHANGELOG" : "ADD_CHANGELOG",
+          editingChangelog?.id || result.id,
+          {
+            version: changelogForm.version,
+            title: changelogForm.title,
+          },
+        );
+      } else {
+        showSnackbar("Failed to save changelog entry", "error");
+      }
+    } catch (error) {
+      console.error("Error saving changelog:", error);
+      showSnackbar("Error saving changelog entry", "error");
+    }
+  };
+
+  const handleDeleteChangelog = async (entry) => {
+    if (
+      window.confirm(
+        `Are you sure you want to delete changelog entry: "${entry.title}"?`,
+      )
+    ) {
+      try {
+        const result = await deleteChangelogEntry(entry.id);
+        if (result.success) {
+          showSnackbar("Changelog entry deleted successfully", "success");
+          loadChangelog();
+
+          // Log the action
+          logAdminAction(adminData?.uid, "DELETE_CHANGELOG", entry.id, {
+            version: entry.version,
+            title: entry.title,
+          });
+        } else {
+          showSnackbar("Failed to delete changelog entry", "error");
+        }
+      } catch (error) {
+        console.error("Error deleting changelog:", error);
+        showSnackbar("Error deleting changelog entry", "error");
+      }
+    }
+  };
+
   // Redirect non-admins
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
@@ -104,6 +230,7 @@ function AdminDashboard() {
   useEffect(() => {
     if (isAdmin) {
       loadData();
+      loadChangelog();
     }
   }, [isAdmin]);
 
@@ -577,6 +704,7 @@ function AdminDashboard() {
           variant="fullWidth"
         >
           <Tab label="User Management" icon={<PersonIcon />} />
+          <Tab label="Changelog" icon={<ArticleIcon />} />
         </Tabs>
       </Paper>
 
@@ -844,6 +972,186 @@ function AdminDashboard() {
         </Paper>
       )}
 
+      {/* Changelog Management Tab */}
+      {selectedTab === 1 && (
+        <Paper sx={{ p: 3 }}>
+          {/* Header */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 3,
+            }}
+          >
+            <Typography variant="h6">Changelog Management</Typography>
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setChangelogForm({
+                  version: "",
+                  title: "",
+                  description: "",
+                  type: "feature",
+                  date: new Date().toISOString().split("T")[0],
+                  published: true,
+                });
+                setEditingChangelog(null);
+                setOpenChangelogDialog(true);
+              }}
+            >
+              Add Entry
+            </Button>
+          </Box>
+
+          {/* Changelog Entries Table */}
+          {changelogLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : changelogEntries.length === 0 ? (
+            <Box sx={{ textAlign: "center", py: 8 }}>
+              <ArticleIcon
+                sx={{ fontSize: 60, color: "text.secondary", mb: 2 }}
+              />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No changelog entries
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Click "Add Entry" to create your first changelog entry
+              </Typography>
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Version</TableCell>
+                    <TableCell>Title</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {changelogEntries.map((entry) => (
+                    <TableRow key={entry.id} hover>
+                      <TableCell>
+                        <Chip
+                          label={entry.version}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="medium">
+                          {entry.title}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {entry.description?.substring(0, 60)}...
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={entry.type}
+                          size="small"
+                          variant="outlined"
+                          color={
+                            entry.type === "feature"
+                              ? "success"
+                              : entry.type === "improvement"
+                                ? "info"
+                                : entry.type === "bugfix"
+                                  ? "warning"
+                                  : "error"
+                          }
+                          icon={
+                            entry.type === "feature" ? (
+                              <UpgradeIcon />
+                            ) : entry.type === "improvement" ? (
+                              <BuildIcon />
+                            ) : entry.type === "bugfix" ? (
+                              <BugReportIcon />
+                            ) : (
+                              <SecurityIcon />
+                            )
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <DateRangeIcon fontSize="small" color="action" />
+                          <Typography variant="body2">{entry.date}</Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={entry.published ? "Published" : "Draft"}
+                          size="small"
+                          color={entry.published ? "success" : "default"}
+                          variant="outlined"
+                          icon={
+                            entry.published ? (
+                              <VisibilityIcon />
+                            ) : (
+                              <VisibilityOffIcon />
+                            )
+                          }
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            gap: 1,
+                          }}
+                        >
+                          <Tooltip title="Edit">
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setChangelogForm({
+                                  version: entry.version,
+                                  title: entry.title,
+                                  description: entry.description,
+                                  type: entry.type,
+                                  date: entry.date,
+                                  published: entry.published,
+                                });
+                                setEditingChangelog(entry);
+                                setOpenChangelogDialog(true);
+                              }}
+                              color="primary"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDeleteChangelog(entry)}
+                              color="error"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Paper>
+      )}
+
       {/* Edit User Dialog */}
       <Dialog
         open={openDialog}
@@ -1047,6 +1355,121 @@ function AdminDashboard() {
             startIcon={<BlockIcon />}
           >
             Suspend User
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Changelog Dialog */}
+      <Dialog
+        open={openChangelogDialog}
+        onClose={() => setOpenChangelogDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {editingChangelog ? "Edit Changelog Entry" : "Add Changelog Entry"}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+            <TextField
+              label="Version"
+              fullWidth
+              value={changelogForm.version}
+              onChange={(e) =>
+                setChangelogForm({ ...changelogForm, version: e.target.value })
+              }
+              placeholder="e.g., 1.2.3"
+              required
+            />
+            <TextField
+              label="Title"
+              fullWidth
+              value={changelogForm.title}
+              onChange={(e) =>
+                setChangelogForm({ ...changelogForm, title: e.target.value })
+              }
+              required
+            />
+            <TextField
+              label="Description"
+              fullWidth
+              multiline
+              rows={4}
+              value={changelogForm.description}
+              onChange={(e) =>
+                setChangelogForm({
+                  ...changelogForm,
+                  description: e.target.value,
+                })
+              }
+              required
+              placeholder="Describe the changes in detail..."
+            />
+            <FormControl fullWidth>
+              <InputLabel>Type</InputLabel>
+              <Select
+                value={changelogForm.type}
+                label="Type"
+                onChange={(e) =>
+                  setChangelogForm({ ...changelogForm, type: e.target.value })
+                }
+              >
+                <MenuItem value="feature">
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <UpgradeIcon fontSize="small" />
+                    <span>Feature</span>
+                  </Box>
+                </MenuItem>
+                <MenuItem value="improvement">
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <BuildIcon fontSize="small" />
+                    <span>Improvement</span>
+                  </Box>
+                </MenuItem>
+                <MenuItem value="bugfix">
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <BugReportIcon fontSize="small" />
+                    <span>Bug Fix</span>
+                  </Box>
+                </MenuItem>
+                <MenuItem value="security">
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <SecurityIcon fontSize="small" />
+                    <span>Security</span>
+                  </Box>
+                </MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              label="Date"
+              type="date"
+              fullWidth
+              value={changelogForm.date}
+              onChange={(e) =>
+                setChangelogForm({ ...changelogForm, date: e.target.value })
+              }
+              InputLabelProps={{ shrink: true }}
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={changelogForm.published}
+                  onChange={(e) =>
+                    setChangelogForm({
+                      ...changelogForm,
+                      published: e.target.checked,
+                    })
+                  }
+                />
+              }
+              label="Published"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenChangelogDialog(false)}>Cancel</Button>
+          <Button onClick={handleSaveChangelog} variant="outlined">
+            {editingChangelog ? "Update Entry" : "Add Entry"}
           </Button>
         </DialogActions>
       </Dialog>
