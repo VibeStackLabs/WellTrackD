@@ -2100,6 +2100,21 @@ export default function Dashboard() {
 
   const caloriesBurned = getCaloriesBurned();
 
+  const getCaloriesBurnedToday = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const total = workouts
+      .filter((workout) => {
+        const workoutDate = new Date(workout.date);
+        workoutDate.setHours(0, 0, 0, 0);
+        return workoutDate.getTime() === today.getTime();
+      })
+      .reduce((sum, w) => sum + (w.calories || 0), 0);
+
+    return Number(total.toFixed(1));
+  };
+
   const actions = [
     {
       icon: <ScaleIcon />,
@@ -2716,8 +2731,9 @@ export default function Dashboard() {
                         <React.Fragment key={day}>
                           {/* Day header row */}
                           <TableRow>
+                            {/* Day label */}
                             <TableCell
-                              colSpan={7}
+                              colSpan={1}
                               sx={{
                                 fontWeight: "bold",
                                 backgroundColor: "#e8f4fd",
@@ -2726,6 +2742,38 @@ export default function Dashboard() {
                               }}
                             >
                               {day}
+                            </TableCell>
+
+                            {/* Calories on the right */}
+                            <TableCell
+                              colSpan={6}
+                              sx={{
+                                backgroundColor: "#e8f4fd",
+                                textAlign: "right",
+                              }}
+                            >
+                              {workoutFilter === "today" && (
+                                <Box
+                                  sx={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
+                                  }}
+                                >
+                                  <WhatshotIcon
+                                    fontSize="small"
+                                    color="error"
+                                  />
+                                  <Typography
+                                    variant="caption"
+                                    fontWeight="bold"
+                                    color="error.main"
+                                  >
+                                    Calories burned: {getCaloriesBurnedToday()}{" "}
+                                    kcal
+                                  </Typography>
+                                </Box>
+                              )}
                             </TableCell>
                           </TableRow>
 
