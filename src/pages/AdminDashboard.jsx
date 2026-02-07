@@ -577,8 +577,6 @@ function AdminDashboard() {
           variant="fullWidth"
         >
           <Tab label="User Management" icon={<PersonIcon />} />
-          <Tab label="System Logs" icon={<BarChartIcon />} />
-          <Tab label="Settings" icon={<SecurityIcon />} />
         </Tabs>
       </Paper>
 
@@ -843,32 +841,6 @@ function AdminDashboard() {
               />
             </>
           )}
-        </Paper>
-      )}
-
-      {/* System Logs Tab - Placeholder for now */}
-      {selectedTab === 1 && (
-        <Paper sx={{ p: 3, textAlign: "center", py: 8 }}>
-          <BarChartIcon sx={{ fontSize: 60, color: "text.secondary", mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            System Logs
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Audit logs will be displayed here
-          </Typography>
-        </Paper>
-      )}
-
-      {/* Settings Tab - Placeholder for now */}
-      {selectedTab === 2 && (
-        <Paper sx={{ p: 3, textAlign: "center", py: 8 }}>
-          <SecurityIcon sx={{ fontSize: 60, color: "text.secondary", mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            System Settings
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            System configuration will be available here
-          </Typography>
         </Paper>
       )}
 
