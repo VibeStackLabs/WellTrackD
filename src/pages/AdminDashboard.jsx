@@ -4,6 +4,7 @@ import { useAdmin } from "../contexts/AdminContext";
 import {
   getAllUsers,
   deleteUser,
+  deleteUserWithDetails,
   updateUser,
   getSystemStats,
   logAdminAction,
@@ -72,6 +73,7 @@ import {
   Upgrade as UpgradeIcon,
   BugReport as BugReportIcon,
   Build as BuildIcon,
+  OpenInNew as OpenInNewIcon,
 } from "@mui/icons-material";
 
 // Import changelog functions
@@ -123,6 +125,9 @@ function AdminDashboard() {
   });
   const [editingChangelog, setEditingChangelog] = useState(null);
   const [changelogLoading, setChangelogLoading] = useState(false);
+
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const loadChangelog = async () => {
     setChangelogLoading(true);
@@ -293,29 +298,59 @@ function AdminDashboard() {
 
   const handleDeleteClick = (user) => {
     setSelectedUser(user);
+    setDeleteConfirmationText("");
     setOpenDeleteDialog(true);
   };
 
   const handleDeleteUser = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser || deleteConfirmationText !== "DELETE") return;
+
+    setDeleteLoading(true);
 
     try {
-      // Log action (client-side only)
-      logAdminAction(adminData?.uid, "DELETE_USER", selectedUser.id, {
-        userEmail: selectedUser.email,
-        userName: selectedUser.name,
-        timestamp: new Date().toISOString(),
-      });
+      // Show loading
+      showSnackbar(`Deleting user ${selectedUser.email}...`, "info");
 
-      const result = await deleteUser(selectedUser.id);
+      // Use the detailed deletion function
+      const result = await deleteUserWithDetails(selectedUser.id);
 
       if (result.success) {
         // Update local state
         setUsers(users.filter((user) => user.id !== selectedUser.id));
-        showSnackbar(`User ${selectedUser.email} deleted successfully`);
+        setFilteredUsers(
+          filteredUsers.filter((user) => user.id !== selectedUser.id),
+        );
+
+        // Show detailed success message
+        showSnackbar(
+          `✅ User ${selectedUser.email} deleted successfully!\n` +
+            `Deleted: ${result.deletedCounts.workouts} workouts, ` +
+            `${result.deletedCounts.bodyMetrics} BMI entries, ` +
+            `${result.deletedCounts.workoutPlans} workout plans`,
+          "success",
+        );
+
+        // Log action
+        logAdminAction(adminData?.uid, "DELETE_USER", selectedUser.id, {
+          userEmail: selectedUser.email,
+          userName: selectedUser.name,
+          deletedCounts: result.deletedCounts,
+          warnings: result.warnings,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Show warnings if any
+        if (result.warnings && result.warnings.length > 0) {
+          setTimeout(() => {
+            showSnackbar(`⚠️ Notes: ${result.warnings.join(", ")}`, "warning");
+          }, 1000);
+        }
+
+        // Reset confirmation text
+        setDeleteConfirmationText("");
       } else {
         showSnackbar(
-          `Failed to delete user: ${result.error?.message || "Unknown error"}`,
+          `Failed to delete user: ${result.error || "Unknown error"}`,
           "error",
         );
       }
@@ -323,6 +358,7 @@ function AdminDashboard() {
       console.error("Error deleting user:", error);
       showSnackbar("Error deleting user", "error");
     } finally {
+      setDeleteLoading(false);
       setOpenDeleteDialog(false);
       setSelectedUser(null);
     }
@@ -1228,39 +1264,184 @@ function AdminDashboard() {
       {/* Delete Confirmation Dialog */}
       <Dialog
         open={openDeleteDialog}
-        onClose={() => setOpenDeleteDialog(false)}
+        onClose={() => {
+          setOpenDeleteDialog(false);
+          setDeleteConfirmationText("");
+        }}
+        maxWidth="md"
       >
-        <DialogTitle>Delete User</DialogTitle>
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <DeleteIcon color="error" />
+          <span>Delete User Account</span>
+        </DialogTitle>
+
         <DialogContent>
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            This action cannot be undone!
+          <Alert severity="error" sx={{ mb: 2 }}>
+            <AlertTitle>Irreversible Action</AlertTitle>
+            This will permanently delete ALL user data. This action cannot be
+            undone.
           </Alert>
-          <Typography>
-            Are you sure you want to delete user{" "}
-            <strong>{selectedUser?.email}</strong>?
-          </Typography>
-          {selectedUser?.name && (
-            <Typography variant="body2" color="text" sx={{ mt: 1 }}>
-              Name: {selectedUser.name}
+
+          {/* User Info Summary */}
+          <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: "#fff8f8" }}>
+            <Typography variant="subtitle2" color="error" gutterBottom>
+              USER TO DELETE
             </Typography>
-          )}
-          <Typography variant="body2" color="text">
-            User ID: {selectedUser?.id}
-          </Typography>
-          <Typography variant="body2" color="error" sx={{ mt: 2 }}>
-            This will permanently delete all user data including workouts, BMI
-            entries, and profile.
-          </Typography>
+            <Grid container spacing={1}>
+              <Grid size={{ xs: 6 }}>
+                <Typography variant="body2">
+                  <strong>Email:</strong> {selectedUser?.email}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <Typography variant="body2">
+                  <strong>Name:</strong> {selectedUser?.name || "Not provided"}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <Typography variant="body2">
+                  <strong>Username:</strong>{" "}
+                  {selectedUser?.username || "Not set"}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <Typography variant="body2">
+                  <strong>Status:</strong> {selectedUser?.status || "active"}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <Typography variant="body2">
+                  <strong>User ID:</strong> {selectedUser?.id}
+                </Typography>
+              </Grid>
+            </Grid>
+          </Paper>
+
+          {/* What will be deleted */}
+          <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+            <Typography variant="subtitle2" color="error" gutterBottom>
+              🔥 THIS WILL BE DELETED FROM FIRESTORE:
+            </Typography>
+            <Box component="ul" sx={{ m: 0, pl: 2 }}>
+              <li>
+                <Typography variant="body2">
+                  <strong>User Profile:</strong> All personal information
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2">
+                  <strong>Workout History:</strong> All recorded workouts
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2">
+                  <strong>BMI & Health Data:</strong> All weight and BMI entries
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2">
+                  <strong>Workout Plans:</strong> All custom workout plans
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2">
+                  <strong>Username:</strong> @{selectedUser?.username} will be
+                  freed up
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2">
+                  <strong>Admin Permissions:</strong> If user was an admin
+                </Typography>
+              </li>
+            </Box>
+          </Paper>
+
+          {/* Authentication Note */}
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <AlertTitle>Important Note</AlertTitle>
+            <Typography variant="body2" gutterBottom>
+              The user will be deleted from the database, but they will still
+              exist in Firebase Authentication.
+            </Typography>
+            <Typography variant="body2">
+              To completely remove their login ability, you need to manually
+              delete them from Firebase Console:
+            </Typography>
+            <Box sx={{ mt: 1, pl: 2 }}>
+              <Typography variant="body2">
+                1. Go to Firebase Console → Authentication
+              </Typography>
+              <Typography variant="body2">
+                2. Find user: <strong>{selectedUser?.email}</strong>
+              </Typography>
+              <Typography variant="body2">
+                3. Click ⋮ (menu) → Delete user
+              </Typography>
+            </Box>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<OpenInNewIcon />}
+              onClick={() =>
+                window.open("https://console.firebase.google.com/", "_blank")
+              }
+              sx={{ mt: 1 }}
+            >
+              Open Firebase Console
+            </Button>
+          </Alert>
+
+          {/* Final Warning */}
+          <Alert severity="warning" icon={false}>
+            <Typography variant="body2" fontWeight="bold">
+              ⚠️ Type "DELETE" to confirm:
+            </Typography>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Type DELETE here"
+              value={deleteConfirmationText}
+              onChange={(e) => setDeleteConfirmationText(e.target.value)}
+              sx={{ mt: 1 }}
+              error={
+                deleteConfirmationText !== "" &&
+                deleteConfirmationText !== "DELETE"
+              }
+              helperText={
+                deleteConfirmationText !== "" &&
+                deleteConfirmationText !== "DELETE"
+                  ? 'Must type exactly "DELETE"'
+                  : "Case sensitive"
+              }
+              disabled={deleteLoading}
+            />
+          </Alert>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)}>Cancel</Button>
+
+        <DialogActions sx={{ px: 3, pb: 2, pt: 1 }}>
+          <Button
+            onClick={() => {
+              setOpenDeleteDialog(false);
+              setDeleteConfirmationText("");
+            }}
+            fullWidth
+            variant="outlined"
+            disabled={deleteLoading}
+          >
+            Cancel
+          </Button>
           <Button
             onClick={handleDeleteUser}
             variant="outlined"
             color="error"
-            startIcon={<DeleteIcon />}
+            startIcon={
+              deleteLoading ? <CircularProgress size={20} /> : <DeleteIcon />
+            }
+            disabled={deleteConfirmationText !== "DELETE" || deleteLoading}
+            fullWidth
           >
-            Delete User
+            {deleteLoading ? "Deleting..." : "Delete User Permanently"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1294,8 +1475,8 @@ function AdminDashboard() {
           </Button>
           <Button
             onClick={handleSendPasswordReset}
-            variant="contained"
-            color="primary"
+            variant="outlined"
+            color="success"
             startIcon={<EmailIcon />}
             disabled={resetLoading || !resetEmail}
           >

@@ -8,6 +8,8 @@ import {
   deleteDoc,
   query,
   where,
+  writeBatch,
+  orderBy,
 } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { sendPasswordResetEmail } from "firebase/auth";
@@ -84,36 +86,226 @@ export const updateUser = async (userId, updates) => {
   }
 };
 
-// Delete user
+// Enhanced Delete user - Deletes ALL user data from Firestore
 export const deleteUser = async (userId) => {
   try {
     // Get user data before deletion
     const userDoc = await getDoc(doc(db, "users", userId));
+    if (!userDoc.exists()) {
+      return { success: false, error: "User not found" };
+    }
+
     const userData = userDoc.data();
+    const username = userData.username;
+    const email = userData.email;
 
-    // Delete from users collection
-    await deleteDoc(doc(db, "users", userId));
+    // Create a batch for all Firestore operations
+    const batch = writeBatch(db);
 
-    // Delete from usernames collection if exists
-    if (userData?.username) {
+    // Delete all subcollections recursively
+    const subcollections = ["workouts", "bodyMetrics", "workoutPlans"];
+
+    // Track what we're deleting
+    const deletionCounts = {
+      workouts: 0,
+      bodyMetrics: 0,
+      workoutPlans: 0,
+      other: 0,
+    };
+
+    for (const subcollection of subcollections) {
       try {
-        await deleteDoc(doc(db, "usernames", userData.username));
-      } catch (err) {
-        console.log("Username cleanup skipped:", err);
+        const subRef = collection(db, "users", userId, subcollection);
+        const subSnapshot = await getDocs(subRef);
+        subSnapshot.docs.forEach((doc) => {
+          batch.delete(doc.ref);
+          deletionCounts[subcollection] =
+            (deletionCounts[subcollection] || 0) + 1;
+        });
+      } catch (subError) {
+        console.log(`No ${subcollection} found for user ${userId}`);
       }
     }
 
-    // Remove from admins collection if exists
-    try {
-      await deleteDoc(doc(db, "admins", userId));
-    } catch (err) {
-      console.log("Admin cleanup skipped:", err);
+    // Delete username from usernames collection
+    if (username) {
+      const usernameDoc = doc(db, "usernames", username);
+      batch.delete(usernameDoc);
+      deletionCounts.other++;
     }
 
-    return { success: true, userData };
+    // Delete user from admins collection if exists
+    try {
+      const adminRef = doc(db, "admins", userId);
+      const adminDoc = await getDoc(adminRef);
+      if (adminDoc.exists()) {
+        batch.delete(adminRef);
+        deletionCounts.other++;
+      }
+    } catch (adminError) {
+      console.log("No admin record found or error deleting admin record");
+    }
+
+    // Delete from flaggedUsers if exists
+    try {
+      const flaggedRef = doc(db, "flaggedUsers", userId);
+      const flaggedDoc = await getDoc(flaggedRef);
+      if (flaggedDoc.exists()) {
+        batch.delete(flaggedRef);
+        deletionCounts.other++;
+      }
+    } catch (flaggedError) {
+      // Ignore if doesn't exist
+    }
+
+    // Delete user document from users collection
+    const userRef = doc(db, "users", userId);
+    batch.delete(userRef);
+
+    // Execute the batch
+    await batch.commit();
+
+    return {
+      success: true,
+      userData,
+      deletionCounts,
+      message: "All user data deleted from Firestore successfully",
+    };
   } catch (error) {
     console.error("Error deleting user:", error);
-    return { success: false, error };
+    return { success: false, error: error.message };
+  }
+};
+
+// Detailed delete with more information
+export const deleteUserWithDetails = async (userId) => {
+  const results = {
+    userData: null,
+    deletedCounts: {
+      workouts: 0,
+      bodyMetrics: 0,
+      workoutPlans: 0,
+      other: 0,
+    },
+    success: false,
+    warnings: [],
+    error: null,
+  };
+
+  try {
+    // Get user data first
+    const userDoc = await getDoc(doc(db, "users", userId));
+    if (!userDoc.exists()) {
+      results.error = "User not found";
+      return results;
+    }
+
+    results.userData = userDoc.data();
+    const username = results.userData.username;
+
+    // Start batch
+    const batch = writeBatch(db);
+
+    // Delete workouts
+    try {
+      const workoutsRef = collection(db, "users", userId, "workouts");
+      const workoutsSnapshot = await getDocs(
+        query(workoutsRef, orderBy("createdAt", "desc")),
+      );
+      workoutsSnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+        results.deletedCounts.workouts++;
+      });
+    } catch (e) {
+      results.warnings.push("No workouts found or error deleting workouts");
+    }
+
+    // Delete body metrics
+    try {
+      const bodyMetricsRef = collection(db, "users", userId, "bodyMetrics");
+      const bodyMetricsSnapshot = await getDocs(
+        query(bodyMetricsRef, orderBy("createdAt", "desc")),
+      );
+      bodyMetricsSnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+        results.deletedCounts.bodyMetrics++;
+      });
+    } catch (e) {
+      results.warnings.push(
+        "No body metrics found or error deleting body metrics",
+      );
+    }
+
+    // Delete workout plans
+    try {
+      const workoutPlansRef = collection(db, "users", userId, "workoutPlans");
+      const workoutPlansSnapshot = await getDocs(workoutPlansRef);
+      workoutPlansSnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+        results.deletedCounts.workoutPlans++;
+      });
+    } catch (e) {
+      results.warnings.push(
+        "No workout plans found or error deleting workout plans",
+      );
+    }
+
+    // Delete username
+    if (username) {
+      try {
+        const usernameDoc = doc(db, "usernames", username);
+        const usernameDocSnap = await getDoc(usernameDoc);
+        if (usernameDocSnap.exists()) {
+          batch.delete(usernameDoc);
+          results.deletedCounts.other++;
+        }
+      } catch (e) {
+        results.warnings.push("Error deleting username mapping");
+      }
+    } else {
+      results.warnings.push("No username found to delete");
+    }
+
+    // Delete admin record if exists
+    try {
+      const adminRef = doc(db, "admins", userId);
+      const adminDoc = await getDoc(adminRef);
+      if (adminDoc.exists()) {
+        batch.delete(adminRef);
+        results.deletedCounts.other++;
+        results.warnings.push(
+          "User was also an admin - admin permissions removed",
+        );
+      }
+    } catch (e) {
+      // Ignore
+    }
+
+    // Delete from flaggedUsers if exists
+    try {
+      const flaggedRef = doc(db, "flaggedUsers", userId);
+      const flaggedDoc = await getDoc(flaggedRef);
+      if (flaggedDoc.exists()) {
+        batch.delete(flaggedRef);
+        results.deletedCounts.other++;
+      }
+    } catch (e) {
+      // Ignore
+    }
+
+    // Finally delete the user document
+    const userRef = doc(db, "users", userId);
+    batch.delete(userRef);
+
+    // Commit the batch
+    await batch.commit();
+
+    results.success = true;
+    return results;
+  } catch (error) {
+    console.error("Error in detailed user deletion:", error);
+    results.error = error.message;
+    return results;
   }
 };
 
@@ -196,23 +388,6 @@ export const getSystemStats = async () => {
   }
 };
 
-// Log admin action
-// export const logAdminAction = async (adminId, action, target, details = {}) => {
-//   try {
-//     await setDoc(doc(collection(db, "adminLogs")), {
-//       adminId,
-//       action,
-//       target,
-//       details,
-//       timestamp: new Date().toISOString(),
-//       ip: details.ip || "unknown",
-//       userAgent: navigator.userAgent,
-//     });
-//   } catch (error) {
-//     console.error("Error logging admin action:", error);
-//   }
-// };
-
 // Simple client-side logging (no Firebase)
 export const logAdminAction = (adminId, action, target, details = {}) => {
   const logEntry = {
@@ -226,7 +401,7 @@ export const logAdminAction = (adminId, action, target, details = {}) => {
 
   console.log("Admin Action:", logEntry);
 
-  // Optional: Store in localStorage temporarily (max 100 entries)
+  // Store in localStorage temporarily (max 100 entries)
   try {
     const logs = JSON.parse(localStorage.getItem("adminLogs") || "[]");
     logs.unshift(logEntry); // Add to beginning
