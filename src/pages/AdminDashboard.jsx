@@ -173,8 +173,8 @@ function AdminDashboard() {
     if (!selectedUser) return;
 
     try {
-      // Log action before deletion
-      await logAdminAction(adminData?.uid, "DELETE_USER", selectedUser.id, {
+      // Log action (client-side only)
+      logAdminAction(adminData?.uid, "DELETE_USER", selectedUser.id, {
         userEmail: selectedUser.email,
         userName: selectedUser.name,
         timestamp: new Date().toISOString(),
@@ -226,8 +226,8 @@ function AdminDashboard() {
         updatedAt: new Date().toISOString(),
       };
 
-      // Log action
-      await logAdminAction(adminData?.uid, "UPDATE_USER", selectedUser.id, {
+      // Log action (client-side only)
+      logAdminAction(adminData?.uid, "UPDATE_USER", selectedUser.id, {
         changes: updates,
         previousData: {
           name: selectedUser.name,
@@ -273,8 +273,8 @@ function AdminDashboard() {
       if (result.success) {
         showSnackbar(result.message);
 
-        // Log action
-        await logAdminAction(
+        // Log action (client-side only)
+        logAdminAction(
           adminData?.uid,
           "RESET_PASSWORD",
           selectedUser?.id || "unknown",
@@ -329,8 +329,8 @@ function AdminDashboard() {
           ),
         );
 
-        // Log action
-        await logAdminAction(adminData?.uid, "TOGGLE_USER_STATUS", user.id, {
+        // Log action (client-side only)
+        logAdminAction(adminData?.uid, "TOGGLE_USER_STATUS", user.id, {
           previousStatus: currentStatus,
           newStatus: result.newStatus,
           timestamp: new Date().toISOString(),

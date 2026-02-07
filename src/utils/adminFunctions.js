@@ -197,18 +197,42 @@ export const getSystemStats = async () => {
 };
 
 // Log admin action
-export const logAdminAction = async (adminId, action, target, details = {}) => {
+// export const logAdminAction = async (adminId, action, target, details = {}) => {
+//   try {
+//     await setDoc(doc(collection(db, "adminLogs")), {
+//       adminId,
+//       action,
+//       target,
+//       details,
+//       timestamp: new Date().toISOString(),
+//       ip: details.ip || "unknown",
+//       userAgent: navigator.userAgent,
+//     });
+//   } catch (error) {
+//     console.error("Error logging admin action:", error);
+//   }
+// };
+
+// Simple client-side logging (no Firebase)
+export const logAdminAction = (adminId, action, target, details = {}) => {
+  const logEntry = {
+    adminId,
+    action,
+    target,
+    details,
+    timestamp: new Date().toISOString(),
+    userAgent: navigator.userAgent,
+  };
+
+  console.log("Admin Action:", logEntry);
+
+  // Optional: Store in localStorage temporarily (max 100 entries)
   try {
-    await setDoc(doc(collection(db, "adminLogs")), {
-      adminId,
-      action,
-      target,
-      details,
-      timestamp: new Date().toISOString(),
-      ip: details.ip || "unknown",
-      userAgent: navigator.userAgent,
-    });
+    const logs = JSON.parse(localStorage.getItem("adminLogs") || "[]");
+    logs.unshift(logEntry); // Add to beginning
+    if (logs.length > 100) logs.pop(); // Keep only last 100
+    localStorage.setItem("adminLogs", JSON.stringify(logs));
   } catch (error) {
-    console.error("Error logging admin action:", error);
+    console.error("Error saving admin log locally:", error);
   }
 };
