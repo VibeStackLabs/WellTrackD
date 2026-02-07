@@ -29,7 +29,7 @@ export default function App() {
           if (userData.status === "suspended") {
             await signOut(auth);
             alert("Your account has been suspended. Please contact support.");
-            navigate("/login");
+            window.location.href = "/login";
           }
         }
       };
