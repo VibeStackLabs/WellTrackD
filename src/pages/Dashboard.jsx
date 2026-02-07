@@ -68,6 +68,7 @@ import ListIcon from "@mui/icons-material/List";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import SecurityIcon from "@mui/icons-material/Security";
+import NewReleasesIcon from "@mui/icons-material/NewReleases";
 import { Link } from "react-router-dom";
 import {
   LineChart,
@@ -83,6 +84,8 @@ import CountUp from "react-countup";
 import WorkoutPlans from "./WorkoutPlans";
 import AddToWorkoutHandler from "./AddToWorkoutHandler";
 import { useAdmin } from "../contexts/AdminContext";
+import { getPublishedChangelog } from "../utils/changelogFunctions";
+import ChangelogDialog from "../components/ChangelogDialog";
 
 const PREDEFINED_STRENGTH_WORKOUTS = [
   "Bench Press",
@@ -138,6 +141,10 @@ export default function Dashboard() {
 
   // FAB State
   const [fabOpen, setFabOpen] = useState(false);
+
+  // Changelog State
+  const [changelogDialogOpen, setChangelogDialogOpen] = useState(false);
+  const [unreadUpdates, setUnreadUpdates] = useState(0);
 
   // BMI States
   const [weight, setWeight] = useState("");
@@ -741,6 +748,48 @@ export default function Dashboard() {
     fetchProfile();
     fetchData();
   }, [userId]);
+
+  useEffect(() => {
+    const checkForNewUpdates = async () => {
+      try {
+        const entries = await getPublishedChangelog();
+        if (entries.length > 0) {
+          // Get the latest entry date
+          const latestDate = entries[0].date;
+
+          // Check if user has seen this update
+          const lastSeenUpdate = localStorage.getItem("lastSeenUpdate");
+
+          if (
+            !lastSeenUpdate ||
+            new Date(latestDate) > new Date(lastSeenUpdate)
+          ) {
+            // Show badge if there are unseen updates
+            const unseenEntries = entries.filter(
+              (entry) =>
+                !lastSeenUpdate ||
+                new Date(entry.date) > new Date(lastSeenUpdate),
+            );
+            setUnreadUpdates(unseenEntries.length);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking for updates:", error);
+      }
+    };
+
+    checkForNewUpdates();
+  }, []);
+
+  // Update when dialog is closed (mark as seen)
+  const handleChangelogClose = () => {
+    setChangelogDialogOpen(false);
+
+    // Mark all updates as seen
+    const today = new Date().toISOString().split("T")[0];
+    localStorage.setItem("lastSeenUpdate", today);
+    setUnreadUpdates(0);
+  };
 
   // --- BMI ---
   const calculateBMI = () => {
@@ -2136,6 +2185,45 @@ export default function Dashboard() {
                 }}
               >
                 {syncQueue.length}
+              </Box>
+            )}
+          </Button>
+
+          {/* Add What's New button */}
+          <Button
+            variant="outlined"
+            color="success"
+            onClick={() => setChangelogDialogOpen(true)}
+            disabled={isOffline || loading}
+            startIcon={<NewReleasesIcon />}
+            sx={{
+              textTransform: "none",
+              minWidth: "auto",
+              px: 2,
+              position: "relative",
+            }}
+          >
+            What's New
+            {unreadUpdates > 0 && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: -6,
+                  right: -6,
+                  backgroundColor: "error.main",
+                  color: "white",
+                  borderRadius: "50%",
+                  width: 18,
+                  height: 18,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "0.7rem",
+                  fontWeight: "bold",
+                  border: "2px solid white",
+                }}
+              >
+                {unreadUpdates}
               </Box>
             )}
           </Button>
@@ -4399,6 +4487,12 @@ export default function Dashboard() {
         }}
         exercises={addingPlanExercises}
         onConfirm={processExerciseBatch}
+      />
+
+      {/* Changelog Dialog */}
+      <ChangelogDialog
+        open={changelogDialogOpen}
+        onClose={handleChangelogClose}
       />
     </Container>
   );
