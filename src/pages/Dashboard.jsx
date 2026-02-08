@@ -2047,15 +2047,19 @@ export default function Dashboard() {
       }
 
       if (workoutFilter === "week") {
-        // Get the start of the current week (Sunday)
+        // Get the start of the current week (Monday)
         const startOfWeek = new Date(now);
         const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-        // Calculate Sunday of this week
-        startOfWeek.setDate(now.getDate() - day);
+        // Calculate Monday of this week
+        // If today is Sunday (day 0), go back 6 days to get to Monday of last week
+        // If today is Monday (day 1), we're already at Monday
+        // For other days, subtract (day - 1) to get to Monday
+        const daysToMonday = day === 0 ? 6 : day - 1;
+        startOfWeek.setDate(now.getDate() - daysToMonday);
         startOfWeek.setHours(0, 0, 0, 0);
 
-        // Get end of week (Saturday)
+        // Get end of week (Sunday)
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);
