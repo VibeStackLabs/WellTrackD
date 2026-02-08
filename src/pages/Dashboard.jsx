@@ -69,6 +69,7 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import SecurityIcon from "@mui/icons-material/Security";
 import NewReleasesIcon from "@mui/icons-material/NewReleases";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import { Link } from "react-router-dom";
 import {
   LineChart,
@@ -1643,6 +1644,49 @@ export default function Dashboard() {
     }
   };
 
+  const getPreviousBestForExercise = (exerciseName, currentDate) => {
+    if (!exerciseName) return null;
+
+    const currentDateObj = new Date(currentDate);
+    currentDateObj.setHours(0, 0, 0, 0);
+
+    // Filter workouts for the same exercise before current date
+    const previousWorkouts = workouts
+      .filter((w) => {
+        if (w.workoutType !== "strength") return false;
+        if (
+          !w.exercise ||
+          w.exercise.toLowerCase() !== exerciseName.toLowerCase()
+        )
+          return false;
+
+        const workoutDate = new Date(w.date);
+        workoutDate.setHours(0, 0, 0, 0);
+        return workoutDate < currentDateObj;
+      })
+      .sort((a, b) => new Date(b.date) - new Date(a.date)); // Most recent first
+
+    if (previousWorkouts.length === 0) return null;
+
+    // Find the best set from previous workouts
+    let bestSet = null;
+
+    previousWorkouts.forEach((workout) => {
+      if (workout.sets && workout.sets.length > 0) {
+        workout.sets.forEach((set) => {
+          const currentVolume = (set.reps || 0) * (set.weight || 0);
+          const bestVolume = bestSet ? bestSet.reps * bestSet.weight : 0;
+
+          if (currentVolume > bestVolume) {
+            bestSet = { ...set, date: workout.date };
+          }
+        });
+      }
+    });
+
+    return bestSet;
+  };
+
   const confirmDeleteWorkout = async () => {
     if (!userId || !deleteTarget) return;
 
@@ -2113,6 +2157,78 @@ export default function Dashboard() {
       .reduce((sum, w) => sum + (w.calories || 0), 0);
 
     return Number(total.toFixed(1));
+  };
+
+  const PreviousBestIndicator = ({ exercise, currentDate, currentSets }) => {
+    const previousBest = getPreviousBestForExercise(exercise, currentDate);
+
+    if (!previousBest) return null;
+
+    // Find current best set
+    const currentBestSet = currentSets.reduce((best, set) => {
+      const currentVolume = (set.reps || 0) * (set.weight || 0);
+      const bestVolume = best ? best.reps * best.weight : 0;
+      return currentVolume > bestVolume ? set : best;
+    }, null);
+
+    if (!currentBestSet) return null;
+
+    const currentVolume =
+      (currentBestSet.reps || 0) * (currentBestSet.weight || 0);
+    const previousVolume =
+      (previousBest.reps || 0) * (previousBest.weight || 0);
+
+    const isNewRecord = currentVolume > previousVolume;
+    const isSame = currentVolume === previousVolume;
+
+    const formattedBest = `${previousBest.reps} reps × ${previousBest.weight?.toFixed(1)} kg`;
+
+    return (
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+        <Chip
+          label={
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              {isNewRecord ? (
+                <>
+                  <WhatshotIcon fontSize="small" color="error" />
+                  <Typography variant="caption" color="error.main">
+                    New PR! Was: {formattedBest}
+                  </Typography>
+                </>
+              ) : isSame ? (
+                <>
+                  <BarChartIcon fontSize="small" color="info" />
+                  <Typography variant="caption" color="info.main">
+                    Matched best: {formattedBest}
+                  </Typography>
+                </>
+              ) : (
+                <>
+                  <TrendingUpIcon fontSize="small" color="success" />
+                  <Typography variant="caption" color="success.main">
+                    Previous best: {formattedBest}
+                  </Typography>
+                </>
+              )}
+            </Box>
+          }
+          size="small"
+          variant="outlined"
+          sx={{
+            borderColor: isNewRecord
+              ? "error.main"
+              : isSame
+                ? "info.main"
+                : "success.main",
+            backgroundColor: isNewRecord
+              ? "error.50"
+              : isSame
+                ? "info.50"
+                : "success.50",
+          }}
+        />
+      </Box>
+    );
   };
 
   const actions = [
@@ -2910,6 +3026,16 @@ export default function Dashboard() {
                                                     />
                                                   }
                                                 />
+
+                                                {/* Previous Best Indicator */}
+                                                {row.sets &&
+                                                  row.sets.length > 0 && (
+                                                    <PreviousBestIndicator
+                                                      exercise={row.exercise}
+                                                      currentDate={row.date}
+                                                      currentSets={row.sets}
+                                                    />
+                                                  )}
                                               </Box>
                                             </Box>
 
