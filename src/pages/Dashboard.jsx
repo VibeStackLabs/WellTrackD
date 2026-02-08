@@ -48,6 +48,9 @@ import {
   Autocomplete,
   Tabs,
   Tab,
+  Alert,
+  Snackbar,
+  DialogContentText,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
@@ -65,8 +68,6 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import LogoutIcon from "@mui/icons-material/Logout";
 import BedIcon from "@mui/icons-material/Bed";
 import ListIcon from "@mui/icons-material/List";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
 import SecurityIcon from "@mui/icons-material/Security";
 import NewReleasesIcon from "@mui/icons-material/NewReleases";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
@@ -219,6 +220,13 @@ export default function Dashboard() {
   // Rest Day State
   const [restDays, setRestDays] = useState([]);
 
+  // Alert Dialog States
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [alertDialogTitle, setAlertDialogTitle] = useState("");
+  const [alertDialogMessage, setAlertDialogMessage] = useState("");
+  const [alertDialogSeverity, setAlertDialogSeverity] = useState("info");
+  const [alertDialogActions, setAlertDialogActions] = useState([]);
+
   const addRestDay = async (date = new Date().toISOString().split("T")[0]) => {
     if (!userId) return;
 
@@ -285,7 +293,11 @@ export default function Dashboard() {
         cachedWorkouts.push(tempRestDay);
         localStorage.setItem("cachedWorkouts", JSON.stringify(cachedWorkouts));
 
-        alert("✅ Rest day logged locally. Will sync when online.");
+        showAlert(
+          "Rest Day Logged",
+          "✅ Rest day logged locally. Will sync when online.",
+          "success",
+        );
       }
 
       setSnackbarMessage("Rest day added successfully");
@@ -293,9 +305,7 @@ export default function Dashboard() {
       setSnackbarOpen(true);
     } catch (err) {
       console.error("Error adding rest day:", err);
-      setSnackbarMessage("Failed to add rest day");
-      setSnackbarSeverity("error");
-      setSnackbarOpen(true);
+      showAlert("Error", "Failed to add rest day", "error");
     }
   };
 
@@ -306,6 +316,15 @@ export default function Dashboard() {
   const [exercisesToAdd, setExercisesToAdd] = useState([]);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [isProcessingBatch, setIsProcessingBatch] = useState(false);
+
+  // Alert Dialog Helper Function
+  const showAlert = (title, message, severity = "info", actions = []) => {
+    setAlertDialogTitle(title);
+    setAlertDialogMessage(message);
+    setAlertDialogSeverity(severity);
+    setAlertDialogActions(actions);
+    setAlertDialogOpen(true);
+  };
 
   const processExerciseAddition = (exerciseData) => {
     // Clear any existing form data first
@@ -625,38 +644,52 @@ export default function Dashboard() {
 
   // Clear cache function
   const clearLocalCache = () => {
-    if (
-      window.confirm(
-        "Clear all locally cached data?\n\n" +
-          "This will remove: \n" +
-          "• Cached workouts\n" +
-          "• Cached BMI data\n" +
-          "• Cached profile\n" +
-          "• Sync queue\n\n" +
-          "You'll need internet connection to reload data.",
-      )
-    ) {
-      // Clear localStorage
-      localStorage.removeItem("cachedWorkouts");
-      localStorage.removeItem("cachedBMI");
-      localStorage.removeItem("cachedProfile");
+    showAlert(
+      "Clear Local Cache",
+      "Are you sure you want to clear all locally cached data?\n\n" +
+        "This will remove: \n" +
+        "• Cached workouts\n" +
+        "• Cached BMI data\n" +
+        "• Cached profile\n" +
+        "• Sync queue\n\n" +
+        "You'll need internet connection to reload data.",
+      "warning",
+      [
+        {
+          text: "Cancel",
+          onClick: () => setAlertDialogOpen(false),
+          color: "primary",
+        },
+        {
+          text: "Clear Cache",
+          onClick: () => {
+            // Clear localStorage
+            localStorage.removeItem("cachedWorkouts");
+            localStorage.removeItem("cachedBMI");
+            localStorage.removeItem("cachedProfile");
 
-      // Clear sync queue
-      setSyncQueue([]);
+            // Clear sync queue
+            setSyncQueue([]);
 
-      // Update state
-      setHasPersistentData(false);
+            // Update state
+            setHasPersistentData(false);
 
-      // Show success message in snackbar
-      setSnackbarMessage("Cache cleared successfully");
-      setSnackbarSeverity("success");
-      setSnackbarOpen(true);
+            // Show success message in snackbar
+            setSnackbarMessage("Cache cleared successfully");
+            setSnackbarSeverity("success");
+            setSnackbarOpen(true);
 
-      // If online, fetch fresh data
-      if (isOnline()) {
-        fetchData();
-      }
-    }
+            // If online, fetch fresh data
+            if (isOnline()) {
+              fetchData();
+            }
+            setAlertDialogOpen(false);
+          },
+          color: "error",
+          variant: "outlined",
+        },
+      ],
+    );
   };
 
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -811,10 +844,20 @@ export default function Dashboard() {
   };
 
   const addBMIEntry = async () => {
-    if (!userId) return alert("User not loaded yet.");
+    if (!userId) {
+      showAlert("Error", "User not loaded yet. Please try again.", "error");
+      return;
+    }
+
     const bmi = calculateBMI();
-    if (!weight) return alert("Enter a weight");
-    if (bmi === null) return alert("Enter a valid height");
+    if (!weight) {
+      showAlert("Validation Error", "Please enter a weight", "warning");
+      return;
+    }
+    if (bmi === null) {
+      showAlert("Validation Error", "Please enter a valid height", "warning");
+      return;
+    }
 
     try {
       const networkAvailable = isOnline();
@@ -865,7 +908,11 @@ export default function Dashboard() {
         setBmiEntries((prev) => [...prev, { id: "temp-offline", ...bmiData }]);
         setProfile((prev) => ({ ...prev, ...heightData }));
 
-        alert("✅ BMI entry saved locally. Will sync when online.");
+        showAlert(
+          "Saved Locally",
+          "✅ BMI entry saved locally. Will sync when online.",
+          "success",
+        );
       }
 
       clearBMIForm();
@@ -874,7 +921,11 @@ export default function Dashboard() {
     } catch (err) {
       console.error("Error adding BMI:", err);
       if (!isOffline) {
-        alert("Error saving BMI entry. Please try again.");
+        showAlert(
+          "Error",
+          "Error saving BMI entry. Please try again.",
+          "error",
+        );
       }
     }
   };
@@ -1386,12 +1437,20 @@ export default function Dashboard() {
     // Validate based on workout type
     if (workoutType === "strength") {
       if (!exercise) {
-        alert("Please enter an exercise name");
+        showAlert(
+          "Validation Error",
+          "Please enter an exercise name",
+          "warning",
+        );
         return;
       }
       const hasEmptySets = sets.some((set) => !set.reps || !set.weight);
       if (hasEmptySets) {
-        alert("Please fill in reps and weight for all sets");
+        showAlert(
+          "Validation Error",
+          "Please fill in reps and weight for all sets",
+          "warning",
+        );
         return;
       }
     } else if (workoutType === "cardio") {
@@ -1407,7 +1466,11 @@ export default function Dashboard() {
       );
 
       if (hasEmptySessions) {
-        alert("Please enter a valid duration for all sessions");
+        showAlert(
+          "Validation Error",
+          "Please enter a valid duration for all sessions",
+          "warning",
+        );
         return;
       }
 
@@ -1422,7 +1485,11 @@ export default function Dashboard() {
         );
 
         if (hasInvalidSpeed) {
-          alert("Please enter a valid speed for all sessions");
+          showAlert(
+            "Validation Error",
+            "Please enter a valid speed for all sessions",
+            "warning",
+          );
           return;
         }
       }
@@ -1454,8 +1521,10 @@ export default function Dashboard() {
     selectedDateObj.setHours(0, 0, 0, 0);
 
     if (selectedDateObj > today) {
-      alert(
+      showAlert(
+        "Invalid Date",
         "Cannot add workouts for future dates. Please select today or a past date.",
+        "warning",
       );
       return;
     }
@@ -1465,7 +1534,11 @@ export default function Dashboard() {
     oneYearAgo.setFullYear(today.getFullYear() - 1);
 
     if (selectedDateObj < oneYearAgo) {
-      alert("Cannot add workouts older than 1 year.");
+      showAlert(
+        "Invalid Date",
+        "Cannot add workouts older than 1 year.",
+        "warning",
+      );
       return;
     }
 
@@ -1626,7 +1699,11 @@ export default function Dashboard() {
         }
 
         // Show offline success message
-        alert("✅ Workout saved locally. Will sync when you're back online.");
+        showAlert(
+          "Saved Locally",
+          "✅ Workout saved locally. Will sync when you're back online.",
+          "success",
+        );
       }
 
       clearWorkoutForm();
@@ -1637,7 +1714,11 @@ export default function Dashboard() {
 
       if (err.code === "unavailable" || isOffline) {
         // Even if network fails, keep optimistic update
-        alert("⚠️ Network issue. Your workout has been saved locally.");
+        showAlert(
+          "Network Issue",
+          "⚠️ Network issue. Your workout has been saved locally.",
+          "warning",
+        );
       } else {
         fetchData(); // restore from server only if it's not a network issue
       }
@@ -2451,10 +2532,6 @@ export default function Dashboard() {
           onClick={() => {
             setCacheMenuAnchor(null);
             clearLocalCache();
-            // Show a confirmation snackbar instead of alert
-            setSnackbarMessage("Cache cleared successfully");
-            setSnackbarSeverity("success");
-            setSnackbarOpen(true);
           }}
           disabled={!hasPersistentData && syncQueue.length === 0}
         >
@@ -3749,6 +3826,43 @@ export default function Dashboard() {
           >
             Delete
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Custom Alert Dialog */}
+      <Dialog
+        open={alertDialogOpen}
+        onClose={() => setAlertDialogOpen(false)}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{alertDialogTitle}</DialogTitle>
+        <DialogContent>
+          <DialogContentText
+            id="alert-dialog-description"
+            sx={{ whiteSpace: "pre-line" }}
+          >
+            {alertDialogMessage}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          {alertDialogActions.length > 0 ? (
+            alertDialogActions.map((action, index) => (
+              <Button
+                key={index}
+                onClick={action.onClick}
+                color={action.color || "primary"}
+                variant={action.variant || "text"}
+                autoFocus={index === alertDialogActions.length - 1}
+              >
+                {action.text}
+              </Button>
+            ))
+          ) : (
+            <Button onClick={() => setAlertDialogOpen(false)} autoFocus>
+              OK
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
