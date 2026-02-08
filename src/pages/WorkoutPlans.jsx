@@ -30,6 +30,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import ImportExportIcon from "@mui/icons-material/ImportExport";
 import Menu from "@mui/material/Menu";
 import { db } from "../firebase";
 import {
@@ -40,6 +41,9 @@ import {
   deleteDoc,
   serverTimestamp,
 } from "firebase/firestore";
+import WorkoutPlanExcelHandler from "../components/WorkoutPlanExcelHandler";
+import { saveAs } from "file-saver";
+import * as XLSX from "xlsx";
 
 export default function WorkoutPlans({ userId, onAddToToday }) {
   const [plans, setPlans] = useState([]);
@@ -72,6 +76,9 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorSnackbarOpen, setErrorSnackbarOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Excel Handler states
+  const [excelHandlerOpen, setExcelHandlerOpen] = useState(false);
 
   // Load plans from Firestore
   useEffect(() => {
@@ -267,6 +274,50 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
   const handleMenuClose = () => {
     setMenuAnchorEl(null);
     setSelectedPlanForMenu(null);
+  };
+
+  const handleImportPlan = (importedData) => {
+    // Create a new plan from imported data
+    const newPlan = {
+      id: `IMPORTED_${Date.now()}_${importedData.name.replace(/[^a-zA-Z0-9]/g, "_")}`,
+      name: importedData.name,
+      exercises: importedData.exercises,
+      description: importedData.description,
+      createdAt: new Date(),
+      isImported: true,
+    };
+
+    // Save to Firestore
+    saveImportedPlan(newPlan);
+  };
+
+  const saveImportedPlan = async (plan) => {
+    if (!userId) return;
+
+    setSaving(true);
+    try {
+      const planDoc = doc(db, "users", userId, "workoutPlans", plan.id);
+      await setDoc(planDoc, {
+        name: plan.name,
+        exercises: plan.exercises,
+        description: plan.description || "",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        isImported: true,
+      });
+
+      setPlans((prev) => [...prev, plan]);
+      setSelectedPlanId(plan.id);
+
+      setSuccessMessage(`Workout plan "${plan.name}" imported successfully!`);
+      setSuccessSnackbarOpen(true);
+    } catch (error) {
+      console.error("Error saving imported plan:", error);
+      setErrorMessage("Failed to save imported plan. Please try again.");
+      setErrorSnackbarOpen(true);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
@@ -468,17 +519,29 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
         }}
       >
         <Typography variant="h6">Workout Plans</Typography>
-        <Button
-          variant="outlined"
-          startIcon={<AddIcon />}
-          onClick={() => {
-            resetForm();
-            setOpenDialog(true);
-          }}
-          disabled={saving}
-        >
-          Create New Plan
-        </Button>
+
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={<ImportExportIcon />}
+            onClick={() => setExcelHandlerOpen(true)}
+            disabled={saving}
+          >
+            Import/Export
+          </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={() => {
+              resetForm();
+              setOpenDialog(true);
+            }}
+            disabled={saving}
+          >
+            Create New Plan
+          </Button>
+        </Box>
       </Box>
 
       {/* Plan Selection */}
@@ -738,6 +801,78 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
         <MenuItem
           onClick={() => {
             if (selectedPlanForMenu) {
+              try {
+                // Create workbook with just 1 sheet
+                const wb = XLSX.utils.book_new();
+
+                // Create headers
+                const headers = [
+                  "Plan Name",
+                  "Exercise Name",
+                  "Sets",
+                  "Reps",
+                  "Weight",
+                  "Weight Unit",
+                ];
+
+                const allData = [headers];
+
+                // Add each exercise
+                selectedPlanForMenu.exercises?.forEach((exercise) => {
+                  allData.push([
+                    selectedPlanForMenu.name,
+                    exercise.name,
+                    exercise.sets,
+                    exercise.reps,
+                    exercise.weight,
+                    exercise.weightUnit || "kg",
+                  ]);
+                });
+
+                const ws = XLSX.utils.aoa_to_sheet(allData);
+
+                // Set column widths
+                const wscols = [
+                  { wch: 20 }, // Plan Name
+                  { wch: 25 }, // Exercise Name
+                  { wch: 8 }, // Sets
+                  { wch: 10 }, // Reps
+                  { wch: 10 }, // Weight
+                  { wch: 12 }, // Weight Unit
+                ];
+                ws["!cols"] = wscols;
+
+                XLSX.utils.book_append_sheet(wb, ws, "Workout Plan");
+
+                // Save file
+                const wbout = XLSX.write(wb, {
+                  bookType: "xlsx",
+                  type: "array",
+                });
+                const blob = new Blob([wbout], {
+                  type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                });
+                saveAs(
+                  blob,
+                  `Workout_Plan_${selectedPlanForMenu.name.replace(/[^a-z0-9]/gi, "_")}_${
+                    new Date().toISOString().split("T")[0]
+                  }.xlsx`,
+                );
+              } catch (error) {
+                console.error("Error exporting plan:", error);
+                setErrorMessage("Failed to export plan. Please try again.");
+                setErrorSnackbarOpen(true);
+              }
+            }
+            handleMenuClose();
+          }}
+        >
+          Export to Excel
+        </MenuItem>
+        <Divider />
+        <MenuItem
+          onClick={() => {
+            if (selectedPlanForMenu) {
               confirmDeletePlan(selectedPlanForMenu.id);
             }
             handleMenuClose();
@@ -877,6 +1012,12 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           {errorMessage}
         </Alert>
       </Snackbar>
+
+      <WorkoutPlanExcelHandler
+        open={excelHandlerOpen}
+        onClose={() => setExcelHandlerOpen(false)}
+        onImport={handleImportPlan}
+      />
     </Box>
   );
 }
