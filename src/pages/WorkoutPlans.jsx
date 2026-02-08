@@ -20,6 +20,9 @@ import {
   CircularProgress,
   Divider,
   InputAdornment,
+  DialogContentText,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
@@ -59,6 +62,16 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
   const [editingPlan, setEditingPlan] = useState(null);
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const [selectedPlanForMenu, setSelectedPlanForMenu] = useState(null);
+
+  // Dialog states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [planToDelete, setPlanToDelete] = useState(null);
+  const [validationDialogOpen, setValidationDialogOpen] = useState(false);
+  const [validationMessage, setValidationMessage] = useState("");
+  const [successSnackbarOpen, setSuccessSnackbarOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorSnackbarOpen, setErrorSnackbarOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Load plans from Firestore
   useEffect(() => {
@@ -128,7 +141,8 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
     const hasValidExercises = exercises.some((ex) => ex.name.trim() !== "");
 
     if (!hasValidExercises) {
-      alert("Please add at least one valid exercise");
+      setValidationMessage("Please add at least one valid exercise");
+      setValidationDialogOpen(true);
       return;
     }
 
@@ -166,12 +180,16 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
 
       resetForm();
       setSelectedPlanId(planId);
-      alert(`Workout plan ${editingPlan ? "updated" : "saved"} successfully!`);
+      setSuccessMessage(
+        `Workout plan ${editingPlan ? "updated" : "saved"} successfully!`,
+      );
+      setSuccessSnackbarOpen(true);
     } catch (error) {
       console.error("Error saving workout plan:", error);
-      alert(
+      setErrorMessage(
         `Failed to ${editingPlan ? "update" : "save"} workout plan. Please try again.`,
       );
+      setErrorSnackbarOpen(true);
     } finally {
       setSaving(false);
     }
@@ -201,26 +219,36 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
     setOpenEditDialog(true);
   };
 
-  const deletePlan = async (planId) => {
+  const confirmDeletePlan = (planId) => {
     const planToDelete = plans.find((p) => p.id === planId);
     if (!planToDelete) return;
 
-    if (!window.confirm(`Delete "${planToDelete.name}" workout plan?`)) return;
+    setPlanToDelete(planToDelete);
+    setDeleteDialogOpen(true);
+  };
+
+  const deletePlan = async () => {
+    if (!planToDelete || !userId) return;
 
     try {
-      const planDoc = doc(db, "users", userId, "workoutPlans", planId);
+      const planDoc = doc(db, "users", userId, "workoutPlans", planToDelete.id);
       await deleteDoc(planDoc);
 
-      setPlans((prev) => prev.filter((p) => p.id !== planId));
+      setPlans((prev) => prev.filter((p) => p.id !== planToDelete.id));
 
-      if (selectedPlanId === planId) {
+      if (selectedPlanId === planToDelete.id) {
         setSelectedPlanId("");
       }
 
-      alert("Workout plan deleted successfully!");
+      setSuccessMessage("Workout plan deleted successfully!");
+      setSuccessSnackbarOpen(true);
     } catch (error) {
       console.error("Error deleting workout plan:", error);
-      alert("Failed to delete workout plan. Please try again.");
+      setErrorMessage("Failed to delete workout plan. Please try again.");
+      setErrorSnackbarOpen(true);
+    } finally {
+      setDeleteDialogOpen(false);
+      setPlanToDelete(null);
     }
   };
 
@@ -512,7 +540,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
                 </IconButton>
                 <IconButton
                   size="small"
-                  onClick={() => deletePlan(selectedPlan.id)}
+                  onClick={() => confirmDeletePlan(selectedPlan.id)}
                   color="error"
                 >
                   <DeleteIcon />
@@ -710,7 +738,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
         <MenuItem
           onClick={() => {
             if (selectedPlanForMenu) {
-              deletePlan(selectedPlanForMenu.id);
+              confirmDeletePlan(selectedPlanForMenu.id);
             }
             handleMenuClose();
           }}
@@ -783,6 +811,72 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Delete Workout Plan</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete "{planToDelete?.name}" workout plan?
+            This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button onClick={deletePlan} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Validation Error Dialog */}
+      <Dialog
+        open={validationDialogOpen}
+        onClose={() => setValidationDialogOpen(false)}
+      >
+        <DialogTitle>Validation Error</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{validationMessage}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setValidationDialogOpen(false)} autoFocus>
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        open={successSnackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSuccessSnackbarOpen(false)}
+      >
+        <Alert
+          onClose={() => setSuccessSnackbarOpen(false)}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
+
+      {/* Error Snackbar */}
+      <Snackbar
+        open={errorSnackbarOpen}
+        autoHideDuration={4000}
+        onClose={() => setErrorSnackbarOpen(false)}
+      >
+        <Alert
+          onClose={() => setErrorSnackbarOpen(false)}
+          severity="error"
+          sx={{ width: "100%" }}
+        >
+          {errorMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
