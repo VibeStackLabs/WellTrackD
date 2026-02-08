@@ -320,9 +320,26 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
     }
   };
 
+  // Helper function to parse sets as number
+  const parseSets = (setsValue) => {
+    if (!setsValue) return 0;
+    const num = parseInt(setsValue);
+    return isNaN(num) ? 0 : num;
+  };
+
+  // Helper function to get total sets for a plan
+  const getTotalSets = (plan) => {
+    if (!plan.exercises) return 0;
+    return plan.exercises.reduce((sum, exercise) => {
+      return sum + parseSets(exercise.sets);
+    }, 0);
+  };
+
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
 
   const renderExerciseCard = (exercise, index) => {
+    const setsValue = parseSets(exercise.sets);
+
     return (
       <Box
         key={exercise.id || index}
@@ -355,13 +372,17 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
             <Typography variant="caption" color="text.secondary">
               Sets
             </Typography>
-            <Typography variant="body2">{exercise.sets || 3}</Typography>
+            <Typography variant="body2">
+              {setsValue > 0 ? setsValue : "Not set"}
+            </Typography>
           </Grid>
           <Grid size={{ xs: 4 }}>
             <Typography variant="caption" color="text.secondary">
               Reps
             </Typography>
-            <Typography variant="body2">{exercise.reps || 8}</Typography>
+            <Typography variant="body2">
+              {exercise.reps || "Not set"}
+            </Typography>
           </Grid>
           <Grid size={{ xs: 4 }}>
             <Typography variant="caption" color="text.secondary">
@@ -431,11 +452,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
               fullWidth
               value={exercise.sets}
               onChange={(e) =>
-                handleExerciseChange(
-                  index,
-                  "sets",
-                  parseInt(e.target.value) || 0,
-                )
+                handleExerciseChange(index, "sets", e.target.value)
               }
               size="small"
               disabled={saving}
@@ -449,11 +466,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
               fullWidth
               value={exercise.reps}
               onChange={(e) =>
-                handleExerciseChange(
-                  index,
-                  "reps",
-                  parseInt(e.target.value) || 0,
-                )
+                handleExerciseChange(index, "reps", e.target.value)
               }
               size="small"
               disabled={saving}
@@ -581,15 +594,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
                   {selectedPlan.exercises.length} exercise
                   {selectedPlan.exercises.length !== 1 ? "s" : ""}
                   {selectedPlan.exercises.length > 0 && (
-                    <>
-                      {" "}
-                      •{" "}
-                      {selectedPlan.exercises.reduce(
-                        (sum, e) => sum + (e.sets || 0),
-                        0,
-                      )}{" "}
-                      sets
-                    </>
+                    <> • {getTotalSets(selectedPlan)} sets</>
                   )}
                 </Typography>
               </Box>
@@ -644,10 +649,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           </Typography>
           <Grid container spacing={2}>
             {plans.map((plan) => {
-              const totalSets = plan.exercises?.reduce(
-                (sum, e) => sum + (e.sets || 0),
-                0,
-              );
+              const totalSets = getTotalSets(plan);
 
               return (
                 <Grid size={{ xs: 12, sm: 6, md: 4 }} key={plan.id}>
@@ -708,7 +710,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
                         color="text.secondary"
                         paragraph
                       >
-                        Total sets: {totalSets || 0}
+                        Total sets: {totalSets}
                         {plan.exercises?.[0]?.reps &&
                           ` × ${plan.exercises[0].reps} reps`}
                       </Typography>
