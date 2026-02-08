@@ -2314,14 +2314,6 @@ export default function Dashboard() {
 
   const actions = [
     {
-      icon: <ScaleIcon />,
-      name: "Add/Update BMI",
-      onClick: () => {
-        setActiveTab(1); // Switch to Health Metrics tab first
-        setOpenBMI(true); // Then open BMI dialog
-      },
-    },
-    {
       icon: <FitnessCenterIcon />,
       name: "Add Workout",
       onClick: () => {
@@ -2333,7 +2325,15 @@ export default function Dashboard() {
       icon: <ListIcon />,
       name: "Workout Plans",
       onClick: () => {
-        setActiveTab(2); // Switch to Workout Plans tab
+        setActiveTab(1); // Switch to Workout Plans tab
+      },
+    },
+    {
+      icon: <ScaleIcon />,
+      name: "Add/Update BMI",
+      onClick: () => {
+        setActiveTab(2); // Switch to Health Metrics tab first
+        setOpenBMI(true); // Then open BMI dialog
       },
     },
   ];
@@ -2905,7 +2905,7 @@ export default function Dashboard() {
                                   variant="outlined"
                                   color="success"
                                   startIcon={<ListIcon />}
-                                  onClick={() => setActiveTab(2)} // Switch to Workout Plans tab
+                                  onClick={() => setActiveTab(1)} // Switch to Workout Plans tab
                                   size="small"
                                 >
                                   Use Workout Plan
