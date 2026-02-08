@@ -1019,6 +1019,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
         open={excelHandlerOpen}
         onClose={() => setExcelHandlerOpen(false)}
         onImport={handleImportPlan}
+        plans={plans}
       />
     </Box>
   );
