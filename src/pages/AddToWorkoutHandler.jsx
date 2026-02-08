@@ -185,7 +185,7 @@ export default function AddToWorkoutHandler({
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button
-          variant="contained"
+          variant="outlined"
           onClick={handleAddSelected}
           disabled={selectedExercises.length === 0}
         >

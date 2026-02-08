@@ -3820,7 +3820,7 @@ export default function Dashboard() {
         <DialogActions>
           <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
           <Button
-            variant="contained"
+            variant="outlined"
             color="error"
             onClick={confirmDeleteWorkout}
           >
@@ -4006,7 +4006,7 @@ export default function Dashboard() {
           >
             Cancel
           </Button>
-          <Button variant="contained" onClick={addBMIEntry}>
+          <Button variant="outlined" onClick={addBMIEntry}>
             Add / Update
           </Button>
         </DialogActions>
@@ -4745,7 +4745,7 @@ export default function Dashboard() {
             Cancel
           </Button>
           <Button
-            variant="contained"
+            variant="outlined"
             onClick={saveWorkout}
             disabled={
               workoutType === "strength"

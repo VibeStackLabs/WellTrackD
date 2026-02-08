@@ -560,7 +560,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
             </Grid>
 
             <Button
-              variant="contained"
+              variant="outlined"
               fullWidth
               sx={{ mt: 3 }}
               onClick={addToTodayWorkout}
@@ -697,7 +697,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
             Create your first workout plan to save time logging exercises
           </Typography>
           <Button
-            variant="contained"
+            variant="outlined"
             startIcon={<AddIcon />}
             onClick={() => {
               resetForm();
@@ -793,7 +793,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
             Cancel
           </Button>
           <Button
-            variant="contained"
+            variant="outlined"
             onClick={saveCustomPlan}
             disabled={
               !customPlanName.trim() ||
@@ -826,7 +826,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={deletePlan} color="error" variant="contained">
+          <Button onClick={deletePlan} color="error" variant="outlined">
             Delete
           </Button>
         </DialogActions>

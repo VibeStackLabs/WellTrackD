@@ -19,7 +19,10 @@ import {
   DialogActions,
   Fade,
 } from "@mui/material";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
+import {
+  VisibilityOutlined as VisibilityOutlinedIcon,
+  VisibilityOffOutlined as VisibilityOffOutlinedIcon,
+} from "@mui/icons-material";
 import { IconButton } from "@mui/material";
 
 export default function Signup() {
@@ -278,16 +281,21 @@ export default function Signup() {
                       onClick={handleClickShowPassword}
                       onMouseDown={handleMouseDownPassword}
                       edge="end"
+                      color="primary"
                       sx={{ minWidth: "auto", p: 0.5 }}
                     >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                      {showPassword ? (
+                        <VisibilityOffOutlinedIcon />
+                      ) : (
+                        <VisibilityOutlinedIcon />
+                      )}
                     </IconButton>
                   ),
                 }}
               />
 
               <Button
-                variant="contained"
+                variant="outlined"
                 size="large"
                 fullWidth
                 sx={{ mt: 1, borderRadius: 3 }}

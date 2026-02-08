@@ -22,7 +22,10 @@ import {
   Alert,
   Snackbar,
 } from "@mui/material";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
+import {
+  VisibilityOutlined as VisibilityOutlinedIcon,
+  VisibilityOffOutlined as VisibilityOffOutlinedIcon,
+} from "@mui/icons-material";
 import { IconButton } from "@mui/material";
 
 export default function Login() {
@@ -206,19 +209,25 @@ export default function Login() {
                       onClick={handleClickShowPassword}
                       onMouseDown={handleMouseDownPassword}
                       edge="end"
+                      color="primary"
                       sx={{ minWidth: "auto", p: 0.5 }}
                     >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                      {showPassword ? (
+                        <VisibilityOffOutlinedIcon />
+                      ) : (
+                        <VisibilityOutlinedIcon />
+                      )}
                     </IconButton>
                   ),
                 }}
               />
               <Box sx={{ textAlign: "right", mb: 1 }}>
                 <Button
+                  color="error.main"
                   variant="outlined"
                   sx={{
                     textTransform: "none",
-                    color: "primary.main",
+                    color: "error.main",
                   }}
                   onClick={() => setForgotPasswordOpen(true)}
                 >
@@ -226,7 +235,7 @@ export default function Login() {
                 </Button>
               </Box>
               <Button
-                variant="contained"
+                variant="outlined"
                 color="primary"
                 size="large"
                 sx={{ mt: 1, borderRadius: 3 }}
@@ -306,14 +315,14 @@ export default function Login() {
               <Button onClick={handleForgotPasswordClose}>Cancel</Button>
               <Button
                 onClick={handleForgotPassword}
-                variant="contained"
+                variant="outlined"
                 disabled={!resetEmail}
               >
                 Send Reset Link
               </Button>
             </>
           ) : (
-            <Button onClick={handleForgotPasswordClose} variant="contained">
+            <Button onClick={handleForgotPasswordClose} variant="outlined">
               Close
             </Button>
           )}
