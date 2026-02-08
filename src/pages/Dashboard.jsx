@@ -2206,24 +2206,48 @@ export default function Dashboard() {
   // Calories Burned calculation
   const getCaloriesBurned = () => {
     const now = new Date();
-    let startDate;
+    let startDate, endDate;
 
     if (calorieFilter === "week") {
-      startDate = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() - 7,
-      );
+      // Calculate Monday of this week (Monday to Sunday)
+      const day = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const daysToMonday = day === 0 ? 6 : day - 1;
+
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - daysToMonday);
+      startDate.setHours(0, 0, 0, 0);
+
+      // Sunday of this week
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      endDate.setHours(23, 59, 59, 999);
     } else if (calorieFilter === "month") {
-      startDate = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() - 30,
-      );
+      // First day of current month
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate.setHours(0, 0, 0, 0);
+
+      // Last day of current month
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      endDate.setHours(23, 59, 59, 999);
     }
 
+    // Handle case where filter is not set (shouldn't happen but good practice)
+    if (!startDate || !endDate) return 0;
+
     return workouts
-      .filter((d) => new Date(d.date) >= startDate)
+      .filter((d) => {
+        const workoutDate = new Date(d.date);
+        // Set to start of day for comparison
+        const workoutDateStart = new Date(workoutDate);
+        workoutDateStart.setHours(0, 0, 0, 0);
+
+        // Set to end of day for endDate comparison
+        const workoutDateEnd = new Date(workoutDate);
+        workoutDateEnd.setHours(23, 59, 59, 999);
+
+        // Workout is included if it falls within the date range
+        return workoutDateEnd >= startDate && workoutDateStart <= endDate;
+      })
       .reduce((sum, w) => sum + (w.calories || 0), 0);
   };
 
