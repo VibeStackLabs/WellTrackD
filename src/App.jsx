@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -10,7 +10,17 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import {
+  Box,
+  CircularProgress,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button,
+} from "@mui/material";
 import { db, auth } from "./firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
@@ -18,6 +28,10 @@ import { AdminProvider } from "./contexts/AdminContext";
 
 export default function App() {
   const [user, loading] = useAuthState(auth);
+
+  // Suspended dialog state
+  const [suspendedDialogOpen, setSuspendedDialogOpen] = useState(false);
+  const [suspendedMessage, setSuspendedMessage] = useState("");
 
   // When user logs in, check if they're suspended
   useEffect(() => {
@@ -27,15 +41,26 @@ export default function App() {
         if (userDoc.exists()) {
           const userData = userDoc.data();
           if (userData.status === "suspended") {
-            await signOut(auth);
-            alert("Your account has been suspended. Please contact support.");
-            window.location.href = "/login";
+            setSuspendedMessage(
+              "Your account has been suspended. Please contact support.",
+            );
+            setSuspendedDialogOpen(true);
           }
         }
       };
       checkUserStatus();
     }
   }, [user]);
+
+  const handleSuspendedDialogClose = async () => {
+    setSuspendedDialogOpen(false);
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+    window.location.href = "/login";
+  };
 
   if (loading)
     return (
@@ -55,28 +80,50 @@ export default function App() {
     );
 
   return (
-    <AdminProvider>
-      <Router>
-        <Routes>
-          <Route
-            path="/signup"
-            element={!user ? <Signup /> : <Navigate to="/dashboard" />}
-          />
-          <Route
-            path="/login"
-            element={!user ? <Login /> : <Navigate to="/dashboard" />}
-          />
-          <Route
-            path="/dashboard"
-            element={user ? <Dashboard /> : <Navigate to="/login" />}
-          />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route
-            path="*"
-            element={<Navigate to={user ? "/dashboard" : "/login"} />}
-          />
-        </Routes>
-      </Router>
-    </AdminProvider>
+    <>
+      <AdminProvider>
+        <Router>
+          <Routes>
+            <Route
+              path="/signup"
+              element={!user ? <Signup /> : <Navigate to="/dashboard" />}
+            />
+            <Route
+              path="/login"
+              element={!user ? <Login /> : <Navigate to="/dashboard" />}
+            />
+            <Route
+              path="/dashboard"
+              element={user ? <Dashboard /> : <Navigate to="/login" />}
+            />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route
+              path="*"
+              element={<Navigate to={user ? "/dashboard" : "/login"} />}
+            />
+          </Routes>
+        </Router>
+      </AdminProvider>
+
+      {/* Suspended Account Dialog */}
+      <Dialog
+        open={suspendedDialogOpen}
+        onClose={handleSuspendedDialogClose}
+        aria-labelledby="suspended-dialog-title"
+        aria-describedby="suspended-dialog-description"
+      >
+        <DialogTitle id="suspended-dialog-title">Account Suspended</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="suspended-dialog-description">
+            {suspendedMessage}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleSuspendedDialogClose} autoFocus>
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
