@@ -334,12 +334,10 @@ export default function Login() {
         open={snackbarOpen}
         autoHideDuration={4000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           onClose={handleSnackbarClose}
           severity="success"
-          variant="filled"
           sx={{ width: "100%" }}
         >
           {snackbarMessage}
