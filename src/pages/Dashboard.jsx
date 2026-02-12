@@ -88,6 +88,7 @@ import AddToWorkoutHandler from "./AddToWorkoutHandler";
 import { useAdmin } from "../contexts/AdminContext";
 import { getPublishedChangelog } from "../utils/changelogFunctions";
 import ChangelogDialog from "../components/ChangelogDialog";
+import Profile from "../components/Profile";
 
 const PREDEFINED_STRENGTH_WORKOUTS = [
   "Bench Press",
@@ -226,6 +227,20 @@ export default function Dashboard() {
   const [alertDialogMessage, setAlertDialogMessage] = useState("");
   const [alertDialogSeverity, setAlertDialogSeverity] = useState("info");
   const [alertDialogActions, setAlertDialogActions] = useState([]);
+
+  // Handle profile updates from Profile component
+  const handleProfileUpdate = (updatedProfile) => {
+    setProfile(updatedProfile);
+
+    // Update local cache
+    localStorage.setItem("cachedProfile", JSON.stringify(updatedProfile));
+    setLocalCache((prev) => ({ ...prev, profile: updatedProfile }));
+
+    // Show success message
+    setSnackbarMessage("Profile updated successfully!");
+    setSnackbarSeverity("success");
+    setSnackbarOpen(true);
+  };
 
   const addRestDay = async (date = new Date().toISOString().split("T")[0]) => {
     if (!userId) return;
@@ -2376,18 +2391,21 @@ export default function Dashboard() {
         alignItems="center"
         mb={4}
       >
-        <Typography variant="h4" fontWeight="bold">
-          Welcome, {profile?.name || "User"}
-          {isOffline && (
-            <Chip
-              label="Offline"
-              size="small"
-              color="warning"
-              variant="outlined"
-              sx={{ ml: 2, fontSize: "0.7rem", verticalAlign: "middle" }}
-            />
-          )}
-        </Typography>
+        {/* Profile Component */}
+        <Box sx={{ display: "flex", alignItems: "center" }}>
+          <Profile
+            userData={{
+              ...profile,
+              uid: userId,
+              name: profile?.name || "User",
+              username: profile?.username || "user",
+              email: profile?.email || "",
+              createdAt: profile?.createdAt,
+            }}
+            onUpdate={handleProfileUpdate}
+            isOffline={isOffline}
+          />
+        </Box>
 
         <Box display="flex" gap={2} alignItems="center">
           {/* Sync & Cache Menu Button */}
