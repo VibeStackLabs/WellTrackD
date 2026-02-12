@@ -15,6 +15,7 @@ import {
   InputAdornment,
   Chip,
   Paper,
+  Avatar,
 } from "@mui/material";
 import {
   Save as SaveIcon,
@@ -53,6 +54,9 @@ export default function ProfileEditDialog({
   const [username, setUsername] = useState("");
   const [originalUsername, setOriginalUsername] = useState("");
 
+  // Avatar state
+  const [avatarUrl, setAvatarUrl] = useState("");
+
   // Password states
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -73,12 +77,51 @@ export default function ProfileEditDialog({
   const [success, setSuccess] = useState("");
   const [activeTab, setActiveTab] = useState("profile"); // "profile" or "password"
 
+  // UI Avatars service - free, no API key needed
+  const getUIAvatarUrl = (name, size = 200) => {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "User")}&size=${size}&background=1976d2&color=fff&bold=true&length=2`;
+  };
+
+  // Get user initials for avatar fallback
+  const getUserInitials = () => {
+    if (userData?.name) {
+      return userData.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return "U";
+  };
+
+  // Generate consistent color based on username or uid
+  const getAvatarColor = () => {
+    const colors = [
+      "#1976d2",
+      "#2e7d32",
+      "#ed6c02",
+      "#9c27b0",
+      "#d32f2f",
+      "#0288d1",
+      "#7b1fa2",
+      "#c2185b",
+    ];
+
+    const hash = (userId || userData?.username || "")
+      .split("")
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
+    return colors[hash % colors.length];
+  };
+
   // Initialize form with user data
   useEffect(() => {
     if (open && userData) {
       setName(userData.name || "");
       setUsername(userData.username || "");
       setOriginalUsername(userData.username || "");
+      setAvatarUrl(userData.avatarUrl || "");
       setUsernameTouched(false);
       setUsernameAvailable(null);
       setUsernameError("");
@@ -182,6 +225,7 @@ export default function ProfileEditDialog({
       const updates = {
         name: name.trim(),
         username: cleanUsername,
+        avatarUrl: avatarUrl?.trim() || null,
         updatedAt: serverTimestamp(),
       };
 
@@ -217,6 +261,7 @@ export default function ProfileEditDialog({
           ...userData,
           name: name.trim(),
           username: cleanUsername,
+          avatarUrl: avatarUrl || null,
           updatedAt: new Date(),
         });
       }
@@ -386,6 +431,62 @@ export default function ProfileEditDialog({
         {/* Profile Tab */}
         {activeTab === "profile" && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+            {/* Avatar Section */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 3, mb: 1 }}>
+              <Avatar
+                src={avatarUrl || getUIAvatarUrl(name)}
+                sx={{
+                  width: 80,
+                  height: 80,
+                  bgcolor: getAvatarColor(),
+                  fontSize: "2rem",
+                  fontWeight: 600,
+                  border: "3px solid",
+                  borderColor: "primary.main",
+                }}
+              >
+                {!avatarUrl && getUserInitials()}
+              </Avatar>
+
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Profile Picture
+                </Typography>
+                <TextField
+                  label="Image URL"
+                  placeholder="https://example.com/your-photo.jpg"
+                  value={avatarUrl || ""}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  fullWidth
+                  size="small"
+                  disabled={loading || isOffline}
+                  helperText="Enter any image URL or leave empty for auto-generated avatar"
+                  FormHelperTextProps={{
+                    sx: {
+                      ml: "4px",
+                    },
+                  }}
+                />
+                <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    onClick={() => {
+                      // Use UI Avatars
+                      setAvatarUrl("");
+                    }}
+                    disabled={loading || isOffline || !avatarUrl}
+                    startIcon={<CloseIcon />}
+                  >
+                    Reset to Initials
+                  </Button>
+                </Box>
+              </Box>
+            </Box>
+
+            <Divider />
+
             {/* Email (read-only) */}
             <TextField
               label="Email"

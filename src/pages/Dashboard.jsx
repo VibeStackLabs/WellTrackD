@@ -2400,6 +2400,7 @@ export default function Dashboard() {
               name: profile?.name || "User",
               username: profile?.username || "user",
               email: profile?.email || "",
+              avatarUrl: profile?.avatarUrl,
               createdAt: profile?.createdAt,
             }}
             onUpdate={handleProfileUpdate}

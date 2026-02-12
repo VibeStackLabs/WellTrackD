@@ -4,54 +4,22 @@ import {
   Box,
   Typography,
   IconButton,
-  Menu,
-  MenuItem,
-  Divider,
-  ListItemIcon,
-  ListItemText,
-  CircularProgress,
   Chip,
+  Tooltip,
 } from "@mui/material";
-import {
-  AccountCircle as AccountCircleIcon,
-  Edit as EditIcon,
-  Logout as LogoutIcon,
-  Lock as LockIcon,
-  Person as PersonIcon,
-  Email as EmailIcon,
-} from "@mui/icons-material";
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase";
+import { AccountCircle as AccountCircleIcon } from "@mui/icons-material";
 import ProfileEditDialog from "./ProfileEditDialog";
 
+// UI Avatars service - free, no API key needed
+const getUIAvatarUrl = (name, size = 200) => {
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "User")}&size=${size}&background=1976d2&color=fff&bold=true&length=2`;
+};
+
 export default function Profile({ userData, onUpdate, isOffline }) {
-  const [anchorEl, setAnchorEl] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [menuLoading, setMenuLoading] = useState(false);
 
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleEditProfile = () => {
-    handleMenuClose();
+  const handleProfileClick = () => {
     setEditDialogOpen(true);
-  };
-
-  const handleLogout = async () => {
-    setMenuLoading(true);
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      setMenuLoading(false);
-      handleMenuClose();
-    }
   };
 
   const handleDialogClose = () => {
@@ -97,36 +65,50 @@ export default function Profile({ userData, onUpdate, isOffline }) {
     return colors[hash % colors.length];
   };
 
+  // Determine avatar source
+  const getAvatarSrc = () => {
+    // If user has custom avatar URL, use it
+    if (userData?.avatarUrl) {
+      return userData.avatarUrl;
+    }
+    // Otherwise use UI Avatars
+    return getUIAvatarUrl(userData?.name || "User");
+  };
+
   return (
     <>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        {/* Avatar/Profile Button */}
-        <IconButton
-          onClick={handleMenuOpen}
-          size="small"
-          sx={{
-            p: 0.5,
-            border: "2px solid",
-            borderColor: isOffline ? "warning.main" : "primary.main",
-            transition: "all 0.2s",
-            "&:hover": {
-              borderColor: isOffline ? "warning.dark" : "primary.dark",
-              backgroundColor: "rgba(25, 118, 210, 0.04)",
-            },
-          }}
-        >
-          <Avatar
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+        {/* Clickable Profile Avatar */}
+        <Tooltip title="Edit Profile">
+          <IconButton
+            onClick={handleProfileClick}
+            size="small"
             sx={{
-              width: 40,
-              height: 40,
-              bgcolor: getAvatarColor(),
-              fontSize: "1.1rem",
-              fontWeight: 600,
+              p: 0.5,
+              border: "2px solid",
+              borderColor: isOffline ? "warning.main" : "primary.main",
+              transition: "all 0.2s",
+              "&:hover": {
+                borderColor: isOffline ? "warning.dark" : "primary.dark",
+                transform: "scale(1.05)",
+                backgroundColor: "rgba(25, 118, 210, 0.04)",
+              },
             }}
           >
-            {getUserInitials()}
-          </Avatar>
-        </IconButton>
+            <Avatar
+              src={getAvatarSrc()}
+              sx={{
+                width: 44,
+                height: 44,
+                bgcolor: getAvatarColor(),
+                fontSize: "1.2rem",
+                fontWeight: 600,
+              }}
+            >
+              {!userData?.avatarUrl && getUserInitials()}
+            </Avatar>
+          </IconButton>
+        </Tooltip>
 
         {/* Welcome Text with Name */}
         <Box sx={{ display: { xs: "none", sm: "block" } }}>
@@ -142,6 +124,8 @@ export default function Profile({ userData, onUpdate, isOffline }) {
               variant="subtitle1"
               fontWeight="bold"
               color="primary.main"
+              sx={{ cursor: "pointer" }}
+              onClick={handleProfileClick}
             >
               {userData?.name || "User"}
             </Typography>
@@ -156,91 +140,6 @@ export default function Profile({ userData, onUpdate, isOffline }) {
             )}
           </Box>
         </Box>
-
-        {/* Profile Menu */}
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleMenuClose}
-          transformOrigin={{ horizontal: "right", vertical: "top" }}
-          anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-          PaperProps={{
-            elevation: 3,
-            sx: {
-              mt: 1.5,
-              minWidth: 260,
-              borderRadius: 2,
-              overflow: "visible",
-              "&:before": {
-                content: '""',
-                display: "block",
-                position: "absolute",
-                top: 0,
-                right: 14,
-                width: 10,
-                height: 10,
-                bgcolor: "background.paper",
-                transform: "translateY(-50%) rotate(45deg)",
-                zIndex: 0,
-              },
-            },
-          }}
-        >
-          {/* User Info Header */}
-          <Box sx={{ px: 2, py: 1.5 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Avatar
-                sx={{
-                  width: 48,
-                  height: 48,
-                  bgcolor: getAvatarColor(),
-                  fontSize: "1.2rem",
-                  fontWeight: 600,
-                }}
-              >
-                {getUserInitials()}
-              </Avatar>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="subtitle1" fontWeight="bold" noWrap>
-                  {userData?.name || "User"}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap>
-                  @{userData?.username || "username"}
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
-
-          <Divider />
-
-          {/* Menu Items */}
-          <MenuItem onClick={handleEditProfile}>
-            <ListItemIcon>
-              <EditIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText
-              primary="Edit Profile"
-              secondary="Update name, username, or password"
-            />
-          </MenuItem>
-
-          <Divider sx={{ my: 0.5 }} />
-
-          <MenuItem onClick={handleLogout} disabled={menuLoading}>
-            <ListItemIcon>
-              {menuLoading ? (
-                <CircularProgress size={20} />
-              ) : (
-                <LogoutIcon fontSize="small" color="error" />
-              )}
-            </ListItemIcon>
-            <ListItemText
-              primary="Logout"
-              secondary="Sign out of your account"
-              primaryTypographyProps={{ color: "error" }}
-            />
-          </MenuItem>
-        </Menu>
       </Box>
 
       {/* Profile Edit Dialog */}
