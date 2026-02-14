@@ -96,7 +96,10 @@ export default function App() {
               path="/dashboard"
               element={user ? <Dashboard /> : <Navigate to="/login" />}
             />
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route
+              path="/admin"
+              element={user ? <AdminDashboard /> : <Navigate to="/login" />}
+            />
             <Route
               path="*"
               element={<Navigate to={user ? "/dashboard" : "/login"} />}
