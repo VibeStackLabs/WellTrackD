@@ -143,6 +143,9 @@ class GoogleFitService {
             {
               dataTypeName: "com.google.calories.expended",
             },
+            {
+              dataTypeName: "com.google.heart_minutes",
+            },
           ],
           bucketByTime: { durationMillis: 86400000 }, // Daily buckets
           startTimeMillis: startDate.getTime(),
@@ -169,9 +172,10 @@ class GoogleFitService {
       let steps = 0;
       let distance = 0;
       let calories = 0;
+      let heartPoints = 0;
 
       // Simpler, more reliable approach based on aggregateBy order
-      if (bucket.dataset && bucket.dataset.length >= 3) {
+      if (bucket.dataset && bucket.dataset.length >= 4) {
         // Steps (intVal)
         if (bucket.dataset[0]?.point) {
           steps = bucket.dataset[0].point.reduce((total, point) => {
@@ -192,6 +196,13 @@ class GoogleFitService {
             return total + (point.value?.[0]?.fpVal || 0);
           }, 0);
         }
+
+        // Heart points (intVal)
+        if (bucket.dataset[3]?.point) {
+          heartPoints = bucket.dataset[3].point.reduce((total, point) => {
+            return total + (point.value?.[0]?.intVal || 0);
+          }, 0);
+        }
       }
 
       // Convert distance from meters to kilometers
@@ -202,6 +213,7 @@ class GoogleFitService {
         steps,
         distance: parseFloat(distance.toFixed(2)),
         calories: Math.round(calories),
+        heartPoints: Math.round(heartPoints),
         startTime: startDate.toISOString(),
         endTime: new Date(parseInt(bucket.endTimeMillis)).toISOString(),
         source: "google-fit",
@@ -219,7 +231,9 @@ class GoogleFitService {
     endOfDay.setHours(23, 59, 59, 999);
 
     const data = await this.getStepData(startOfDay, endOfDay);
-    return data.length > 0 ? data[0] : { steps: 0, distance: 0, calories: 0 };
+    return data.length > 0
+      ? data[0]
+      : { steps: 0, distance: 0, calories: 0, heartPoints: 0 };
   }
 }
 

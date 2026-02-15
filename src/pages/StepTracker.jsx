@@ -78,6 +78,7 @@ export default function StepTracker({ userId }) {
     goalAchieved: 0,
     totalDistance: 0,
     totalCalories: 0,
+    totalHeartPoints: 0,
   });
 
   // Load goal from localStorage on mount
@@ -207,6 +208,7 @@ export default function StepTracker({ userId }) {
             steps: 0,
             distance: 0,
             calories: 0,
+            heartPoints: 0,
             goal: stepGoal,
             source: "google-fit",
           };
@@ -304,6 +306,10 @@ export default function StepTracker({ userId }) {
       (sum, day) => sum + (day.calories || 0),
       0,
     );
+    const totalHeartPoints = filteredData.reduce(
+      (sum, day) => sum + (day.heartPoints || 0),
+      0,
+    );
 
     setStats({
       totalSteps,
@@ -312,6 +318,7 @@ export default function StepTracker({ userId }) {
       goalAchieved,
       totalDistance: totalDistance.toFixed(2),
       totalCalories,
+      totalHeartPoints,
     });
   };
 
@@ -396,11 +403,12 @@ export default function StepTracker({ userId }) {
   const todayData = stepData.find((day) => {
     const today = format(new Date(), "yyyy-MM-dd");
     return day.date === today;
-  }) || { steps: 0, distance: 0, calories: 0 };
+  }) || { steps: 0, distance: 0, calories: 0, heartPoints: 0 };
 
   const todaySteps = todayData.steps;
   const todayDistance = todayData.distance;
   const todayCalories = todayData.calories;
+  const todayHeartPoints = todayData.heartPoints || 0;
 
   const progressPercent = stepGoal
     ? Math.min((todaySteps / stepGoal) * 100, 100)
@@ -698,7 +706,7 @@ export default function StepTracker({ userId }) {
             </Grid>
 
             <Grid size={{ xs: 12, md: 4 }}>
-              <Box display="flex" justifyContent="space-around">
+              <Box display="flex" justifyContent="space-around" gap={3}>
                 <Box textAlign="center">
                   <Typography variant="h6" color="success.main">
                     <CountUp end={todayDistance} duration={1} decimals={2} /> km
@@ -713,6 +721,14 @@ export default function StepTracker({ userId }) {
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     Calories
+                  </Typography>
+                </Box>
+                <Box textAlign="center">
+                  <Typography variant="h6" color="error.main">
+                    <CountUp end={todayHeartPoints} duration={1} />
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Heart Points
                   </Typography>
                 </Box>
               </Box>
@@ -772,6 +788,16 @@ export default function StepTracker({ userId }) {
                 decimals={1}
               />{" "}
               km
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              Heart Points
+            </Typography>
+            <Typography variant="h6">
+              <CountUp end={stats.totalHeartPoints} duration={1} />
             </Typography>
           </Paper>
         </Grid>
@@ -910,6 +936,13 @@ export default function StepTracker({ userId }) {
                               color="warning.main"
                             >
                               {entry.calories} cal
+                            </Typography>
+                            <Typography
+                              component="span"
+                              variant="body2"
+                              color="error.main"
+                            >
+                              {entry.heartPoints} points
                             </Typography>
                           </Box>
                           {stepGoal && (
