@@ -1,4 +1,5 @@
-// Real Google Fit API service
+import { format } from "date-fns";
+
 class GoogleFitService {
   constructor() {
     this.accessToken = null;
@@ -154,7 +155,7 @@ class GoogleFitService {
       }
 
       return {
-        date: startDate.toISOString().split("T")[0],
+        date: format(startDate, "yyyy-MM-dd"),
         steps,
         startTime: startDate.toISOString(),
         endTime: endDate.toISOString(),

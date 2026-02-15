@@ -118,14 +118,24 @@ export default function StepTracker({ userId }) {
         return;
       }
 
-      // Calculate date range based on timeRange
+      // Calculate date range based on timeRange with proper timezone handling
       const endDate = new Date();
+      // Set to end of day in local timezone
+      endDate.setHours(23, 59, 59, 999);
+
       const startDate = subDays(
         endDate,
         timeRange === "week" ? 6 : timeRange === "month" ? 29 : 89,
       );
+      // Set to start of day
+      startDate.setHours(0, 0, 0, 0);
 
-      console.log("Fetching step data from", startDate, "to", endDate);
+      console.log(
+        "Fetching step data from",
+        startDate.toISOString(),
+        "to",
+        endDate.toISOString(),
+      );
 
       // Fetch real data from Google Fit
       const steps = await googleFitService.getStepData(startDate, endDate);
@@ -137,12 +147,19 @@ export default function StepTracker({ userId }) {
       // Create a map of existing step data by date
       const stepsByDate = {};
       steps.forEach((step) => {
+        // Ensure we're using the date string consistently
         stepsByDate[step.date] = step;
       });
 
       // Fill in missing dates with zero steps
       const mergedData = dateRange.map((date) => {
-        const dateStr = format(date, "yyyy-MM-dd");
+        // Create date in local timezone to avoid off-by-one
+        const localDate = new Date(date);
+        localDate.setMinutes(
+          localDate.getMinutes() - localDate.getTimezoneOffset(),
+        );
+        const dateStr = localDate.toISOString().split("T")[0];
+
         if (stepsByDate[dateStr]) {
           return stepsByDate[dateStr];
         } else {
