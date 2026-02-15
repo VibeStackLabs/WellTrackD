@@ -63,6 +63,51 @@ class GoogleFitService {
     return response.json();
   }
 
+  // Get user profile from Google
+  async getUserProfile() {
+    try {
+      // Try to get from people API first
+      const response = await fetch(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        {
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch user profile");
+      }
+
+      const profile = await response.json();
+      return {
+        name: profile.name,
+        email: profile.email,
+        picture: profile.picture,
+        sub: profile.sub,
+      };
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      // Fallback to token info
+      try {
+        const tokenInfo = await fetch(
+          `https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${this.accessToken}`,
+        );
+        const info = await tokenInfo.json();
+        return {
+          email: info.email,
+          name: info.email?.split("@")[0] || "Google User",
+        };
+      } catch {
+        return {
+          email: "google-user@example.com",
+          name: "Google User",
+        };
+      }
+    }
+  }
+
   // Get step data for a date range [citation:1][citation:9]
   async getStepData(startDate, endDate) {
     try {

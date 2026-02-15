@@ -40,8 +40,9 @@ import {
   MoreVert,
   CheckCircle,
   Error as ErrorIcon,
+  AccountCircle,
 } from "@mui/icons-material";
-import { format, subDays } from "date-fns";
+import { format, subDays, eachDayOfInterval } from "date-fns";
 import StepChart from "../components/StepTracker/StepChart";
 import GoogleFitAuth from "../components/StepTracker/GoogleFitAuth";
 import googleFitService from "../services/googleFitService";
@@ -60,6 +61,8 @@ export default function StepTracker({ userId }) {
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [anchorEl, setAnchorEl] = useState(null);
   const [lastSyncTime, setLastSyncTime] = useState(null);
+  const [syncError, setSyncError] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
   const [stats, setStats] = useState({
     totalSteps: 0,
     averageSteps: 0,
@@ -69,11 +72,12 @@ export default function StepTracker({ userId }) {
     totalCalories: 0,
   });
 
-  // Check for existing token on mount
+  // Check for existing token on mount and get user profile
   useEffect(() => {
     const hasToken = googleFitService.loadTokenFromStorage();
     if (hasToken) {
       setGoogleFitConnected(true);
+      loadUserProfile();
       loadStepData();
     } else {
       setLoading(false);
@@ -84,10 +88,29 @@ export default function StepTracker({ userId }) {
     if (savedLastSync) {
       setLastSyncTime(new Date(savedLastSync));
     }
+
+    // Load user profile from localStorage
+    const savedProfile = localStorage.getItem("googleFitUserProfile");
+    if (savedProfile) {
+      setUserProfile(JSON.parse(savedProfile));
+    }
   }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      // Fetch user info from Google's people API or from token
+      const profile = await googleFitService.getUserProfile();
+      setUserProfile(profile);
+      localStorage.setItem("googleFitUserProfile", JSON.stringify(profile));
+    } catch (error) {
+      console.error("Error loading user profile:", error);
+    }
+  };
 
   const loadStepData = async () => {
     setLoading(true);
+    setSyncError(null);
+
     try {
       if (!googleFitService.isTokenValid()) {
         setGoogleFitConnected(false);
@@ -95,25 +118,43 @@ export default function StepTracker({ userId }) {
         return;
       }
 
-      // Fetch real data from Google Fit
+      // Calculate date range based on timeRange
       const endDate = new Date();
-      const startDate = subDays(endDate, 30);
-
-      const steps = await googleFitService.getStepData(startDate, endDate);
-      const distanceData = await googleFitService.getDistanceData(
-        startDate,
+      const startDate = subDays(
         endDate,
+        timeRange === "week" ? 6 : timeRange === "month" ? 29 : 89,
       );
 
-      // Merge data
-      const mergedData = steps.map((step) => {
-        const distance = distanceData.find((d) => d.date === step.date);
-        return {
-          ...step,
-          distance: distance?.distance || (step.steps * 0.000762).toFixed(2),
-          calories: Math.round(step.steps * 0.04),
-          goal: 10000, // Default goal, could be user-configurable
-        };
+      console.log("Fetching step data from", startDate, "to", endDate);
+
+      // Fetch real data from Google Fit
+      const steps = await googleFitService.getStepData(startDate, endDate);
+      console.log("Steps data received:", steps);
+
+      // Create a complete date range with all days
+      const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
+
+      // Create a map of existing step data by date
+      const stepsByDate = {};
+      steps.forEach((step) => {
+        stepsByDate[step.date] = step;
+      });
+
+      // Fill in missing dates with zero steps
+      const mergedData = dateRange.map((date) => {
+        const dateStr = format(date, "yyyy-MM-dd");
+        if (stepsByDate[dateStr]) {
+          return stepsByDate[dateStr];
+        } else {
+          return {
+            date: dateStr,
+            steps: 0,
+            distance: "0.00",
+            calories: 0,
+            goal: 10000,
+            source: "google-fit",
+          };
+        }
       });
 
       setStepData(mergedData);
@@ -126,20 +167,28 @@ export default function StepTracker({ userId }) {
       const now = new Date();
       setLastSyncTime(now);
       localStorage.setItem("googleFitLastSync", now.toISOString());
+
+      setSnackbarMessage(
+        `Synced ${mergedData.filter((d) => d.steps > 0).length} days of step data`,
+      );
+      setSnackbarSeverity("success");
     } catch (error) {
       console.error("Error loading step data:", error);
+      setSyncError(error.message);
 
       // Try to load from cache as fallback
       const cached = localStorage.getItem(`steps_${userId}`);
       if (cached) {
         setStepData(JSON.parse(cached));
+        setSnackbarMessage("Loaded cached data (offline mode)");
+        setSnackbarSeverity("warning");
+      } else {
+        setSnackbarMessage("Failed to load data from Google Fit");
+        setSnackbarSeverity("error");
       }
-
-      setSnackbarMessage("Failed to load latest data from Google Fit");
-      setSnackbarSeverity("error");
-      setSnackbarOpen(true);
     } finally {
       setLoading(false);
+      setSnackbarOpen(true);
     }
   };
 
@@ -149,6 +198,7 @@ export default function StepTracker({ userId }) {
     localStorage.removeItem("googleFitToken");
     localStorage.removeItem("googleFitTokenExpiry");
     localStorage.removeItem("googleFitLastSync");
+    localStorage.removeItem("googleFitUserProfile");
 
     // Clear step data from state and localStorage
     setStepData([]);
@@ -157,6 +207,7 @@ export default function StepTracker({ userId }) {
     // Update state
     setGoogleFitConnected(false);
     setLastSyncTime(null);
+    setUserProfile(null);
     setDisconnectDialogOpen(false);
 
     // Show success message
@@ -223,17 +274,8 @@ export default function StepTracker({ userId }) {
 
   const handleSyncGoogleFit = async () => {
     setSyncLoading(true);
-    try {
-      await loadStepData();
-      setSnackbarMessage("Synced with Google Fit successfully!");
-      setSnackbarSeverity("success");
-    } catch (error) {
-      setSnackbarMessage("Failed to sync with Google Fit");
-      setSnackbarSeverity("error");
-    } finally {
-      setSyncLoading(false);
-      setSnackbarOpen(true);
-    }
+    await loadStepData();
+    setSyncLoading(false);
   };
 
   const handleTimeRangeChange = (event, newRange) => {
@@ -243,8 +285,12 @@ export default function StepTracker({ userId }) {
     }
   };
 
-  const handleGoogleFitSuccess = () => {
+  const handleGoogleFitSuccess = (profile) => {
     setGoogleFitConnected(true);
+    if (profile) {
+      setUserProfile(profile);
+      localStorage.setItem("googleFitUserProfile", JSON.stringify(profile));
+    }
     loadStepData();
   };
 
@@ -264,6 +310,40 @@ export default function StepTracker({ userId }) {
 
   const todayGoal = 10000; // Default goal
   const progressPercent = Math.min((todaySteps / todayGoal) * 100, 100);
+
+  // Get user's email/name from profile
+  const getUserDisplay = () => {
+    if (userProfile?.email) {
+      return userProfile.email;
+    }
+    if (userProfile?.name) {
+      return userProfile.name;
+    }
+    return "Google Account";
+  };
+
+  // Get user's avatar/initials
+  const getUserAvatar = () => {
+    if (userProfile?.picture) {
+      return (
+        <Avatar
+          src={userProfile.picture}
+          sx={{ width: 24, height: 24 }}
+          imgProps={{ referrerPolicy: "no-referrer" }}
+        />
+      );
+    }
+    // Fallback to initials if no picture
+    const initial =
+      userProfile?.name?.charAt(0).toUpperCase() ||
+      userProfile?.email?.charAt(0).toUpperCase() ||
+      "G";
+    return (
+      <Avatar sx={{ width: 24, height: 24, bgcolor: "#4285F4" }}>
+        {initial}
+      </Avatar>
+    );
+  };
 
   if (loading) {
     return (
@@ -313,7 +393,7 @@ export default function StepTracker({ userId }) {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Header with menu */}
+      {/* Header with account info and menu */}
       <Box
         display="flex"
         justifyContent="space-between"
@@ -324,11 +404,20 @@ export default function StepTracker({ userId }) {
           <DirectionsWalk sx={{ fontSize: 40, color: "primary.main" }} />
           <Box>
             <Typography variant="h5">Step Tracker</Typography>
-            <Box display="flex" alignItems="center" gap={1}>
-              <Typography variant="body2" color="text.secondary">
-                Connected to Google Fit
-              </Typography>
-              <CheckCircle color="success" sx={{ fontSize: 16 }} />
+            <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+              <Box display="flex" alignItems="center" gap={0.5}>
+                <CheckCircle color="success" sx={{ fontSize: 16 }} />
+                <Typography variant="body2" color="text.secondary">
+                  Connected as
+                </Typography>
+                <Chip
+                  size="small"
+                  avatar={getUserAvatar()}
+                  label={getUserDisplay()}
+                  variant="outlined"
+                  sx={{ ml: 0.5 }}
+                />
+              </Box>
               {lastSyncTime && (
                 <Typography variant="caption" color="text.secondary">
                   Last sync: {format(lastSyncTime, "hh:mm a")}
@@ -341,7 +430,7 @@ export default function StepTracker({ userId }) {
         <Box display="flex" gap={2} alignItems="center">
           <Button
             variant="outlined"
-            startIcon={<Sync />}
+            startIcon={syncLoading ? <CircularProgress size={20} /> : <Sync />}
             onClick={handleSyncGoogleFit}
             disabled={syncLoading}
           >
@@ -357,6 +446,24 @@ export default function StepTracker({ userId }) {
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
           >
+            <MenuItem>
+              <ListItemIcon>
+                {userProfile?.picture ? (
+                  <Avatar
+                    src={userProfile.picture}
+                    sx={{ width: 24, height: 24 }}
+                    imgProps={{ referrerPolicy: "no-referrer" }}
+                  />
+                ) : (
+                  <AccountCircle fontSize="small" />
+                )}
+              </ListItemIcon>
+              <ListItemText
+                primary={getUserDisplay()}
+                secondary="Connected account"
+              />
+            </MenuItem>
+            <Divider />
             <MenuItem
               onClick={() => {
                 handleMenuClose();
@@ -371,6 +478,17 @@ export default function StepTracker({ userId }) {
           </Menu>
         </Box>
       </Box>
+
+      {/* Sync Error Alert */}
+      {syncError && (
+        <Alert
+          severity="error"
+          sx={{ mb: 3 }}
+          onClose={() => setSyncError(null)}
+        >
+          Sync Error: {syncError}. Using cached data.
+        </Alert>
+      )}
 
       {/* Today's Progress Card */}
       <Card variant="outlined" sx={{ mb: 4 }}>
@@ -524,19 +642,37 @@ export default function StepTracker({ userId }) {
             <ToggleButton value="3months">3 Months</ToggleButton>
           </ToggleButtonGroup>
 
-          <Chip
-            icon={<Google />}
-            label="Live Google Fit Data"
-            color="primary"
-            variant="outlined"
-            size="small"
-          />
+          <Box display="flex" gap={1} alignItems="center">
+            <Chip
+              icon={<Google />}
+              label="Live Google Fit Data"
+              color="primary"
+              variant="outlined"
+              size="small"
+            />
+            {stepData.filter((d) => d.steps > 0).length === 0 && (
+              <Chip
+                icon={<ErrorIcon />}
+                label="No step data found"
+                color="warning"
+                variant="outlined"
+                size="small"
+              />
+            )}
+          </Box>
         </Box>
 
         <StepChart
           data={getFilteredData(stepData, timeRange)}
           days={timeRange === "week" ? 7 : timeRange === "month" ? 30 : 90}
         />
+
+        {stepData.filter((d) => d.steps > 0).length === 0 && (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            No step data found for this period. Make sure you have activity data
+            in your Google Fit account.
+          </Alert>
+        )}
       </Card>
 
       {/* Recent Entries */}
@@ -557,43 +693,66 @@ export default function StepTracker({ userId }) {
                         bgcolor:
                           entry.steps >= entry.goal
                             ? "success.main"
-                            : "primary.main",
+                            : entry.steps > 0
+                              ? "primary.main"
+                              : "grey.400",
                       }}
                     >
                       {entry.steps >= entry.goal ? (
                         <EmojiEvents />
-                      ) : (
+                      ) : entry.steps > 0 ? (
                         <DirectionsWalk />
+                      ) : (
+                        <Timeline />
                       )}
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
-                    primary={format(new Date(entry.date), "dd MMM yyyy")}
+                    primary={
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography variant="body1">
+                          {format(new Date(entry.date), "dd MMM yyyy")}
+                        </Typography>
+                        {entry.steps === 0 && (
+                          <Chip
+                            label="No data"
+                            size="small"
+                            variant="outlined"
+                          />
+                        )}
+                      </Box>
+                    }
                     secondary={
-                      <>
-                        <Box
-                          component="span"
-                          sx={{ display: "inline-flex", gap: 2, mt: 0.5 }}
-                        >
-                          <Typography component="span" variant="body2">
-                            Steps: {entry.steps.toLocaleString()}
-                          </Typography>
-                          <Typography
+                      entry.steps > 0 ? (
+                        <>
+                          <Box
                             component="span"
-                            variant="body2"
-                            color="success.main"
+                            sx={{ display: "inline-flex", gap: 2, mt: 0.5 }}
                           >
-                            {entry.distance} km
-                          </Typography>
-                          <Typography
-                            component="span"
-                            variant="body2"
-                            color="warning.main"
-                          >
-                            {entry.calories} cal
-                          </Typography>
-                        </Box>
-                      </>
+                            <Typography component="span" variant="body2">
+                              Steps: {entry.steps.toLocaleString()}
+                            </Typography>
+                            <Typography
+                              component="span"
+                              variant="body2"
+                              color="success.main"
+                            >
+                              {entry.distance} km
+                            </Typography>
+                            <Typography
+                              component="span"
+                              variant="body2"
+                              color="warning.main"
+                            >
+                              {entry.calories} cal
+                            </Typography>
+                          </Box>
+                        </>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          No step data recorded
+                        </Typography>
+                      )
                     }
                     secondaryTypographyProps={{
                       component: "div",
@@ -603,6 +762,7 @@ export default function StepTracker({ userId }) {
                     label="Google Fit"
                     size="small"
                     icon={<Google />}
+                    color="primary"
                     variant="outlined"
                   />
                 </ListItem>
@@ -626,7 +786,8 @@ export default function StepTracker({ userId }) {
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="disconnect-dialog-description">
-            Are you sure you want to disconnect from Google Fit? This will:
+            Are you sure you want to disconnect{" "}
+            <strong>{getUserDisplay()}</strong> from Google Fit? This will:
           </DialogContentText>
           <Box component="ul" sx={{ mt: 2, pl: 2 }}>
             <Typography component="li" variant="body2">

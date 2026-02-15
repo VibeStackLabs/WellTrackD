@@ -36,6 +36,7 @@ export default function GoogleFitAuth({ open, onClose, onSuccess }) {
     ].join(" "),
     onSuccess: async (tokenResponse) => {
       setActiveStep(1);
+      setLoading(true);
 
       try {
         // Store the access token
@@ -46,14 +47,47 @@ export default function GoogleFitAuth({ open, onClose, onSuccess }) {
 
         setActiveStep(2);
 
+        // Fetch user profile from Google
+        let userProfile = null;
+        try {
+          const profileResponse = await fetch(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            {
+              headers: {
+                Authorization: `Bearer ${tokenResponse.access_token}`,
+              },
+            },
+          );
+
+          if (profileResponse.ok) {
+            userProfile = await profileResponse.json();
+          }
+        } catch (profileError) {
+          console.warn("Could not fetch user profile:", profileError);
+        }
+
         // Fetch initial data to verify connection
         await googleFitService.getTodaySteps();
 
-        onSuccess({
-          connected: true,
-          lastSync: new Date().toISOString(),
-          scopes: tokenResponse.scope.split(" "),
-        });
+        // Call onSuccess with profile if available
+        onSuccess(
+          userProfile
+            ? {
+                connected: true,
+                lastSync: new Date().toISOString(),
+                scopes: tokenResponse.scope?.split(" ") || [],
+                profile: {
+                  email: userProfile.email,
+                  name: userProfile.name,
+                  picture: userProfile.picture,
+                },
+              }
+            : {
+                connected: true,
+                lastSync: new Date().toISOString(),
+                scopes: tokenResponse.scope?.split(" ") || [],
+              },
+        );
 
         onClose();
       } catch (err) {
@@ -116,6 +150,8 @@ export default function GoogleFitAuth({ open, onClose, onSuccess }) {
               <ul style={{ margin: 0, paddingLeft: 20 }}>
                 <li>✓ Daily step count (read/write)</li>
                 <li>✓ Distance traveled</li>
+                <li>✓ Calories burned</li>
+                <li>✓ Heart points</li>
                 <li>✓ Basic profile information</li>
                 <li>✓ Activity sessions</li>
               </ul>
