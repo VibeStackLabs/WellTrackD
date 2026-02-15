@@ -25,6 +25,10 @@ import { db, auth } from "./firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { AdminProvider } from "./contexts/AdminContext";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+
+// Google OAuth client ID
+const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID";
 
 export default function App() {
   const [user, loading] = useAuthState(auth);
@@ -81,52 +85,56 @@ export default function App() {
 
   return (
     <>
-      <AdminProvider>
-        <Router>
-          <Routes>
-            <Route
-              path="/signup"
-              element={!user ? <Signup /> : <Navigate to="/dashboard" />}
-            />
-            <Route
-              path="/login"
-              element={!user ? <Login /> : <Navigate to="/dashboard" />}
-            />
-            <Route
-              path="/dashboard"
-              element={user ? <Dashboard /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/admin"
-              element={user ? <AdminDashboard /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="*"
-              element={<Navigate to={user ? "/dashboard" : "/login"} />}
-            />
-          </Routes>
-        </Router>
-      </AdminProvider>
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <AdminProvider>
+          <Router>
+            <Routes>
+              <Route
+                path="/signup"
+                element={!user ? <Signup /> : <Navigate to="/dashboard" />}
+              />
+              <Route
+                path="/login"
+                element={!user ? <Login /> : <Navigate to="/dashboard" />}
+              />
+              <Route
+                path="/dashboard"
+                element={user ? <Dashboard /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/admin"
+                element={user ? <AdminDashboard /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="*"
+                element={<Navigate to={user ? "/dashboard" : "/login"} />}
+              />
+            </Routes>
+          </Router>
+        </AdminProvider>
 
-      {/* Suspended Account Dialog */}
-      <Dialog
-        open={suspendedDialogOpen}
-        onClose={handleSuspendedDialogClose}
-        aria-labelledby="suspended-dialog-title"
-        aria-describedby="suspended-dialog-description"
-      >
-        <DialogTitle id="suspended-dialog-title">Account Suspended</DialogTitle>
-        <DialogContent>
-          <DialogContentText id="suspended-dialog-description">
-            {suspendedMessage}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleSuspendedDialogClose} autoFocus>
-            OK
-          </Button>
-        </DialogActions>
-      </Dialog>
+        {/* Suspended Account Dialog */}
+        <Dialog
+          open={suspendedDialogOpen}
+          onClose={handleSuspendedDialogClose}
+          aria-labelledby="suspended-dialog-title"
+          aria-describedby="suspended-dialog-description"
+        >
+          <DialogTitle id="suspended-dialog-title">
+            Account Suspended
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="suspended-dialog-description">
+              {suspendedMessage}
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleSuspendedDialogClose} autoFocus>
+              OK
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </GoogleOAuthProvider>
     </>
   );
 }

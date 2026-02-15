@@ -89,6 +89,7 @@ import { useAdmin } from "../contexts/AdminContext";
 import { getPublishedChangelog } from "../utils/changelogFunctions";
 import ChangelogDialog from "../components/ChangelogDialog";
 import Profile from "../components/Profile";
+import StepTracker from "./StepTracker";
 
 const PREDEFINED_STRENGTH_WORKOUTS = [
   "Bench Press",
@@ -2839,6 +2840,7 @@ export default function Dashboard() {
           <Tab label="Workout History" />
           <Tab label="Workout Plans" />
           <Tab label="Health Metrics" />
+          <Tab label="Step Tracker" />
         </Tabs>
       </Box>
 
@@ -3841,6 +3843,9 @@ export default function Dashboard() {
           </Card>
         </>
       )}
+
+      {/* Step Tracker Tab Content */}
+      {activeTab === 3 && <StepTracker userId={userId} />}
 
       {/* Delete Dialog */}
       <Dialog
