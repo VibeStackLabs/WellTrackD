@@ -39,7 +39,24 @@ class GoogleFitService {
     localStorage.removeItem("googleFitTokenExpiry");
   }
 
+  async refreshTokenIfNeeded() {
+    // If token expires in less than 5 minutes, refresh
+    if (this.tokenExpiry && this.tokenExpiry - Date.now() < 300000) {
+      try {
+        // You'll need to implement token refresh using your backend
+        // or use Google's OAuth library
+        console.log("Token needs refresh");
+        // Implement your refresh logic here
+      } catch (error) {
+        console.error("Token refresh failed:", error);
+        this.clearToken();
+      }
+    }
+  }
+
   async fetchWithAuth(endpoint, options = {}) {
+    await this.refreshTokenIfNeeded();
+
     if (!this.isTokenValid()) {
       throw new Error("Token expired or not available");
     }

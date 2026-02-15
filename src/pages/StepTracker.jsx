@@ -96,6 +96,13 @@ export default function StepTracker({ userId }) {
     }
   }, []);
 
+  // Separate useEffect for timeRange changes:
+  useEffect(() => {
+    if (googleFitConnected) {
+      loadStepData();
+    }
+  }, [timeRange]); // This will reload data when timeRange changes
+
   const loadUserProfile = async () => {
     try {
       // Fetch user info from Google's people API or from token
@@ -140,6 +147,19 @@ export default function StepTracker({ userId }) {
       // Fetch real data from Google Fit
       const steps = await googleFitService.getStepData(startDate, endDate);
       console.log("Steps data received:", steps);
+
+      // Validate the data structure
+      if (!Array.isArray(steps)) {
+        throw new Error("Invalid data format received from Google Fit");
+      }
+
+      // Ensure each step has required fields
+      const validSteps = steps.filter(
+        (step) =>
+          step &&
+          typeof step.date === "string" &&
+          typeof step.steps === "number",
+      );
 
       // Create a complete date range with all days
       const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
@@ -679,10 +699,16 @@ export default function StepTracker({ userId }) {
           </Box>
         </Box>
 
-        <StepChart
-          data={getFilteredData(stepData, timeRange)}
-          days={timeRange === "week" ? 7 : timeRange === "month" ? 30 : 90}
-        />
+        {loading ? (
+          <Box display="flex" justifyContent="center" p={4}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <StepChart
+            data={getFilteredData(stepData, timeRange)}
+            days={timeRange === "week" ? 7 : timeRange === "month" ? 30 : 90}
+          />
+        )}
 
         {stepData.filter((d) => d.steps > 0).length === 0 && (
           <Alert severity="info" sx={{ mt: 2 }}>
