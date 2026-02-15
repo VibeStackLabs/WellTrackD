@@ -126,16 +126,22 @@ class GoogleFitService {
     }
   }
 
-  // Get step data for a date range [citation:1][citation:9]
+  // Get step data for a date range with distance and calories
   async getStepData(startDate, endDate) {
     try {
-      // Query step data
+      // Query step data with multiple metrics
       const response = await this.fetchWithAuth("/dataset:aggregate", {
         method: "POST",
         body: JSON.stringify({
           aggregateBy: [
             {
               dataTypeName: "com.google.step_count.delta",
+            },
+            {
+              dataTypeName: "com.google.distance.delta",
+            },
+            {
+              dataTypeName: "com.google.calories.expended",
             },
           ],
           bucketByTime: { durationMillis: 86400000 }, // Daily buckets
@@ -151,7 +157,7 @@ class GoogleFitService {
     }
   }
 
-  // Parse the aggregate response into daily steps [citation:1]
+  // Parse the aggregate response into daily steps, distance, and calories
   parseStepResponse(response) {
     if (!response.bucket || !Array.isArray(response.bucket)) {
       return [];
@@ -159,29 +165,51 @@ class GoogleFitService {
 
     return response.bucket.map((bucket) => {
       const startDate = new Date(parseInt(bucket.startTimeMillis));
-      const endDate = new Date(parseInt(bucket.endTimeMillis));
 
       let steps = 0;
-      if (bucket.dataset && bucket.dataset[0] && bucket.dataset[0].point) {
-        steps = bucket.dataset[0].point.reduce((total, point) => {
-          if (point.value && point.value[0] && point.value[0].intVal) {
-            return total + point.value[0].intVal;
-          }
-          return total;
-        }, 0);
+      let distance = 0;
+      let calories = 0;
+
+      // Simpler, more reliable approach based on aggregateBy order
+      if (bucket.dataset && bucket.dataset.length >= 3) {
+        // Steps (intVal)
+        if (bucket.dataset[0]?.point) {
+          steps = bucket.dataset[0].point.reduce((total, point) => {
+            return total + (point.value?.[0]?.intVal || 0);
+          }, 0);
+        }
+
+        // Distance in meters (fpVal)
+        if (bucket.dataset[1]?.point) {
+          distance = bucket.dataset[1].point.reduce((total, point) => {
+            return total + (point.value?.[0]?.fpVal || 0);
+          }, 0);
+        }
+
+        // Calories (fpVal)
+        if (bucket.dataset[2]?.point) {
+          calories = bucket.dataset[2].point.reduce((total, point) => {
+            return total + (point.value?.[0]?.fpVal || 0);
+          }, 0);
+        }
       }
+
+      // Convert distance from meters to kilometers
+      distance = distance / 1000;
 
       return {
         date: format(startDate, "yyyy-MM-dd"),
         steps,
+        distance: parseFloat(distance.toFixed(2)),
+        calories: Math.round(calories),
         startTime: startDate.toISOString(),
-        endTime: endDate.toISOString(),
+        endTime: new Date(parseInt(bucket.endTimeMillis)).toISOString(),
         source: "google-fit",
       };
     });
   }
 
-  // Get today's steps so far [citation:9]
+  // Get today's steps so far
   async getTodaySteps() {
     const now = new Date();
     const startOfDay = new Date(now);
@@ -191,7 +219,7 @@ class GoogleFitService {
     endOfDay.setHours(23, 59, 59, 999);
 
     const data = await this.getStepData(startOfDay, endOfDay);
-    return data.length > 0 ? data[0].steps : 0;
+    return data.length > 0 ? data[0] : { steps: 0, distance: 0, calories: 0 };
   }
 }
 

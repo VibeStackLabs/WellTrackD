@@ -29,6 +29,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  TextField,
 } from "@mui/material";
 import {
   DirectionsWalk,
@@ -41,6 +42,7 @@ import {
   CheckCircle,
   Error as ErrorIcon,
   AccountCircle,
+  Flag,
 } from "@mui/icons-material";
 import { format, subDays, eachDayOfInterval } from "date-fns";
 import StepChart from "../components/StepTracker/StepChart";
@@ -63,6 +65,12 @@ export default function StepTracker({ userId }) {
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [syncError, setSyncError] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+
+  // Goal states
+  const [stepGoal, setStepGoal] = useState(null);
+  const [goalDialogOpen, setGoalDialogOpen] = useState(false);
+  const [newGoal, setNewGoal] = useState("");
+
   const [stats, setStats] = useState({
     totalSteps: 0,
     averageSteps: 0,
@@ -71,6 +79,14 @@ export default function StepTracker({ userId }) {
     totalDistance: 0,
     totalCalories: 0,
   });
+
+  // Load goal from localStorage on mount
+  useEffect(() => {
+    const savedGoal = localStorage.getItem(`stepGoal_${userId}`);
+    if (savedGoal) {
+      setStepGoal(parseInt(savedGoal));
+    }
+  }, [userId]);
 
   // Check for existing token on mount and get user profile
   useEffect(() => {
@@ -181,14 +197,17 @@ export default function StepTracker({ userId }) {
         const dateStr = localDate.toISOString().split("T")[0];
 
         if (stepsByDate[dateStr]) {
-          return stepsByDate[dateStr];
+          return {
+            ...stepsByDate[dateStr],
+            goal: stepGoal, // Use user's goal
+          };
         } else {
           return {
             date: dateStr,
             steps: 0,
-            distance: "0.00",
+            distance: 0,
             calories: 0,
-            goal: 10000,
+            goal: stepGoal,
             source: "google-fit",
           };
         }
@@ -216,7 +235,14 @@ export default function StepTracker({ userId }) {
       // Try to load from cache as fallback
       const cached = localStorage.getItem(`steps_${userId}`);
       if (cached) {
-        setStepData(JSON.parse(cached));
+        const cachedData = JSON.parse(cached);
+        // Update cached data with current goal
+        const updatedCachedData = cachedData.map((day) => ({
+          ...day,
+          goal: stepGoal,
+        }));
+        setStepData(updatedCachedData);
+        calculateStats(updatedCachedData);
         setSnackbarMessage("Loaded cached data (offline mode)");
         setSnackbarSeverity("warning");
       } else {
@@ -236,10 +262,12 @@ export default function StepTracker({ userId }) {
     localStorage.removeItem("googleFitTokenExpiry");
     localStorage.removeItem("googleFitLastSync");
     localStorage.removeItem("googleFitUserProfile");
+    localStorage.removeItem(`steps_${userId}`);
+    localStorage.removeItem(`stepGoal_${userId}`);
 
     // Clear step data from state and localStorage
     setStepData([]);
-    localStorage.removeItem(`steps_${userId}`);
+    setStepGoal(null);
 
     // Update state
     setGoogleFitConnected(false);
@@ -265,11 +293,11 @@ export default function StepTracker({ userId }) {
       (best, day) => (day.steps > (best?.steps || 0) ? day : best),
       null,
     );
-    const goalAchieved = filteredData.filter(
-      (day) => day.steps >= (day.goal || 10000),
-    ).length;
+    const goalAchieved = stepGoal
+      ? filteredData.filter((day) => day.steps >= stepGoal).length
+      : 0;
     const totalDistance = filteredData.reduce(
-      (sum, day) => sum + parseFloat(day.distance || 0),
+      (sum, day) => sum + (day.distance || 0),
       0,
     );
     const totalCalories = filteredData.reduce(
@@ -331,6 +359,32 @@ export default function StepTracker({ userId }) {
     loadStepData();
   };
 
+  const handleSetGoal = () => {
+    if (newGoal && parseInt(newGoal) > 0) {
+      const goal = parseInt(newGoal);
+      setStepGoal(goal);
+      localStorage.setItem(`stepGoal_${userId}`, goal);
+
+      // Update existing data with new goal
+      const updatedData = stepData.map((day) => ({
+        ...day,
+        goal: goal,
+      }));
+      setStepData(updatedData);
+      localStorage.setItem(`steps_${userId}`, JSON.stringify(updatedData));
+      calculateStats(updatedData);
+
+      setGoalDialogOpen(false);
+      setNewGoal("");
+
+      setSnackbarMessage(
+        `Daily step goal set to ${goal.toLocaleString()} steps`,
+      );
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+    }
+  };
+
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -339,14 +393,18 @@ export default function StepTracker({ userId }) {
     setAnchorEl(null);
   };
 
-  const todaySteps =
-    stepData.find((day) => {
-      const today = format(new Date(), "yyyy-MM-dd");
-      return day.date === today;
-    })?.steps || 0;
+  const todayData = stepData.find((day) => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    return day.date === today;
+  }) || { steps: 0, distance: 0, calories: 0 };
 
-  const todayGoal = 10000; // Default goal
-  const progressPercent = Math.min((todaySteps / todayGoal) * 100, 100);
+  const todaySteps = todayData.steps;
+  const todayDistance = todayData.distance;
+  const todayCalories = todayData.calories;
+
+  const progressPercent = stepGoal
+    ? Math.min((todaySteps / stepGoal) * 100, 100)
+    : 0;
 
   // Get user's email/name from profile
   const getUserDisplay = () => {
@@ -504,6 +562,24 @@ export default function StepTracker({ userId }) {
             <MenuItem
               onClick={() => {
                 handleMenuClose();
+                setGoalDialogOpen(true);
+              }}
+            >
+              <ListItemIcon>
+                <Flag fontSize="small" color="primary" />
+              </ListItemIcon>
+              <ListItemText
+                primary="Set Step Goal"
+                secondary={
+                  stepGoal
+                    ? `Current: ${stepGoal.toLocaleString()} steps`
+                    : "Not set"
+                }
+              />
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                handleMenuClose();
                 setDisconnectDialogOpen(true);
               }}
             >
@@ -527,6 +603,25 @@ export default function StepTracker({ userId }) {
         </Alert>
       )}
 
+      {/* Goal Warning if not set */}
+      {!stepGoal && (
+        <Alert
+          severity="info"
+          sx={{ mb: 3 }}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => setGoalDialogOpen(true)}
+            >
+              Set Goal
+            </Button>
+          }
+        >
+          Set your daily step goal to track your progress!
+        </Alert>
+      )}
+
       {/* Today's Progress Card */}
       <Card variant="outlined" sx={{ mb: 4 }}>
         <CardContent>
@@ -544,43 +639,61 @@ export default function StepTracker({ userId }) {
 
             <Grid size={{ xs: 12, md: 4 }}>
               <Box textAlign="center">
-                <Box sx={{ position: "relative", display: "inline-flex" }}>
-                  <CircularProgress
-                    variant="determinate"
-                    value={progressPercent}
-                    size={80}
-                    thickness={4}
-                    sx={{
-                      color:
-                        progressPercent >= 100
-                          ? "success.main"
-                          : "primary.main",
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      top: 0,
-                      left: 0,
-                      bottom: 0,
-                      right: 0,
-                      position: "absolute",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
-                      component="div"
-                      color="text.secondary"
-                    >
-                      {Math.round(progressPercent)}%
+                {stepGoal ? (
+                  <>
+                    <Box sx={{ position: "relative", display: "inline-flex" }}>
+                      <CircularProgress
+                        variant="determinate"
+                        value={progressPercent}
+                        size={80}
+                        thickness={4}
+                        sx={{
+                          color:
+                            progressPercent >= 100
+                              ? "success.main"
+                              : "primary.main",
+                        }}
+                      />
+                      <Box
+                        sx={{
+                          top: 0,
+                          left: 0,
+                          bottom: 0,
+                          right: 0,
+                          position: "absolute",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Typography
+                          variant="caption"
+                          component="div"
+                          color="text.secondary"
+                        >
+                          {Math.round(progressPercent)}%
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      of {stepGoal.toLocaleString()} goal
                     </Typography>
+                  </>
+                ) : (
+                  <Box py={2}>
+                    <Typography variant="body2" color="text.secondary">
+                      Set a goal to track your progress
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setGoalDialogOpen(true)}
+                      sx={{ mt: 1 }}
+                    >
+                      Set Goal
+                    </Button>
                   </Box>
-                </Box>
-                <Typography variant="body2" color="text.secondary">
-                  of {todayGoal.toLocaleString()} goal
-                </Typography>
+                )}
               </Box>
             </Grid>
 
@@ -588,7 +701,7 @@ export default function StepTracker({ userId }) {
               <Box display="flex" justifyContent="space-around">
                 <Box textAlign="center">
                   <Typography variant="h6" color="success.main">
-                    {(todaySteps * 0.000762).toFixed(2)} km
+                    <CountUp end={todayDistance} duration={1} decimals={2} /> km
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     Distance
@@ -596,7 +709,7 @@ export default function StepTracker({ userId }) {
                 </Box>
                 <Box textAlign="center">
                   <Typography variant="h6" color="warning.main">
-                    {Math.round(todaySteps * 0.04)}
+                    <CountUp end={todayCalories} duration={1} separator="," />
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     Calories
@@ -633,11 +746,17 @@ export default function StepTracker({ userId }) {
         <Grid size={{ xs: 6, sm: 3 }}>
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Typography variant="caption" color="text.secondary">
-              Goal Achieved
+              {stepGoal ? "Goal Achieved" : "Days with Data"}
             </Typography>
             <Typography variant="h6">
-              {stats.goalAchieved}/{getFilteredData(stepData, timeRange).length}{" "}
-              days
+              {stepGoal ? (
+                <>
+                  {stats.goalAchieved}/
+                  {getFilteredData(stepData, timeRange).length} days
+                </>
+              ) : (
+                <>{stepData.filter((d) => d.steps > 0).length} days</>
+              )}
             </Typography>
           </Paper>
         </Grid>
@@ -705,7 +824,10 @@ export default function StepTracker({ userId }) {
           </Box>
         ) : (
           <StepChart
-            data={getFilteredData(stepData, timeRange)}
+            data={getFilteredData(stepData, timeRange).map((day) => ({
+              ...day,
+              goal: stepGoal || 10000, // Pass goal to chart, default to 10000 for display
+            }))}
             days={timeRange === "week" ? 7 : timeRange === "month" ? 30 : 90}
           />
         )}
@@ -734,14 +856,14 @@ export default function StepTracker({ userId }) {
                     <Avatar
                       sx={{
                         bgcolor:
-                          entry.steps >= entry.goal
+                          stepGoal && entry.steps >= stepGoal
                             ? "success.main"
                             : entry.steps > 0
                               ? "primary.main"
                               : "grey.400",
                       }}
                     >
-                      {entry.steps >= entry.goal ? (
+                      {stepGoal && entry.steps >= stepGoal ? (
                         <EmojiEvents />
                       ) : entry.steps > 0 ? (
                         <DirectionsWalk />
@@ -790,6 +912,22 @@ export default function StepTracker({ userId }) {
                               {entry.calories} cal
                             </Typography>
                           </Box>
+                          {stepGoal && (
+                            <Box mt={0.5}>
+                              <Typography
+                                variant="caption"
+                                color={
+                                  entry.steps >= stepGoal
+                                    ? "success.main"
+                                    : "text.secondary"
+                                }
+                              >
+                                {entry.steps >= stepGoal
+                                  ? "✅ Goal achieved"
+                                  : `🎯 ${((entry.steps / stepGoal) * 100).toFixed(0)}% of goal`}
+                              </Typography>
+                            </Box>
+                          )}
                         </>
                       ) : (
                         <Typography variant="body2" color="text.secondary">
@@ -813,6 +951,38 @@ export default function StepTracker({ userId }) {
             ))}
         </List>
       </Card>
+
+      {/* Set Goal Dialog */}
+      <Dialog open={goalDialogOpen} onClose={() => setGoalDialogOpen(false)}>
+        <DialogTitle>Set Daily Step Goal</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Set your daily step goal. This will be used to track your progress
+            and achievements.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            label="Daily Step Goal"
+            type="number"
+            fullWidth
+            value={newGoal}
+            onChange={(e) => setNewGoal(e.target.value)}
+            placeholder="e.g., 8000"
+            inputProps={{ min: 1, step: 100 }}
+            helperText="Enter your target steps per day"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setGoalDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleSetGoal}
+            variant="contained"
+            disabled={!newGoal || parseInt(newGoal) <= 0}
+          >
+            Set Goal
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Disconnect Confirmation Dialog */}
       <Dialog
