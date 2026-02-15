@@ -113,12 +113,9 @@ export default function StepTracker({ userId }) {
     }
   }, []);
 
-  // Separate useEffect for timeRange changes:
   useEffect(() => {
-    if (googleFitConnected) {
-      loadStepData();
-    }
-  }, [timeRange]); // This will reload data when timeRange changes
+    calculateStats(stepData, timeRange);
+  }, [stepData, timeRange]);
 
   const loadUserProfile = async () => {
     try {
@@ -147,10 +144,9 @@ export default function StepTracker({ userId }) {
       // Set to end of day in local timezone
       endDate.setHours(23, 59, 59, 999);
 
-      const startDate = subDays(
-        endDate,
-        timeRange === "week" ? 6 : timeRange === "month" ? 29 : 89,
-      );
+      // Always fetch last 90 days
+      const startDate = subDays(endDate, 89);
+
       // Set to start of day
       startDate.setHours(0, 0, 0, 0);
 
@@ -353,7 +349,6 @@ export default function StepTracker({ userId }) {
   const handleTimeRangeChange = (event, newRange) => {
     if (newRange) {
       setTimeRange(newRange);
-      calculateStats(stepData, newRange);
     }
   };
 
