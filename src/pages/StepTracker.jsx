@@ -630,13 +630,23 @@ export default function StepTracker({ userId }) {
         <CardContent>
           <Grid container spacing={3} alignItems="center">
             <Grid size={{ xs: 12, md: 4 }}>
-              <Box textAlign="center">
-                <Typography variant="h3" color="primary">
-                  <CountUp end={todaySteps} duration={1} separator="," />
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Steps Today
-                </Typography>
+              <Box display="flex" justifyContent="space-around" gap={3}>
+                <Box textAlign="center">
+                  <Typography variant="h5" color="primary">
+                    <CountUp end={todaySteps} duration={1} separator="," />
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Steps Today
+                  </Typography>
+                </Box>
+                <Box textAlign="center">
+                  <Typography variant="h5" color="success.main">
+                    <CountUp end={todayDistance} duration={1} decimals={2} /> km
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Distance
+                  </Typography>
+                </Box>
               </Box>
             </Grid>
 
@@ -703,15 +713,7 @@ export default function StepTracker({ userId }) {
             <Grid size={{ xs: 12, md: 4 }}>
               <Box display="flex" justifyContent="space-around" gap={3}>
                 <Box textAlign="center">
-                  <Typography variant="h6" color="success.main">
-                    <CountUp end={todayDistance} duration={1} decimals={2} /> km
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Distance
-                  </Typography>
-                </Box>
-                <Box textAlign="center">
-                  <Typography variant="h6" color="warning.main">
+                  <Typography variant="h5" color="warning.main">
                     <CountUp end={todayCalories} duration={1} separator="," />
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
@@ -719,7 +721,7 @@ export default function StepTracker({ userId }) {
                   </Typography>
                 </Box>
                 <Box textAlign="center">
-                  <Typography variant="h6" color="error.main">
+                  <Typography variant="h5" color="error.main">
                     <CountUp end={todayHeartPoints} duration={1} />
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
