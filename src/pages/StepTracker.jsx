@@ -883,10 +883,14 @@ export default function StepTracker({ userId }) {
         <Typography variant="h6" gutterBottom>
           Recent Activity
         </Typography>
-        <List>
-          {getFilteredData(stepData, timeRange)
-            .slice(0, 10)
-            .map((entry, index) => (
+        <Box
+          sx={{
+            maxHeight: 400, // Set max height (adjust as needed)
+            overflowY: "auto", // Enable vertical scroll
+          }}
+        >
+          <List>
+            {getFilteredData(stepData, timeRange).map((entry, index) => (
               <React.Fragment key={entry.date}>
                 {index > 0 && <Divider />}
                 <ListItem>
@@ -994,7 +998,8 @@ export default function StepTracker({ userId }) {
                 </ListItem>
               </React.Fragment>
             ))}
-        </List>
+          </List>
+        </Box>
       </Card>
 
       {/* Set Goal Dialog */}
