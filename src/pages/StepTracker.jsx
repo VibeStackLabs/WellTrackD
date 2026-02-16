@@ -79,6 +79,7 @@ export default function StepTracker({ userId }) {
     totalDistance: 0,
     totalCalories: 0,
     totalHeartPoints: 0,
+    totalMoveMinutes: 0,
   });
 
   // Load goal from localStorage on mount
@@ -306,6 +307,10 @@ export default function StepTracker({ userId }) {
       (sum, day) => sum + (day.heartPoints || 0),
       0,
     );
+    const totalMoveMinutes = filteredData.reduce(
+      (sum, day) => sum + (day.moveMinutes || 0),
+      0,
+    );
 
     setStats({
       totalSteps,
@@ -315,6 +320,7 @@ export default function StepTracker({ userId }) {
       totalDistance: totalDistance.toFixed(2),
       totalCalories,
       totalHeartPoints,
+      totalMoveMinutes,
     });
   };
 
@@ -398,12 +404,13 @@ export default function StepTracker({ userId }) {
   const todayData = stepData.find((day) => {
     const today = format(new Date(), "yyyy-MM-dd");
     return day.date === today;
-  }) || { steps: 0, distance: 0, calories: 0, heartPoints: 0 };
+  }) || { steps: 0, distance: 0, calories: 0, heartPoints: 0, moveMinutes: 0 };
 
   const todaySteps = todayData.steps;
   const todayDistance = todayData.distance;
   const todayCalories = todayData.calories;
   const todayHeartPoints = todayData.heartPoints || 0;
+  const todayMoveMinutes = todayData.moveMinutes || 0;
 
   const progressPercent = stepGoal
     ? Math.min((todaySteps / stepGoal) * 100, 100)
@@ -726,6 +733,14 @@ export default function StepTracker({ userId }) {
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     Heart Points
+                  </Typography>
+                </Box>
+                <Box textAlign="center">
+                  <Typography variant="h5" color="info.main">
+                    <CountUp end={todayMoveMinutes} duration={1} />
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Move Minutes
                   </Typography>
                 </Box>
               </Box>

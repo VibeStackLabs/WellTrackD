@@ -146,6 +146,9 @@ class GoogleFitService {
             {
               dataTypeName: "com.google.heart_minutes",
             },
+            {
+              dataTypeName: "com.google.active_minutes",
+            },
           ],
           bucketByTime: { durationMillis: 86400000 }, // Daily buckets
           startTimeMillis: startDate.getTime(),
@@ -173,6 +176,7 @@ class GoogleFitService {
       let distance = 0;
       let calories = 0;
       let heartPoints = 0;
+      let moveMinutes = 0;
 
       bucket.dataset.forEach((dataset) => {
         const dataType = dataset.dataSourceId || "";
@@ -201,6 +205,11 @@ class GoogleFitService {
           if (dataType.includes("heart_minutes")) {
             heartPoints += value.fpVal || 0;
           }
+
+          // Move Minutes (Active Minutes)
+          if (dataType.includes("active_minutes")) {
+            moveMinutes += value.intVal || value.fpVal || 0;
+          }
         });
       });
 
@@ -213,6 +222,7 @@ class GoogleFitService {
         distance: parseFloat(distance.toFixed(2)),
         calories: Math.round(calories),
         heartPoints: Math.round(heartPoints),
+        moveMinutes: Math.round(moveMinutes),
         startTime: startDate.toISOString(),
         endTime: new Date(parseInt(bucket.endTimeMillis)).toISOString(),
         source: "google-fit",
