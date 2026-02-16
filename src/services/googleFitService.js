@@ -174,36 +174,35 @@ class GoogleFitService {
       let calories = 0;
       let heartPoints = 0;
 
-      // Simpler, more reliable approach based on aggregateBy order
-      if (bucket.dataset && bucket.dataset.length >= 4) {
-        // Steps (intVal)
-        if (bucket.dataset[0]?.point) {
-          steps = bucket.dataset[0].point.reduce((total, point) => {
-            return total + (point.value?.[0]?.intVal || 0);
-          }, 0);
-        }
+      bucket.dataset.forEach((dataset) => {
+        const dataType = dataset.dataSourceId || "";
 
-        // Distance in meters (fpVal)
-        if (bucket.dataset[1]?.point) {
-          distance = bucket.dataset[1].point.reduce((total, point) => {
-            return total + (point.value?.[0]?.fpVal || 0);
-          }, 0);
-        }
+        dataset.point?.forEach((point) => {
+          const value = point.value?.[0];
 
-        // Calories (fpVal)
-        if (bucket.dataset[2]?.point) {
-          calories = bucket.dataset[2].point.reduce((total, point) => {
-            return total + (point.value?.[0]?.fpVal || 0);
-          }, 0);
-        }
+          if (!value) return;
 
-        // Heart points (intVal)
-        if (bucket.dataset[3]?.point) {
-          heartPoints = bucket.dataset[3].point.reduce((total, point) => {
-            return total + (point.value?.[0]?.intVal || 0);
-          }, 0);
-        }
-      }
+          // Steps
+          if (dataType.includes("step_count")) {
+            steps += value.intVal || 0;
+          }
+
+          // Distance
+          if (dataType.includes("distance")) {
+            distance += value.fpVal || 0;
+          }
+
+          // Calories
+          if (dataType.includes("calories")) {
+            calories += value.fpVal || 0;
+          }
+
+          // Heart Minutes
+          if (dataType.includes("heart_minutes")) {
+            heartPoints += value.fpVal || 0;
+          }
+        });
+      });
 
       // Convert distance from meters to kilometers
       distance = distance / 1000;
