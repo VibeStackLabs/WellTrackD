@@ -25,7 +25,6 @@ import {
 } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
 import { getAuthErrorMessage } from "../utils/authErrors";
-import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 export default function Signup() {
   const [name, setName] = useState("");
@@ -45,9 +44,6 @@ export default function Signup() {
   const [showMessage, setShowMessage] = useState(false); // For fade-in
 
   const navigate = useNavigate();
-
-  // Get current color theme
-  const theme = useMuiTheme();
 
   // --- Validate username locally ---
   const validateUsername = (name) => {
@@ -209,7 +205,7 @@ export default function Signup() {
               fontWeight: 700,
               letterSpacing: 0.5,
               fontSize: { xs: "0.9rem", sm: "1rem", md: "1.25rem" },
-              color: theme.typography.buttonText,
+              color: "text.primary",
             }}
           >
             WellTrackD
@@ -231,7 +227,7 @@ export default function Signup() {
             <Fade in={showMessage} timeout={800}>
               <Typography
                 variant="body1"
-                sx={{ mb: 3, color: theme.typography.buttonText }}
+                sx={{ mb: 3, color: "text.primary", }}
               >
                 {randomMessage}
               </Typography>
@@ -330,7 +326,7 @@ export default function Signup() {
               sx={{
                 mt: 3,
                 textAlign: "center",
-                color: theme.typography.buttonText,
+                color: "text.primary",
               }}
             >
               Already have an account?{" "}

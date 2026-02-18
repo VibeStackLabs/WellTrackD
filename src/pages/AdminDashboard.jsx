@@ -88,7 +88,6 @@ import {
 
 // Import MUI theme
 import { useTheme } from "../context/ThemeContext";
-import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 // Import date picker
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -142,7 +141,6 @@ function AdminDashboard() {
 
   // Get current color theme
   const { mode, toggleMode } = useTheme();
-  const theme = useMuiTheme();
 
   const loadChangelog = async () => {
     setChangelogLoading(true);
@@ -606,7 +604,7 @@ function AdminDashboard() {
               <Typography
                 variant="h4"
                 fontWeight={700}
-                sx={{ color: theme.typography.buttonText }}
+                sx={{ color: "text.primary" }}
               >
                 Admin Dashboard
               </Typography>

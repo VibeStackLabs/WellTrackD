@@ -568,7 +568,7 @@ export default function ProfileEditDialog({
             </Box>
 
             {/* Account Info */}
-            <Paper variant="outlined" sx={{ p: 2, bgcolor: "grey.50" }}>
+            <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography
                 variant="caption"
                 color="text.secondary"

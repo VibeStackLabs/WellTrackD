@@ -134,10 +134,6 @@ export default function AddToWorkoutHandler({
                   border: "1px solid #e0e0e0",
                   borderRadius: 1,
                   mb: 1,
-                  backgroundColor: isSelected ? "#e3f2fd" : "transparent",
-                  "&:hover": {
-                    backgroundColor: isSelected ? "#d4e7fa" : "#f5f5f5",
-                  },
                 }}
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>

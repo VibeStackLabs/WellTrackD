@@ -28,7 +28,6 @@ import {
 } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
 import { getAuthErrorMessage } from "../utils/authErrors";
-import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -44,9 +43,6 @@ export default function Login() {
   const [snackbarMessage, setSnackbarMessage] = useState(""); // snackbar message
 
   const navigate = useNavigate();
-
-  // Get current color theme
-  const theme = useMuiTheme();
 
   // Pick a random message **once per page load** using useMemo
   const randomMessage = useMemo(() => {
@@ -149,7 +145,7 @@ export default function Login() {
               fontWeight: 700,
               letterSpacing: 0.5,
               fontSize: { xs: "0.9rem", sm: "1rem", md: "1.25rem" },
-              color: theme.typography.buttonText,
+              color: "text.primary",
             }}
           >
             WellTrackD
@@ -171,7 +167,7 @@ export default function Login() {
             <Fade in={showMessage} timeout={800}>
               <Typography
                 variant="body1"
-                sx={{ mb: 3, color: theme.typography.buttonText }}
+                sx={{ mb: 3, color: "text.primary", }}
               >
                 {randomMessage}
               </Typography>
@@ -239,7 +235,7 @@ export default function Login() {
               sx={{
                 mt: 3,
                 textAlign: "center",
-                color: theme.typography.buttonText,
+                color: "text.primary",
               }}
             >
               Don't have an account?{" "}

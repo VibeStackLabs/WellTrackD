@@ -2,7 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light mode background */
+body {
+  background: linear-gradient(180deg, #f9f6ee 0%, #f6e4d2 100%);
+  background-attachment: fixed;
+}
+
 /* Dark mode background */
 .dark body {
-  background-color: #121212;
+  background: linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 100%);
+  background-attachment: fixed;
+}
+
+/* Custom utility classes */
+@layer components {
+  .dashboard-card {
+    @apply transition-all duration-300;
+  }
+
+  .dashboard-card:hover {
+    box-shadow: var(--tw-shadow-lg);
+    transform: translateY(-0.5rem);
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #f9f6ee;
+  border-radius: 100px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+/* Thumb */
+::-webkit-scrollbar-thumb {
+  background: #f6e4d2;
+  border-radius: 100px;
+  border: 2px solid #f9f6ee;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #2d2d2d;
+  border: 2px solid #1a1a1a;
+}
+
+/* Hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #e6d4c2;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3d3d3d;
 }

@@ -45,7 +45,6 @@ import WorkoutPlanExcelHandler from "../components/WorkoutPlanExcelHandler";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
 import { useTheme } from "../context/ThemeContext";
-import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 export default function WorkoutPlans({ userId, onAddToToday }) {
   const [plans, setPlans] = useState([]);
@@ -84,7 +83,6 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
 
   // Get current color theme
   const { mode } = useTheme();
-  const theme = useMuiTheme();
 
   // Load plans from Firestore
   useEffect(() => {
@@ -353,7 +351,6 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           p: 1.5,
           border: "1px solid #e0e0e0",
           borderRadius: 1,
-          backgroundColor: mode === "light" ? "#fafafa" : "#424242",
           mb: 1,
         }}
       >
@@ -413,7 +410,6 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           p: 2,
           border: "1px solid #e0e0e0",
           borderRadius: 1,
-          backgroundColor: mode === "light" ? "#e8f4fd" : "#5d6163",
           mb: 2,
         }}
       >
@@ -537,7 +533,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           mb: 2,
         }}
       >
-        <Typography variant="h6" sx={{ color: theme.typography.buttonText }}>
+        <Typography variant="h6" color="text.primary">
           Workout Plans
         </Typography>
 
@@ -654,8 +650,9 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
         <>
           <Typography
             variant="subtitle1"
+            color="text.primary"
             gutterBottom
-            sx={{ mb: 2, color: theme.typography.buttonText }}
+            sx={{ mb: 2 }}
           >
             Your Plans
           </Typography>

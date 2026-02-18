@@ -190,7 +190,7 @@ export default function Dashboard() {
   // Table styles
   const tableStyles = {
     "& .MuiTableRow-root:hover": {
-      backgroundColor: mode === "light" ? "#fafafa" : "#424242",
+      backgroundColor: mode === "light" ? "#f6e4d280" : "#2d2d2d80",
     },
     "& .MuiTableCell-root": {
       py: 1.5,
@@ -2735,10 +2735,10 @@ export default function Dashboard() {
               backgroundColor: "background.paper",
               boxShadow: 1,
               borderLeft: "4px solid",
-              borderColor: "primary.main",
+              borderColor: "warning.main",
             }}
           >
-            <ScaleIcon color="primary" fontSize="large" />
+            <ScaleIcon color="warning" fontSize="large" />
             <Box>
               <Typography variant="body2" color="textSecondary">
                 Latest Body Weight
@@ -2983,11 +2983,7 @@ export default function Dashboard() {
             <TableContainer component={Paper} sx={tableStyles}>
               <Table>
                 <TableHead>
-                  <TableRow
-                    sx={{
-                      backgroundColor: mode === "light" ? "#f9fafb" : "#252525",
-                    }}
-                  >
+                  <TableRow>
                     <TableCell sx={{ fontWeight: "bold", pr: 8 }}>
                       Date
                     </TableCell>
@@ -3013,7 +3009,7 @@ export default function Dashboard() {
                     <TableRow>
                       <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                         <Box sx={{ textAlign: "center" }}>
-                          <Typography color="text.secondary" sx={{ mb: 2 }}>
+                          <Typography color="text.primary" sx={{ mb: 2 }}>
                             {workoutFilter === "today" ? (
                               <>
                                 No activities found for today 💤
@@ -3082,8 +3078,6 @@ export default function Dashboard() {
                               colSpan={1}
                               sx={{
                                 fontWeight: "bold",
-                                backgroundColor:
-                                  mode === "light" ? "#e8f4fd" : "#5d6163",
                                 fontSize: "0.95rem",
                                 py: 1,
                               }}
@@ -3095,8 +3089,6 @@ export default function Dashboard() {
                             <TableCell
                               colSpan={6}
                               sx={{
-                                backgroundColor:
-                                  mode === "light" ? "#e8f4fd" : "#5d6163",
                                 textAlign: "right",
                               }}
                             >
@@ -3320,10 +3312,6 @@ export default function Dashboard() {
                                                       variant="outlined"
                                                       sx={{
                                                         p: 0.5,
-                                                        backgroundColor:
-                                                          mode === "light"
-                                                            ? "#f9f9f9"
-                                                            : "#464646",
                                                         borderLeft: "3px solid",
                                                         borderLeftColor:
                                                           idx % 2 === 0
@@ -3509,10 +3497,6 @@ export default function Dashboard() {
                                                       variant="outlined"
                                                       sx={{
                                                         p: 0.5,
-                                                        backgroundColor:
-                                                          mode === "light"
-                                                            ? "#f9f9f9"
-                                                            : "#464646",
                                                         borderLeft: "3px solid",
                                                         borderLeftColor:
                                                           idx % 2 === 0
@@ -4086,7 +4070,8 @@ export default function Dashboard() {
           <Box
             sx={{
               px: 3,
-              pr: 5,
+              pr: 4,
+              pt: 1,
             }}
           >
             <Card
@@ -4125,7 +4110,8 @@ export default function Dashboard() {
                   )}
                   <Typography
                     variant="caption"
-                    color="#3d3d3d"
+                    color="warning.dark"
+                    fontWeight="medium"
                     sx={{ ml: "auto" }}
                   >
                     Created on{" "}
@@ -4492,14 +4478,7 @@ export default function Dashboard() {
                 fullWidth
                 margin="normal"
                 disabled={editingWorkout} // Disable when editing
-                InputProps={{
-                  style: editingWorkout
-                    ? {
-                        backgroundColor:
-                          mode === "light" ? "#f5f5f5" : "#424242",
-                      }
-                    : {},
-                }}
+                InputProps={{ style: editingWorkout }}
               >
                 <MenuItem value="treadmill">Treadmill</MenuItem>
                 <MenuItem value="crosstrainer">
@@ -4537,7 +4516,6 @@ export default function Dashboard() {
                       p: 2,
                       border: "1px solid #ccc",
                       borderRadius: 1,
-                      backgroundColor: index === 0 ? "transparent" : "grey.50",
                     }}
                   >
                     <Box
