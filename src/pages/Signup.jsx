@@ -192,6 +192,26 @@ export default function Signup() {
       }}
     >
       <Container maxWidth="sm">
+        <Box textAlign="center" mb={3}>
+          <Link to="/">
+            <img
+              src="/favicon/favicon-96x96.png"
+              alt="WellTrackD Logo"
+              style={{ height: 50 }}
+            />
+          </Link>
+
+          <Typography
+            sx={{
+              fontWeight: 700,
+              letterSpacing: 0.5,
+              fontSize: { xs: "0.9rem", sm: "1rem", md: "1.25rem" },
+            }}
+          >
+            WellTrackD
+          </Typography>
+        </Box>
+
         <Card sx={{ borderRadius: 4, p: 5, boxShadow: 10 }}>
           <CardContent>
             <Typography
