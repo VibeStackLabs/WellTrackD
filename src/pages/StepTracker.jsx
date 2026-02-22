@@ -752,64 +752,65 @@ export default function StepTracker({ userId }) {
       {/* Stats Cards */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
         <Grid size={{ xs: 6, sm: 3 }}>
-          <Paper variant="outlined" sx={{ p: 2 }}>
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2.5,
+              borderRadius: 2,
+              backgroundColor: "background.paper",
+              boxShadow: 1,
+              borderLeft: "4px solid",
+              borderColor: "warning.main",
+            }}
+          >
             <Typography variant="caption" color="text.secondary">
-              Total Steps ({timeRange})
+              Total Calories ({timeRange})
             </Typography>
             <Typography variant="h6">
-              <CountUp end={stats.totalSteps} duration={1} separator="," />
+              <CountUp end={stats.totalCalories} duration={1} separator="," />{" "}
+              kcal
             </Typography>
           </Paper>
         </Grid>
+
         <Grid size={{ xs: 6, sm: 3 }}>
-          <Paper variant="outlined" sx={{ p: 2 }}>
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2.5,
+              borderRadius: 2,
+              backgroundColor: "background.paper",
+              boxShadow: 1,
+              borderLeft: "4px solid",
+              borderColor: "error.main",
+            }}
+          >
             <Typography variant="caption" color="text.secondary">
-              Daily Average
-            </Typography>
-            <Typography variant="h6">
-              <CountUp end={stats.averageSteps} duration={1} separator="," />
-            </Typography>
-          </Paper>
-        </Grid>
-        <Grid size={{ xs: 6, sm: 3 }}>
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="caption" color="text.secondary">
-              {stepGoal ? "Goal Achieved" : "Days with Data"}
-            </Typography>
-            <Typography variant="h6">
-              {stepGoal ? (
-                <>
-                  {stats.goalAchieved}/
-                  {getFilteredData(stepData, timeRange).length} days
-                </>
-              ) : (
-                <>{stepData.filter((d) => d.steps > 0).length} days</>
-              )}
-            </Typography>
-          </Paper>
-        </Grid>
-        <Grid size={{ xs: 6, sm: 3 }}>
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="caption" color="text.secondary">
-              Total Distance
-            </Typography>
-            <Typography variant="h6">
-              <CountUp
-                end={parseFloat(stats.totalDistance)}
-                duration={1}
-                decimals={1}
-              />{" "}
-              km
-            </Typography>
-          </Paper>
-        </Grid>
-        <Grid size={{ xs: 6, sm: 3 }}>
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="caption" color="text.secondary">
-              Heart Points
+              Heart Points ({timeRange})
             </Typography>
             <Typography variant="h6">
               <CountUp end={stats.totalHeartPoints} duration={1} />
+            </Typography>
+          </Paper>
+        </Grid>
+
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2.5,
+              borderRadius: 2,
+              backgroundColor: "background.paper",
+              boxShadow: 1,
+              borderLeft: "4px solid",
+              borderColor: "info.main",
+            }}
+          >
+            <Typography variant="caption" color="text.secondary">
+              Move Minutes ({timeRange})
+            </Typography>
+            <Typography variant="h6">
+              <CountUp end={stats.totalMoveMinutes} duration={1} />
             </Typography>
           </Paper>
         </Grid>
@@ -822,21 +823,12 @@ export default function StepTracker({ userId }) {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            mb: 2,
+            mb: 3,
           }}
         >
-          <ToggleButtonGroup
-            value={timeRange}
-            exclusive
-            onChange={handleTimeRangeChange}
-            size="small"
-          >
-            <ToggleButton value="week">Week</ToggleButton>
-            <ToggleButton value="month">Month</ToggleButton>
-            <ToggleButton value="3months">3 Months</ToggleButton>
-          </ToggleButtonGroup>
+          <Box display="flex" alignItems="center" gap={1.5}>
+            <Typography variant="h6">Step Tracking</Typography>
 
-          <Box display="flex" gap={1} alignItems="center">
             <Chip
               icon={<Google />}
               label="Live Google Fit Data"
@@ -844,6 +836,7 @@ export default function StepTracker({ userId }) {
               variant="outlined"
               size="small"
             />
+
             {stepData.filter((d) => d.steps > 0).length === 0 && (
               <Chip
                 icon={<ErrorIcon />}
@@ -854,6 +847,30 @@ export default function StepTracker({ userId }) {
               />
             )}
           </Box>
+
+          <ToggleButtonGroup
+            value={timeRange}
+            exclusive
+            onChange={handleTimeRangeChange}
+            size="small"
+            sx={{
+              "& .MuiToggleButton-root": {
+                textTransform: "none",
+                px: 2,
+              },
+              "& .MuiToggleButton-root.Mui-selected": {
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+              },
+              "& .MuiToggleButton-root.Mui-selected:hover": {
+                backgroundColor: "primary.dark",
+              },
+            }}
+          >
+            <ToggleButton value="week">Last 7 days</ToggleButton>
+            <ToggleButton value="month">Last 30 days</ToggleButton>
+            <ToggleButton value="3months">Last 90 days</ToggleButton>
+          </ToggleButtonGroup>
         </Box>
 
         {loading ? (
@@ -1013,10 +1030,11 @@ export default function StepTracker({ userId }) {
           <TextField
             autoFocus
             label="Daily Step Goal"
-            type="number"
+            type="text"
+            inputMode="numeric"
             fullWidth
             value={newGoal}
-            onChange={(e) => setNewGoal(e.target.value)}
+            onChange={(e) => setNewGoal(e.target.value.replace(/\D/g, ""))}
             placeholder="e.g., 8000"
             inputProps={{ min: 1, step: 100 }}
             helperText="Enter your target steps per day"

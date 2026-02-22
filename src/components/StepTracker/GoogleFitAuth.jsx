@@ -148,12 +148,12 @@ export default function GoogleFitAuth({ open, onClose, onSuccess }) {
                 What we'll access:
               </Typography>
               <ul style={{ margin: 0, paddingLeft: 20 }}>
-                <li>✓ Daily step count (read/write)</li>
-                <li>✓ Distance traveled</li>
-                <li>✓ Calories burned</li>
-                <li>✓ Heart points</li>
-                <li>✓ Basic profile information</li>
-                <li>✓ Activity sessions</li>
+                <li>Daily step count (read/write)</li>
+                <li>Distance traveled</li>
+                <li>Calories burned</li>
+                <li>Heart points</li>
+                <li>Basic profile information</li>
+                <li>Activity sessions</li>
               </ul>
             </Box>
           </Box>

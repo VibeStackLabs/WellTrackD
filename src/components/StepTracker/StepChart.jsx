@@ -243,26 +243,27 @@ export default function StepChart({ data, days = 7 }) {
 
   return (
     <Box>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 2,
-        }}
-      >
-        <Box>
-          <Typography variant="h6">Step Tracking</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Last {days} days • Avg {averageSteps.toLocaleString()} steps/day
-          </Typography>
-        </Box>
-
+      <Box sx={{ mt: 2, mb: 3 }}>
         <ToggleButtonGroup
           value={chartType}
           exclusive
           onChange={handleChartTypeChange}
           size="small"
+          sx={{
+            backgroundColor: "grey.100",
+            borderRadius: 2,
+            "& .MuiToggleButton-root": {
+              border: 0,
+              px: 2,
+            },
+            "& .MuiToggleButton-root.Mui-selected": {
+              backgroundColor: "primary.main",
+              color: "primary.contrastText",
+            },
+            "& .MuiToggleButton-root.Mui-selected:hover": {
+              backgroundColor: "primary.dark",
+            },
+          }}
         >
           <ToggleButton value="area" title="Area Chart">
             <ShowChartIcon />
@@ -285,19 +286,49 @@ export default function StepChart({ data, days = 7 }) {
           mb: 3,
         }}
       >
-        <Paper variant="outlined" sx={{ p: 2 }}>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 2.5,
+            borderRadius: 2,
+            backgroundColor: "background.paper",
+            boxShadow: 1,
+            borderLeft: "4px solid",
+            borderColor: "warning.main",
+          }}
+        >
           <Typography variant="caption" color="text.secondary">
             Total Steps
           </Typography>
           <Typography variant="h6">{totalSteps.toLocaleString()}</Typography>
         </Paper>
-        <Paper variant="outlined" sx={{ p: 2 }}>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 2.5,
+            borderRadius: 2,
+            backgroundColor: "background.paper",
+            boxShadow: 1,
+            borderLeft: "4px solid",
+            borderColor: "error.main",
+          }}
+        >
           <Typography variant="caption" color="text.secondary">
             Daily Average
           </Typography>
           <Typography variant="h6">{averageSteps.toLocaleString()}</Typography>
         </Paper>
-        <Paper variant="outlined" sx={{ p: 2 }}>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 2.5,
+            borderRadius: 2,
+            backgroundColor: "background.paper",
+            boxShadow: 1,
+            borderLeft: "4px solid",
+            borderColor: "primary.main",
+          }}
+        >
           <Typography variant="caption" color="text.secondary">
             Goal Achieved
           </Typography>
@@ -305,7 +336,17 @@ export default function StepChart({ data, days = 7 }) {
             {goalAchievedDays}/{days} days
           </Typography>
         </Paper>
-        <Paper variant="outlined" sx={{ p: 2 }}>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 2.5,
+            borderRadius: 2,
+            backgroundColor: "background.paper",
+            boxShadow: 1,
+            borderLeft: "4px solid",
+            borderColor: "success.main",
+          }}
+        >
           <Typography variant="caption" color="text.secondary">
             Est. Distance
           </Typography>
