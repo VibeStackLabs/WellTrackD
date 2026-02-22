@@ -40,6 +40,7 @@ import {
   reauthenticateWithCredential,
 } from "firebase/auth";
 import { db, auth } from "../firebase";
+import { getAuthErrorMessage } from "../utils/authErrors";
 
 export default function ProfileEditDialog({
   open,
@@ -335,22 +336,7 @@ export default function ProfileEditDialog({
       }, 1500);
     } catch (err) {
       console.error("Error updating password:", err);
-
-      switch (err.code) {
-        case "auth/wrong-password":
-          setError("Current password is incorrect");
-          break;
-        case "auth/weak-password":
-          setError("Password is too weak. Use at least 6 characters.");
-          break;
-        case "auth/requires-recent-login":
-          setError(
-            "Please log out and log in again before changing your password",
-          );
-          break;
-        default:
-          setError(err.message || "Failed to update password");
-      }
+      setError(getAuthErrorMessage(err, "password-change"));
     } finally {
       setLoading(false);
     }

@@ -24,6 +24,7 @@ import {
   VisibilityOffOutlined as VisibilityOffOutlinedIcon,
 } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
+import { getAuthErrorMessage } from "../utils/authErrors";
 
 export default function Signup() {
   const [name, setName] = useState("");
@@ -161,21 +162,7 @@ export default function Signup() {
 
       navigate("/dashboard");
     } catch (err) {
-      let friendlyMessage;
-      switch (err.code) {
-        case "auth/email-already-in-use":
-          friendlyMessage = "This email is already in use.";
-          break;
-        case "auth/invalid-email":
-          friendlyMessage = "Enter a valid email address.";
-          break;
-        case "auth/weak-password":
-          friendlyMessage = "Password should be at least 6 characters.";
-          break;
-        default:
-          friendlyMessage = "An unexpected error occurred. Please try again.";
-          break;
-      }
+      const friendlyMessage = getAuthErrorMessage(err, "signup");
       setError(friendlyMessage);
       setOpen(true);
     } finally {

@@ -27,6 +27,7 @@ import {
   VisibilityOffOutlined as VisibilityOffOutlinedIcon,
 } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
+import { getAuthErrorMessage } from "../utils/authErrors";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -66,30 +67,7 @@ export default function Login() {
       await signInWithEmailAndPassword(auth, email, password);
       navigate("/dashboard");
     } catch (err) {
-      let friendlyMessage;
-
-      // Map Firebase errors to user-friendly messages
-      switch (err.code) {
-        case "auth/invalid-email":
-          friendlyMessage = "Enter a valid email address.";
-          break;
-        case "auth/user-disabled":
-          friendlyMessage = "This account has been disabled.";
-          break;
-        case "auth/user-not-found":
-          friendlyMessage = "No account found with this email.";
-          break;
-        case "auth/wrong-password":
-          friendlyMessage = "Incorrect password. Please try again.";
-          break;
-        case "auth/invalid-credential":
-          friendlyMessage = "Invalid login credentials.";
-          break;
-        default:
-          friendlyMessage = "An unexpected error occurred. Please try again.";
-          break;
-      }
-
+      const friendlyMessage = getAuthErrorMessage(err, "login");
       setError(friendlyMessage);
       setOpen(true); // open dialog on error
     }
@@ -117,23 +95,7 @@ export default function Login() {
         setResetEmail("");
       }, 2000);
     } catch (err) {
-      let friendlyMessage;
-
-      switch (err.code) {
-        case "auth/invalid-email":
-          friendlyMessage = "Please enter a valid email address.";
-          break;
-        case "auth/user-not-found":
-          friendlyMessage = "No account found with this email.";
-          break;
-        case "auth/too-many-requests":
-          friendlyMessage = "Too many attempts. Please try again later.";
-          break;
-        default:
-          friendlyMessage = "Failed to send reset email. Please try again.";
-          break;
-      }
-
+      const friendlyMessage = getAuthErrorMessage(err, "reset-password");
       setError(friendlyMessage);
       setOpen(true);
     }
