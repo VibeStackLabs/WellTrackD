@@ -195,7 +195,7 @@ export default function Signup() {
         <Box textAlign="center" mb={3}>
           <Link to="/">
             <img
-              src="/favicon/favicon-96x96.png"
+              src="/favicon.svg"
               alt="WellTrackD Logo"
               style={{ height: 50 }}
             />
