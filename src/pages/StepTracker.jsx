@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Container,
   Typography,
@@ -345,6 +345,12 @@ export default function StepTracker({ userId }) {
     const cutoff = subDays(today, days - 1);
     return data.filter((day) => new Date(day.date) >= cutoff);
   };
+
+  const sortedRecentActivity = useMemo(() => {
+    return [...getFilteredData(stepData, timeRange)].sort(
+      (a, b) => new Date(b.date) - new Date(a.date),
+    );
+  }, [stepData, timeRange]);
 
   const handleSyncGoogleFit = async () => {
     setSyncLoading(true);
@@ -907,7 +913,7 @@ export default function StepTracker({ userId }) {
           }}
         >
           <List>
-            {getFilteredData(stepData, timeRange).map((entry, index) => (
+            {sortedRecentActivity.map((entry, index) => (
               <React.Fragment key={entry.date}>
                 {index > 0 && <Divider />}
                 <ListItem>
