@@ -2699,16 +2699,26 @@ export default function Dashboard() {
       {/* Summary Cards */}
       <Grid container spacing={2} mb={4}>
         <Grid size={{ xs: 12, sm: 2.3 }}>
-          <Card
+          <Paper
             variant="outlined"
-            sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              p: 2,
+              gap: 1,
+              borderRadius: 2,
+              backgroundColor: "background.paper",
+              boxShadow: 1,
+              borderLeft: "4px solid",
+              borderColor: "primary.main",
+            }}
           >
             <ScaleIcon color="primary" fontSize="large" />
             <Box>
               <Typography variant="body2" color="textSecondary">
                 Latest Body Weight
               </Typography>
-              <Typography variant="h6" color="primary">
+              <Typography variant="h6">
                 {latestBMIEntry.bodyweight != null ? (
                   <>
                     <CountUp
@@ -2724,20 +2734,30 @@ export default function Dashboard() {
                 )}
               </Typography>
             </Box>
-          </Card>
+          </Paper>
         </Grid>
 
         <Grid size={{ xs: 12, sm: 2 }}>
-          <Card
+          <Paper
             variant="outlined"
-            sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              p: 2,
+              gap: 1,
+              borderRadius: 2,
+              backgroundColor: "background.paper",
+              boxShadow: 1,
+              borderLeft: "4px solid",
+              borderColor: "success.main",
+            }}
           >
             <BarChartIcon color="success" fontSize="large" />
             <Box>
               <Typography variant="body2" color="textSecondary">
                 Latest BMI
               </Typography>
-              <Typography variant="h6" color="success.main">
+              <Typography variant="h6">
                 {latestBMIEntry.bmi != null ? (
                   <CountUp
                     end={Number(latestBMIEntry.bmi)}
@@ -2749,13 +2769,23 @@ export default function Dashboard() {
                 )}
               </Typography>
             </Box>
-          </Card>
+          </Paper>
         </Grid>
 
         <Grid size={{ xs: 12, sm: 2.4 }}>
-          <Card
+          <Paper
             variant="outlined"
-            sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              p: 2,
+              gap: 1,
+              borderRadius: 2,
+              backgroundColor: "background.paper",
+              boxShadow: 1,
+              borderLeft: "4px solid",
+              borderColor: getBMIColor(latestBMIEntry.bmi),
+            }}
           >
             <BarChartIcon
               sx={{ color: getBMIColor(latestBMIEntry.bmi) }}
@@ -2765,42 +2795,52 @@ export default function Dashboard() {
               <Typography variant="body2" color="textSecondary">
                 BMI Status
               </Typography>
-              <Typography
-                variant="h6"
-                sx={{ color: getBMIColor(latestBMIEntry.bmi) }}
-              >
-                {latestBMIStatus}
-              </Typography>
+              <Typography variant="h6">{latestBMIStatus}</Typography>
             </Box>
-          </Card>
+          </Paper>
         </Grid>
 
         <Grid size={{ xs: 12, sm: 2.3 }}>
-          <Card
+          <Paper
             variant="outlined"
-            sx={{ display: "flex", alignItems: "center", p: 2, gap: 1 }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              p: 2,
+              gap: 1,
+              borderRadius: 2,
+              backgroundColor: "background.paper",
+              boxShadow: 1,
+              borderLeft: "4px solid",
+              borderColor: "secondary.main",
+            }}
           >
             <FitnessCenterIcon color="secondary" fontSize="large" />
             <Box>
               <Typography variant="body2" color="textSecondary">
                 Consistency
               </Typography>
-              <Typography variant="h6" color="secondary">
+              <Typography variant="h6">
                 <CountUp end={streak} duration={0.5} />{" "}
                 {streak === 1 ? "day" : "days"}
               </Typography>
             </Box>
-          </Card>
+          </Paper>
         </Grid>
 
         <Grid size={{ xs: 12, sm: 3 }}>
-          <Card
+          <Paper
             variant="outlined"
             sx={{
               display: "flex",
               alignItems: "center",
               p: 2,
-              gap: 2,
+              gap: 1,
+              borderRadius: 2,
+              backgroundColor: "background.paper",
+              boxShadow: 1,
+              borderLeft: "4px solid",
+              borderColor: "success.main",
             }}
           >
             {/* Icon */}
@@ -2820,7 +2860,7 @@ export default function Dashboard() {
                   onClick={(e) => setAnchorEl(e.currentTarget)}
                   sx={{
                     textTransform: "none",
-                    color: "success.main",
+                    color: "#000000de",
                     fontWeight: 600,
                     p: 0,
                     minWidth: "auto",
@@ -2829,7 +2869,7 @@ export default function Dashboard() {
                   {calorieFilter === "week" ? "This Week" : "This Month"}
                 </Button>
 
-                <Typography variant="h6" color="success.main">
+                <Typography variant="h6">
                   <CountUp
                     end={caloriesBurned}
                     duration={0.8}
@@ -2863,7 +2903,7 @@ export default function Dashboard() {
                 This Month
               </MenuItem>
             </Menu>
-          </Card>
+          </Paper>
         </Grid>
       </Grid>
 
