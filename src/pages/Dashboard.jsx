@@ -51,6 +51,8 @@ import {
   Alert,
   Snackbar,
   DialogContentText,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
@@ -2121,6 +2123,18 @@ export default function Dashboard() {
     });
   };
 
+  const handleChartFilterChange = (event, newFilter) => {
+    if (newFilter !== null) {
+      setChartFilter(newFilter);
+    }
+  };
+
+  const handleWorkoutFilterChange = (event, newFilter) => {
+    if (newFilter !== null) {
+      setWorkoutFilter(newFilter);
+    }
+  };
+
   const getWorkoutsByWeekday = () => {
     const filtered = getFilteredWorkouts();
 
@@ -2876,30 +2890,30 @@ export default function Dashboard() {
             </Typography>
 
             <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
-              <Button
-                variant={workoutFilter === "today" ? "contained" : "outlined"}
-                onClick={() => setWorkoutFilter("today")}
+              <ToggleButtonGroup
+                value={workoutFilter}
+                exclusive
+                onChange={handleWorkoutFilterChange}
+                size="small"
+                sx={{
+                  "& .MuiToggleButton-root": {
+                    textTransform: "none",
+                    px: 2,
+                  },
+                  "& .MuiToggleButton-root.Mui-selected": {
+                    backgroundColor: "primary.main",
+                    color: "primary.contrastText",
+                  },
+                  "& .MuiToggleButton-root.Mui-selected:hover": {
+                    backgroundColor: "primary.dark",
+                  },
+                }}
               >
-                Today
-              </Button>
-              <Button
-                variant={workoutFilter === "week" ? "contained" : "outlined"}
-                onClick={() => setWorkoutFilter("week")}
-              >
-                This Week
-              </Button>
-              <Button
-                variant={workoutFilter === "month" ? "contained" : "outlined"}
-                onClick={() => setWorkoutFilter("month")}
-              >
-                This Month
-              </Button>
-              <Button
-                variant={workoutFilter === "all" ? "contained" : "outlined"}
-                onClick={() => setWorkoutFilter("all")}
-              >
-                All Time
-              </Button>
+                <ToggleButton value="today">Today</ToggleButton>
+                <ToggleButton value="week">This Week</ToggleButton>
+                <ToggleButton value="month">This Month</ToggleButton>
+                <ToggleButton value="all">All Time</ToggleButton>
+              </ToggleButtonGroup>
             </Box>
 
             <TableContainer component={Paper} sx={tableStyles}>
@@ -3705,37 +3719,30 @@ export default function Dashboard() {
             >
               <Typography variant="h6">Weight & BMI Progress</Typography>
 
-              {/* Chart Filter Buttons */}
-              <Box sx={{ display: "flex", gap: 1 }}>
-                <Button
-                  size="small"
-                  variant={chartFilter === "week" ? "contained" : "outlined"}
-                  onClick={() => setChartFilter("week")}
-                >
-                  Last 7 days
-                </Button>
-                <Button
-                  size="small"
-                  variant={chartFilter === "month" ? "contained" : "outlined"}
-                  onClick={() => setChartFilter("month")}
-                >
-                  Last 30 days
-                </Button>
-                <Button
-                  size="small"
-                  variant={chartFilter === "3months" ? "contained" : "outlined"}
-                  onClick={() => setChartFilter("3months")}
-                >
-                  Last 90 days
-                </Button>
-                <Button
-                  size="small"
-                  variant={chartFilter === "all" ? "contained" : "outlined"}
-                  onClick={() => setChartFilter("all")}
-                >
-                  All time
-                </Button>
-              </Box>
+              <ToggleButtonGroup
+                value={chartFilter}
+                exclusive
+                onChange={handleChartFilterChange}
+                size="small"
+                sx={{
+                  "& .MuiToggleButton-root": {
+                    textTransform: "none",
+                    px: 2,
+                  },
+                  "& .MuiToggleButton-root.Mui-selected": {
+                    backgroundColor: "primary.main",
+                    color: "primary.contrastText",
+                  },
+                  "& .MuiToggleButton-root.Mui-selected:hover": {
+                    backgroundColor: "primary.dark",
+                  },
+                }}
+              >
+                <ToggleButton value="week">Last 7 days</ToggleButton>
+                <ToggleButton value="month">Last 30 days</ToggleButton>
+                <ToggleButton value="3months">Last 90 days</ToggleButton>
+                <ToggleButton value="all">All Time</ToggleButton>
+              </ToggleButtonGroup>
             </Box>
 
             <BMIChart
