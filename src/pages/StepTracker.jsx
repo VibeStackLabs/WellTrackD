@@ -49,6 +49,8 @@ import StepChart from "../components/StepTracker/StepChart";
 import GoogleFitAuth from "../components/StepTracker/GoogleFitAuth";
 import googleFitService from "../services/googleFitService";
 import CountUp from "react-countup";
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "../firebase";
 
 export default function StepTracker({ userId }) {
   const [stepData, setStepData] = useState([]);
@@ -65,11 +67,13 @@ export default function StepTracker({ userId }) {
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [syncError, setSyncError] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   // Goal states
   const [stepGoal, setStepGoal] = useState(null);
   const [goalDialogOpen, setGoalDialogOpen] = useState(false);
   const [newGoal, setNewGoal] = useState("");
+  const [isSavingGoal, setIsSavingGoal] = useState(false);
 
   const [stats, setStats] = useState({
     totalSteps: 0,
@@ -82,11 +86,54 @@ export default function StepTracker({ userId }) {
     totalMoveMinutes: 0,
   });
 
-  // Load goal from localStorage on mount
+  // Network status listener
   useEffect(() => {
-    const savedGoal = localStorage.getItem(`stepGoal_${userId}`);
-    if (savedGoal) {
-      setStepGoal(parseInt(savedGoal));
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  // Load goal from Firestore on mount
+  useEffect(() => {
+    const loadUserGoal = async () => {
+      if (!userId) return;
+
+      try {
+        // Try to load from Firestore first
+        const goalRef = doc(db, "users", userId, "settings", "stepGoal");
+        const goalSnap = await getDoc(goalRef);
+
+        if (goalSnap.exists()) {
+          const goal = goalSnap.data().goal;
+          setStepGoal(goal);
+          // Cache in localStorage as backup
+          localStorage.setItem(`stepGoal_${userId}`, goal);
+        } else {
+          // Fallback to localStorage
+          const savedGoal = localStorage.getItem(`stepGoal_${userId}`);
+          if (savedGoal) {
+            setStepGoal(parseInt(savedGoal));
+          }
+        }
+      } catch (error) {
+        console.error("Error loading goal from Firestore:", error);
+        // Fallback to localStorage if offline
+        const savedGoal = localStorage.getItem(`stepGoal_${userId}`);
+        if (savedGoal) {
+          setStepGoal(parseInt(savedGoal));
+        }
+      }
+    };
+
+    if (userId) {
+      loadUserGoal();
     }
   }, [userId]);
 
@@ -262,11 +309,9 @@ export default function StepTracker({ userId }) {
     localStorage.removeItem("googleFitLastSync");
     localStorage.removeItem("googleFitUserProfile");
     localStorage.removeItem(`steps_${userId}`);
-    localStorage.removeItem(`stepGoal_${userId}`);
 
-    // Clear step data from state and localStorage
+    // Don't remove goal from Firestore, just from state
     setStepData([]);
-    setStepGoal(null);
 
     // Update state
     setGoogleFitConnected(false);
@@ -373,29 +418,77 @@ export default function StepTracker({ userId }) {
     loadStepData();
   };
 
-  const handleSetGoal = () => {
+  // Save goal to Firestore
+  const handleSetGoal = async () => {
     if (newGoal && parseInt(newGoal) > 0) {
       const goal = parseInt(newGoal);
-      setStepGoal(goal);
-      localStorage.setItem(`stepGoal_${userId}`, goal);
 
-      // Update existing data with new goal
-      const updatedData = stepData.map((day) => ({
-        ...day,
-        goal: goal,
-      }));
-      setStepData(updatedData);
-      localStorage.setItem(`steps_${userId}`, JSON.stringify(updatedData));
-      calculateStats(updatedData);
+      setIsSavingGoal(true);
 
-      setGoalDialogOpen(false);
-      setNewGoal("");
+      try {
+        // Save to Firestore
+        if (userId) {
+          const goalRef = doc(db, "users", userId, "settings", "stepGoal");
+          await setDoc(goalRef, {
+            goal: goal,
+            updatedAt: serverTimestamp(),
+            userId: userId,
+          });
+        }
 
-      setSnackbarMessage(
-        `Daily step goal set to ${goal.toLocaleString()} steps`,
-      );
-      setSnackbarSeverity("success");
-      setSnackbarOpen(true);
+        // Update local state
+        setStepGoal(goal);
+
+        // Cache in localStorage as backup
+        localStorage.setItem(`stepGoal_${userId}`, goal);
+
+        // Update existing data with new goal
+        const updatedData = stepData.map((day) => ({
+          ...day,
+          goal: goal,
+        }));
+        setStepData(updatedData);
+        localStorage.setItem(`steps_${userId}`, JSON.stringify(updatedData));
+        calculateStats(updatedData);
+
+        setGoalDialogOpen(false);
+        setNewGoal("");
+
+        setSnackbarMessage(
+          `Daily step goal set to ${goal.toLocaleString()} steps`,
+        );
+        setSnackbarSeverity("success");
+      } catch (error) {
+        console.error("Error saving goal to Firestore:", error);
+
+        if (isOffline) {
+          // If offline, still save locally and queue for sync
+          setStepGoal(goal);
+          localStorage.setItem(`stepGoal_${userId}`, goal);
+
+          const updatedData = stepData.map((day) => ({
+            ...day,
+            goal: goal,
+          }));
+          setStepData(updatedData);
+          localStorage.setItem(`steps_${userId}`, JSON.stringify(updatedData));
+          calculateStats(updatedData);
+
+          setGoalDialogOpen(false);
+          setNewGoal("");
+
+          setSnackbarMessage(
+            `Goal saved locally. Will sync to cloud when online.`,
+          );
+          setSnackbarSeverity("warning");
+        } else {
+          setSnackbarMessage("Failed to save goal. Please try again.");
+          setSnackbarSeverity("error");
+        }
+      } finally {
+        setIsSavingGoal(false);
+        setSnackbarOpen(true);
+      }
     }
   };
 
@@ -504,6 +597,13 @@ export default function StepTracker({ userId }) {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      {/* Offline Indicator */}
+      {isOffline && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          You're offline. Changes will sync when you're back online.
+        </Alert>
+      )}
+
       {/* Header with account info and menu */}
       <Box
         display="flex"
@@ -1043,7 +1143,7 @@ export default function StepTracker({ userId }) {
             onChange={(e) => setNewGoal(e.target.value.replace(/\D/g, ""))}
             placeholder="e.g., 8000"
             inputProps={{ min: 1, step: 100 }}
-            helperText="Enter your target steps per day"
+            helperText={isOffline ? "Will sync when online" : "Saved to cloud"}
           />
         </DialogContent>
         <DialogActions>
@@ -1051,9 +1151,9 @@ export default function StepTracker({ userId }) {
           <Button
             onClick={handleSetGoal}
             variant="contained"
-            disabled={!newGoal || parseInt(newGoal) <= 0}
+            disabled={!newGoal || parseInt(newGoal) <= 0 || isSavingGoal}
           >
-            Set Goal
+            {isSavingGoal ? <CircularProgress size={24} /> : "Set Goal"}
           </Button>
         </DialogActions>
       </Dialog>
