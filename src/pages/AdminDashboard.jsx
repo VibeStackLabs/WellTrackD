@@ -74,6 +74,8 @@ import {
   BugReport as BugReportIcon,
   Build as BuildIcon,
   OpenInNew as OpenInNewIcon,
+  DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon,
 } from "@mui/icons-material";
 
 // Import changelog functions
@@ -83,6 +85,10 @@ import {
   updateChangelogEntry,
   deleteChangelogEntry,
 } from "../utils/changelogFunctions";
+
+// Import MUI theme
+import { useTheme } from "../context/ThemeContext";
+import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -128,6 +134,10 @@ function AdminDashboard() {
 
   const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Get current color theme
+  const { mode, toggleMode } = useTheme();
+  const theme = useMuiTheme();
 
   const loadChangelog = async () => {
     setChangelogLoading(true);
@@ -588,7 +598,11 @@ function AdminDashboard() {
           <Grid>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <SecurityIcon sx={{ fontSize: 32, color: "primary.main" }} />
-              <Typography variant="h4" fontWeight={700}>
+              <Typography
+                variant="h4"
+                fontWeight={700}
+                sx={{ color: theme.typography.buttonText }}
+              >
                 Admin Dashboard
               </Typography>
             </Box>
@@ -611,6 +625,23 @@ function AdminDashboard() {
                 disabled={loading}
               >
                 Refresh
+              </Button>
+
+              {/* Dark Mode Toggle Icon */}
+              <Button
+                variant="outlined"
+                color="warning"
+                onClick={toggleMode}
+                startIcon={
+                  mode === "light" ? <DarkModeIcon /> : <LightModeIcon />
+                }
+                sx={{
+                  textTransform: "none",
+                  minWidth: "auto",
+                  px: 2,
+                }}
+              >
+                Toggle Theme
               </Button>
 
               <Button
@@ -1283,7 +1314,7 @@ function AdminDashboard() {
           </Alert>
 
           {/* User Info Summary */}
-          <Paper variant="outlined" sx={{ p: 2, mb: 2, bgcolor: "#fff8f8" }}>
+          <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
             <Typography variant="subtitle2" color="error" gutterBottom>
               USER TO DELETE
             </Typography>

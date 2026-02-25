@@ -250,10 +250,8 @@ export default function StepChart({ data, days = 7 }) {
           onChange={handleChartTypeChange}
           size="small"
           sx={{
-            backgroundColor: "grey.100",
-            borderRadius: 2,
             "& .MuiToggleButton-root": {
-              border: 0,
+              textTransform: "none",
               px: 2,
             },
             "& .MuiToggleButton-root.Mui-selected": {

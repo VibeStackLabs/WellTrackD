@@ -44,6 +44,8 @@ import {
 import WorkoutPlanExcelHandler from "../components/WorkoutPlanExcelHandler";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
+import { useTheme } from "../context/ThemeContext";
+import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 export default function WorkoutPlans({ userId, onAddToToday }) {
   const [plans, setPlans] = useState([]);
@@ -79,6 +81,10 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
 
   // Excel Handler states
   const [excelHandlerOpen, setExcelHandlerOpen] = useState(false);
+
+  // Get current color theme
+  const { mode } = useTheme();
+  const theme = useMuiTheme();
 
   // Load plans from Firestore
   useEffect(() => {
@@ -347,7 +353,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           p: 1.5,
           border: "1px solid #e0e0e0",
           borderRadius: 1,
-          backgroundColor: "#fafafa",
+          backgroundColor: mode === "light" ? "#fafafa" : "#424242",
           mb: 1,
         }}
       >
@@ -407,7 +413,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           p: 2,
           border: "1px solid #e0e0e0",
           borderRadius: 1,
-          backgroundColor: "#f0f7ff",
+          backgroundColor: mode === "light" ? "#e8f4fd" : "#5d6163",
           mb: 2,
         }}
       >
@@ -531,7 +537,9 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           mb: 2,
         }}
       >
-        <Typography variant="h6">Workout Plans</Typography>
+        <Typography variant="h6" sx={{ color: theme.typography.buttonText }}>
+          Workout Plans
+        </Typography>
 
         <Box sx={{ display: "flex", gap: 1 }}>
           <Button
@@ -644,7 +652,11 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
       {/* All Plans Grid */}
       {plans.length > 0 && (
         <>
-          <Typography variant="subtitle1" gutterBottom sx={{ mb: 2 }}>
+          <Typography
+            variant="subtitle1"
+            gutterBottom
+            sx={{ mb: 2, color: theme.typography.buttonText }}
+          >
             Your Plans
           </Typography>
           <Grid container spacing={2}>

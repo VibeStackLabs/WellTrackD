@@ -83,6 +83,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import {
+  DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon,
+} from "@mui/icons-material";
 import { format, parseISO } from "date-fns";
 import CountUp from "react-countup";
 import WorkoutPlans from "./WorkoutPlans";
@@ -93,6 +97,7 @@ import ChangelogDialog from "../components/ChangelogDialog";
 import Profile from "../components/Profile";
 import StepTracker from "./StepTracker";
 import BMIChart from "../components/BMIChart";
+import { useTheme } from "../context/ThemeContext";
 
 const PREDEFINED_STRENGTH_WORKOUTS = [
   "Bench Press",
@@ -139,6 +144,7 @@ const PREDEFINED_STRENGTH_WORKOUTS = [
 
 export default function Dashboard() {
   const { isAdmin } = useAdmin();
+  const { mode, toggleMode, tailwindTheme } = useTheme();
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0); // 0 for Workout, 1 for Workout Plans, 2 for Health Metrics
@@ -181,7 +187,7 @@ export default function Dashboard() {
   // Table styles
   const tableStyles = {
     "& .MuiTableRow-root:hover": {
-      backgroundColor: "#fafafa",
+      backgroundColor: mode === "light" ? "#fafafa" : "#424242",
     },
     "& .MuiTableCell-root": {
       py: 1.5,
@@ -2543,6 +2549,22 @@ export default function Dashboard() {
             </Button>
           )}
 
+          {/* Dark Mode Toggle Icon */}
+          <Button
+            variant="outlined"
+            color="warning"
+            onClick={toggleMode}
+            disabled={isOffline || loading}
+            startIcon={mode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
+            sx={{
+              textTransform: "none",
+              minWidth: "auto",
+              px: 2,
+            }}
+          >
+            Toggle Theme
+          </Button>
+
           {/* Logout Button */}
           <Button
             variant="outlined"
@@ -2860,7 +2882,6 @@ export default function Dashboard() {
                   onClick={(e) => setAnchorEl(e.currentTarget)}
                   sx={{
                     textTransform: "none",
-                    color: "#000000de",
                     fontWeight: 600,
                     p: 0,
                     minWidth: "auto",
@@ -2959,7 +2980,11 @@ export default function Dashboard() {
             <TableContainer component={Paper} sx={tableStyles}>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+                  <TableRow
+                    sx={{
+                      backgroundColor: mode === "light" ? "#f9fafb" : "#252525",
+                    }}
+                  >
                     <TableCell sx={{ fontWeight: "bold", pr: 8 }}>
                       Date
                     </TableCell>
@@ -3054,7 +3079,8 @@ export default function Dashboard() {
                               colSpan={1}
                               sx={{
                                 fontWeight: "bold",
-                                backgroundColor: "#e8f4fd",
+                                backgroundColor:
+                                  mode === "light" ? "#e8f4fd" : "#5d6163",
                                 fontSize: "0.95rem",
                                 py: 1,
                               }}
@@ -3066,7 +3092,8 @@ export default function Dashboard() {
                             <TableCell
                               colSpan={6}
                               sx={{
-                                backgroundColor: "#e8f4fd",
+                                backgroundColor:
+                                  mode === "light" ? "#e8f4fd" : "#5d6163",
                                 textAlign: "right",
                               }}
                             >
@@ -3106,12 +3133,21 @@ export default function Dashboard() {
                                 hover={!isRestDay}
                                 sx={{
                                   backgroundColor: isRestDay
-                                    ? "#f9f9f9"
-                                    : "inherit",
+                                    ? mode === "light"
+                                      ? "#f9f9f9"
+                                      : "#464646"
+                                    : mode === "light"
+                                      ? "#f9f9f9"
+                                      : "#2d2d2d",
+
                                   "&:hover": {
                                     backgroundColor: isRestDay
-                                      ? "#f0f0f0"
-                                      : "#fafafa",
+                                      ? mode === "light"
+                                        ? "#f9f9f9"
+                                        : "#464646"
+                                      : mode === "light"
+                                        ? "#f9f9f9"
+                                        : "#2d2d2d",
                                   },
                                 }}
                               >
@@ -3282,7 +3318,9 @@ export default function Dashboard() {
                                                       sx={{
                                                         p: 0.5,
                                                         backgroundColor:
-                                                          "#f9f9f9",
+                                                          mode === "light"
+                                                            ? "#f9f9f9"
+                                                            : "#464646",
                                                         borderLeft: "3px solid",
                                                         borderLeftColor:
                                                           idx % 2 === 0
@@ -3307,7 +3345,6 @@ export default function Dashboard() {
                                                             style={{
                                                               fontWeight:
                                                                 "bold",
-                                                              minWidth: "40px",
                                                             }}
                                                           >
                                                             Set {set.setNumber}
@@ -3328,7 +3365,6 @@ export default function Dashboard() {
                                                             style={{
                                                               fontWeight:
                                                                 "bold",
-                                                              color: "#1976d2",
                                                             }}
                                                           >
                                                             {set.weight?.toFixed(
@@ -3344,8 +3380,8 @@ export default function Dashboard() {
                                                                 <span>•</span>
                                                                 <span
                                                                   style={{
-                                                                    color:
-                                                                      "#2e7d32",
+                                                                    fontWeight:
+                                                                      "bold",
                                                                   }}
                                                                 >
                                                                   Total:{" "}
@@ -3471,7 +3507,9 @@ export default function Dashboard() {
                                                       sx={{
                                                         p: 0.5,
                                                         backgroundColor:
-                                                          "#f9f9f9",
+                                                          mode === "light"
+                                                            ? "#f9f9f9"
+                                                            : "#464646",
                                                         borderLeft: "3px solid",
                                                         borderLeftColor:
                                                           idx % 2 === 0
@@ -3496,7 +3534,6 @@ export default function Dashboard() {
                                                             style={{
                                                               fontWeight:
                                                                 "bold",
-                                                              minWidth: "40px",
                                                             }}
                                                           >
                                                             {session.duration}{" "}
@@ -3535,7 +3572,12 @@ export default function Dashboard() {
                                                             session.incline && (
                                                               <>
                                                                 <span>•</span>
-                                                                <span>
+                                                                <span
+                                                                  style={{
+                                                                    fontWeight:
+                                                                      "bold",
+                                                                  }}
+                                                                >
                                                                   {
                                                                     session.incline
                                                                   }
@@ -3547,7 +3589,12 @@ export default function Dashboard() {
                                                           {session.resistance && (
                                                             <>
                                                               <span>•</span>
-                                                              <span>
+                                                              <span
+                                                                style={{
+                                                                  fontWeight:
+                                                                    "bold",
+                                                                }}
+                                                              >
                                                                 Level{" "}
                                                                 {
                                                                   session.resistance
@@ -4075,7 +4122,7 @@ export default function Dashboard() {
                   )}
                   <Typography
                     variant="caption"
-                    color="text.secondary"
+                    color="#3d3d3d"
                     sx={{ ml: "auto" }}
                   >
                     Created on{" "}
@@ -4438,7 +4485,12 @@ export default function Dashboard() {
                 margin="normal"
                 disabled={editingWorkout} // Disable when editing
                 InputProps={{
-                  style: editingWorkout ? { backgroundColor: "#f5f5f5" } : {},
+                  style: editingWorkout
+                    ? {
+                        backgroundColor:
+                          mode === "light" ? "#f5f5f5" : "#424242",
+                      }
+                    : {},
                 }}
               >
                 <MenuItem value="treadmill">Treadmill</MenuItem>
@@ -4723,8 +4775,6 @@ export default function Dashboard() {
           <Box
             sx={{
               mt: 3,
-              bgcolor: "grey.50",
-              borderRadius: 1,
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",

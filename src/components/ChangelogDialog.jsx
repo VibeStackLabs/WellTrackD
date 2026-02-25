@@ -23,10 +23,14 @@ import {
   TaskAlt as TaskAltIcon,
 } from "@mui/icons-material";
 import { getPublishedChangelog } from "../utils/changelogFunctions";
+import { useTheme } from "../context/ThemeContext";
 
 const ChangelogDialog = ({ open, onClose }) => {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Get current color theme
+  const { mode } = useTheme();
 
   useEffect(() => {
     if (open) {
@@ -155,7 +159,12 @@ const ChangelogDialog = ({ open, onClose }) => {
                           ? "#f44336"
                           : "#2196f3"
                   }`,
-                  backgroundColor: index === 0 ? "#f8f9fa" : "transparent",
+                  backgroundColor:
+                    index === 0
+                      ? mode === "light"
+                        ? "#f8f9fa"
+                        : "#424242"
+                      : "transparent",
                 }}
               >
                 <Box

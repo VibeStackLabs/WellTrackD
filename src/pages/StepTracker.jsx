@@ -51,6 +51,7 @@ import googleFitService from "../services/googleFitService";
 import CountUp from "react-countup";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
+import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 export default function StepTracker({ userId }) {
   const [stepData, setStepData] = useState([]);
@@ -85,6 +86,9 @@ export default function StepTracker({ userId }) {
     totalHeartPoints: 0,
     totalMoveMinutes: 0,
   });
+
+  // Get current color theme
+  const theme = useMuiTheme();
 
   // Network status listener
   useEffect(() => {
@@ -614,7 +618,12 @@ export default function StepTracker({ userId }) {
         <Box display="flex" alignItems="center" gap={2}>
           <DirectionsWalk sx={{ fontSize: 40, color: "primary.main" }} />
           <Box>
-            <Typography variant="h5">Step Tracker</Typography>
+            <Typography
+              variant="h5"
+              sx={{ color: theme.typography.buttonText }}
+            >
+              Step Tracker
+            </Typography>
             <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
               <Box display="flex" alignItems="center" gap={0.5}>
                 <CheckCircle color="success" sx={{ fontSize: 16 }} />
