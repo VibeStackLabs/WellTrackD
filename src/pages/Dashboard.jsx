@@ -88,6 +88,9 @@ import {
   LightMode as LightModeIcon,
 } from "@mui/icons-material";
 import { format, parseISO } from "date-fns";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import CountUp from "react-countup";
 import WorkoutPlans from "./WorkoutPlans";
 import AddToWorkoutHandler from "./AddToWorkoutHandler";
@@ -4137,31 +4140,36 @@ export default function Dashboard() {
         <DialogContent>
           {/* Date Picker */}
           {!editingWorkout && (
-            <TextField
-              label="Workout Date"
-              type="date"
-              value={workoutDate || new Date().toISOString().split("T")[0]}
-              onChange={(e) => setWorkoutDate(e.target.value)}
-              fullWidth
-              margin="normal"
-              InputLabelProps={{
-                shrink: true,
-              }}
-              inputProps={{
-                max: new Date().toISOString().split("T")[0], // Prevent future dates
-              }}
-              helperText={
-                workoutDate === new Date().toISOString().split("T")[0] ||
-                !workoutDate
-                  ? "Today"
-                  : `Logging for ${format(new Date(workoutDate), "dd-MM-yyyy")}`
-              }
-              FormHelperTextProps={{
-                sx: {
-                  ml: "4px", // aligns with outlined input text
-                },
-              }}
-            />
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Workout Date"
+                format="dd-MM-yyyy"
+                value={workoutDate ? new Date(workoutDate) : new Date()}
+                onChange={(newValue) => {
+                  if (newValue) {
+                    setWorkoutDate(newValue.toISOString().split("T")[0]);
+                  }
+                }}
+                disableFuture
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    margin: "normal",
+                    helperText:
+                      workoutDate === new Date().toISOString().split("T")[0] ||
+                      !workoutDate
+                        ? "Today"
+                        : `Logging for ${format(
+                            new Date(workoutDate),
+                            "dd-MM-yyyy",
+                          )}`,
+                    FormHelperTextProps: {
+                      sx: { ml: "4px" },
+                    },
+                  },
+                }}
+              />
+            </LocalizationProvider>
           )}
 
           {/* If editing, show the date as read-only */}

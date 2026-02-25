@@ -90,6 +90,11 @@ import {
 import { useTheme } from "../context/ThemeContext";
 import { useTheme as useMuiTheme } from "@mui/material/styles";
 
+// Import date picker
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+
 function AdminDashboard() {
   const navigate = useNavigate();
   const { isAdmin, adminLoading, adminData, hasPermission } = useAdmin();
@@ -1652,16 +1657,27 @@ function AdminDashboard() {
                 </MenuItem>
               </Select>
             </FormControl>
-            <TextField
-              label="Date"
-              type="date"
-              fullWidth
-              value={changelogForm.date}
-              onChange={(e) =>
-                setChangelogForm({ ...changelogForm, date: e.target.value })
-              }
-              InputLabelProps={{ shrink: true }}
-            />
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Date"
+                format="dd-MM-yyyy"
+                value={changelogForm.date ? new Date(changelogForm.date) : null}
+                onChange={(newValue) => {
+                  if (newValue) {
+                    setChangelogForm({
+                      ...changelogForm,
+                      date: newValue.toISOString().split("T")[0], // keep ISO storage
+                    });
+                  }
+                }}
+                disableFuture
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                  },
+                }}
+              />
+            </LocalizationProvider>
             <FormControlLabel
               control={
                 <Switch
