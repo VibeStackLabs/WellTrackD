@@ -23,7 +23,7 @@ import {
   TaskAlt as TaskAltIcon,
 } from "@mui/icons-material";
 import { getPublishedChangelog } from "../utils/changelogFunctions";
-import { useTheme } from "../context/ThemeContext";
+import { useTheme } from "../contexts/ThemeContext";
 
 const ChangelogDialog = ({ open, onClose }) => {
   const [entries, setEntries] = useState([]);

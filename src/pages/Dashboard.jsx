@@ -100,7 +100,7 @@ import ChangelogDialog from "../components/ChangelogDialog";
 import Profile from "../components/Profile";
 import StepTracker from "./StepTracker";
 import BMIChart from "../components/BMIChart";
-import { useTheme } from "../context/ThemeContext";
+import { useTheme } from "../contexts/ThemeContext";
 
 const PREDEFINED_STRENGTH_WORKOUTS = [
   "Bench Press",

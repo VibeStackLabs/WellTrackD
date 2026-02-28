@@ -44,7 +44,7 @@ import {
 import WorkoutPlanExcelHandler from "../components/WorkoutPlanExcelHandler";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
-import { useTheme } from "../context/ThemeContext";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function WorkoutPlans({ userId, onAddToToday }) {
   const [plans, setPlans] = useState([]);

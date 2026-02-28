@@ -87,7 +87,7 @@ import {
 } from "../utils/changelogFunctions";
 
 // Import MUI theme
-import { useTheme } from "../context/ThemeContext";
+import { useTheme } from "../contexts/ThemeContext";
 
 // Import date picker
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
