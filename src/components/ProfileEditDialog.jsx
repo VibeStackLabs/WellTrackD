@@ -582,15 +582,26 @@ export default function ProfileEditDialog({
               }}
             >
               <Typography variant="caption" display="block">
-                Account created:{" "}
+                Member since:{" "}
                 {userData?.createdAt?.toDate?.()
-                  ? new Date(userData.createdAt.toDate()).toLocaleDateString()
+                  ? new Date(userData.createdAt.toDate()).toLocaleDateString(
+                      [],
+                      {
+                        month: "long",
+                        day: "2-digit",
+                        year: "numeric",
+                      },
+                    )
                   : userData?.createdAt
-                    ? new Date(userData.createdAt).toLocaleDateString()
+                    ? new Date(userData.createdAt).toLocaleDateString([], {
+                        month: "long",
+                        day: "2-digit",
+                        year: "numeric",
+                      })
                     : "N/A"}
               </Typography>
               <Typography variant="caption" display="block">
-                User ID: {userId?.slice(0, 8)}...
+                User ID: {userId}
               </Typography>
             </Paper>
           </Box>
