@@ -139,6 +139,11 @@ function AdminDashboard() {
   const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  const [openDeleteChangelogDialog, setOpenDeleteChangelogDialog] =
+    useState(false);
+  const [selectedChangelog, setSelectedChangelog] = useState(null);
+  const [deleteChangelogLoading, setDeleteChangelogLoading] = useState(false);
+
   // Get current color theme
   const { mode, toggleMode } = useTheme();
 
@@ -210,30 +215,42 @@ function AdminDashboard() {
     }
   };
 
-  const handleDeleteChangelog = async (entry) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete changelog entry: "${entry.title}"?`,
-      )
-    ) {
-      try {
-        const result = await deleteChangelogEntry(entry.id);
-        if (result.success) {
-          showSnackbar("Changelog entry deleted successfully", "success");
-          loadChangelog();
+  const handleDeleteChangelog = (entry) => {
+    setSelectedChangelog(entry);
+    setOpenDeleteChangelogDialog(true);
+  };
 
-          // Log the action
-          logAdminAction(adminData?.uid, "DELETE_CHANGELOG", entry.id, {
-            version: entry.version,
-            title: entry.title,
-          });
-        } else {
-          showSnackbar("Failed to delete changelog entry", "error");
-        }
-      } catch (error) {
-        console.error("Error deleting changelog:", error);
-        showSnackbar("Error deleting changelog entry", "error");
+  const confirmDeleteChangelog = async () => {
+    if (!selectedChangelog) return;
+
+    setDeleteChangelogLoading(true);
+
+    try {
+      const result = await deleteChangelogEntry(selectedChangelog.id);
+
+      if (result.success) {
+        showSnackbar("Changelog entry deleted successfully", "success");
+        loadChangelog();
+
+        logAdminAction(
+          adminData?.uid,
+          "DELETE_CHANGELOG",
+          selectedChangelog.id,
+          {
+            version: selectedChangelog.version,
+            title: selectedChangelog.title,
+          },
+        );
+      } else {
+        showSnackbar("Failed to delete changelog entry", "error");
       }
+    } catch (error) {
+      console.error("Error deleting changelog:", error);
+      showSnackbar("Error deleting changelog entry", "error");
+    } finally {
+      setDeleteChangelogLoading(false);
+      setOpenDeleteChangelogDialog(false);
+      setSelectedChangelog(null);
     }
   };
 
@@ -1747,6 +1764,73 @@ function AdminDashboard() {
           </Button>
           <Button onClick={handleSaveChangelog} variant="contained">
             {editingChangelog ? "Update Entry" : "Add Entry"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Changelog Dialog */}
+      <Dialog
+        open={openDeleteChangelogDialog}
+        onClose={() => setOpenDeleteChangelogDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <DeleteIcon color="error" />
+          Delete Changelog Entry
+        </DialogTitle>
+
+        <DialogContent>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            <AlertTitle>Irreversible Action</AlertTitle>
+            This will permanently delete this changelog entry.
+          </Alert>
+
+          <Typography>Are you sure you want to delete:</Typography>
+
+          <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
+            <Typography variant="subtitle2">
+              Version: {selectedChangelog?.version}
+            </Typography>
+            <Typography variant="body1" fontWeight="medium">
+              {selectedChangelog?.title}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {selectedChangelog?.description}
+            </Typography>
+          </Paper>
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={() => setOpenDeleteChangelogDialog(false)}
+            variant="contained"
+            disabled={deleteChangelogLoading}
+            sx={{
+              bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+              color: mode === "light" ? "#333333" : "#f9f6ee",
+              "&:hover": {
+                bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            onClick={confirmDeleteChangelog}
+            variant="contained"
+            color="error"
+            startIcon={
+              deleteChangelogLoading ? (
+                <CircularProgress size={20} />
+              ) : (
+                <DeleteIcon />
+              )
+            }
+            disabled={deleteChangelogLoading}
+          >
+            {deleteChangelogLoading ? "Deleting..." : "Delete Entry"}
           </Button>
         </DialogActions>
       </Dialog>
