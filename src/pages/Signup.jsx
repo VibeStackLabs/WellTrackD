@@ -225,10 +225,7 @@ export default function Signup() {
 
             {/* Motivational text with fade */}
             <Fade in={showMessage} timeout={800}>
-              <Typography
-                variant="body1"
-                sx={{ mb: 3, color: "text.primary", }}
-              >
+              <Typography variant="body1" sx={{ mb: 3, color: "text.primary" }}>
                 {randomMessage}
               </Typography>
             </Fade>
@@ -305,7 +302,7 @@ export default function Signup() {
               />
 
               <Button
-                variant="outlined"
+                variant="contained"
                 size="large"
                 fullWidth
                 sx={{ mt: 1, borderRadius: 3 }}

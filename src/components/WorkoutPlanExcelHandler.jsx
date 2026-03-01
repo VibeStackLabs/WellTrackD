@@ -24,6 +24,7 @@ import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import CollectionsIcon from "@mui/icons-material/Collections";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function WorkoutPlanExcelHandler({
   open,
@@ -34,6 +35,9 @@ export default function WorkoutPlanExcelHandler({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
+
+  // Get current color theme
+  const { mode } = useTheme();
 
   const downloadTemplate = () => {
     try {
@@ -450,7 +454,7 @@ export default function WorkoutPlanExcelHandler({
 
           <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 3 }}>
             <Button
-              variant="outlined"
+              variant="contained"
               startIcon={<DownloadOutlinedIcon />}
               onClick={downloadTemplate}
               disabled={loading}
@@ -459,7 +463,7 @@ export default function WorkoutPlanExcelHandler({
             </Button>
 
             <Button
-              variant="outlined"
+              variant="contained"
               component="label"
               color="success"
               startIcon={
@@ -518,7 +522,7 @@ export default function WorkoutPlanExcelHandler({
           {plans.length > 0 && (
             <Box sx={{ mb: 3 }}>
               <Button
-                variant="outlined"
+                variant="contained"
                 startIcon={<CollectionsIcon />}
                 onClick={exportAllPlans}
                 fullWidth
@@ -554,7 +558,7 @@ export default function WorkoutPlanExcelHandler({
                     secondaryAction={
                       <Button
                         size="small"
-                        variant="outlined"
+                        variant="contained"
                         onClick={() => exportPlan(plan)}
                       >
                         Export
@@ -621,7 +625,18 @@ export default function WorkoutPlanExcelHandler({
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
+        <Button
+          onClick={onClose}
+          disabled={loading}
+          variant="contained"
+          sx={{
+            bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+            color: mode === "light" ? "#333333" : "#f9f6ee",
+            "&:hover": {
+              bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+            },
+          }}
+        >
           Cancel
         </Button>
       </DialogActions>

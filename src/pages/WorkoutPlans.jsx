@@ -539,7 +539,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
 
         <Box sx={{ display: "flex", gap: 1 }}>
           <Button
-            variant="outlined"
+            variant="contained"
             startIcon={<ImportExportIcon />}
             onClick={() => setExcelHandlerOpen(true)}
             disabled={saving}
@@ -548,7 +548,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           </Button>
 
           <Button
-            variant="outlined"
+            variant="contained"
             startIcon={<AddIcon />}
             onClick={() => {
               resetForm();
@@ -632,7 +632,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
             </Grid>
 
             <Button
-              variant="outlined"
+              variant="contained"
               fullWidth
               sx={{ mt: 3 }}
               onClick={addToTodayWorkout}
@@ -771,7 +771,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
             Create your first workout plan to save time logging exercises
           </Typography>
           <Button
-            variant="outlined"
+            variant="contained"
             startIcon={<AddIcon />}
             onClick={() => {
               resetForm();
@@ -935,11 +935,22 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           </Button>
         </DialogContent>
         <DialogActions>
-          <Button onClick={resetForm} disabled={saving}>
+          <Button
+            onClick={resetForm}
+            disabled={saving}
+            variant="contained"
+            sx={{
+              bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+              color: mode === "light" ? "#333333" : "#f9f6ee",
+              "&:hover": {
+                bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+              },
+            }}
+          >
             Cancel
           </Button>
           <Button
-            variant="outlined"
+            variant="contained"
             onClick={saveCustomPlan}
             disabled={
               !customPlanName.trim() ||
@@ -971,8 +982,20 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={deletePlan} color="error" variant="outlined">
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
+            variant="contained"
+            sx={{
+              bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+              color: mode === "light" ? "#333333" : "#f9f6ee",
+              "&:hover": {
+                bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button onClick={deletePlan} color="error" variant="contained">
             Delete
           </Button>
         </DialogActions>

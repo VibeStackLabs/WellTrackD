@@ -622,7 +622,7 @@ function AdminDashboard() {
           <Grid>
             <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
               <Button
-                variant="outlined"
+                variant="contained"
                 startIcon={<RefreshIcon />}
                 onClick={loadData}
                 disabled={loading}
@@ -632,7 +632,7 @@ function AdminDashboard() {
 
               {/* Dark Mode Toggle Icon */}
               <Button
-                variant="outlined"
+                variant="contained"
                 color="warning"
                 onClick={toggleMode}
                 startIcon={
@@ -648,7 +648,7 @@ function AdminDashboard() {
               </Button>
 
               <Button
-                variant="outlined"
+                variant="contained"
                 color="error"
                 startIcon={<LogoutIcon />}
                 onClick={handleLogout}
@@ -1056,7 +1056,7 @@ function AdminDashboard() {
           >
             <Typography variant="h6">Changelog Management</Typography>
             <Button
-              variant="outlined"
+              variant="contained"
               startIcon={<AddIcon />}
               onClick={() => {
                 setChangelogForm({
@@ -1288,8 +1288,20 @@ function AdminDashboard() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button onClick={handleSaveUser} variant="outlined">
+          <Button
+            onClick={() => setOpenDialog(false)}
+            variant="contained"
+            sx={{
+              bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+              color: mode === "light" ? "#333333" : "#f9f6ee",
+              "&:hover": {
+                bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button onClick={handleSaveUser} variant="contained">
             Save Changes
           </Button>
         </DialogActions>
@@ -1414,7 +1426,7 @@ function AdminDashboard() {
               </Typography>
             </Box>
             <Button
-              variant="outlined"
+              variant="contained"
               size="small"
               startIcon={<OpenInNewIcon />}
               onClick={() =>
@@ -1460,14 +1472,21 @@ function AdminDashboard() {
               setDeleteConfirmationText("");
             }}
             fullWidth
-            variant="outlined"
+            variant="contained"
             disabled={deleteLoading}
+            sx={{
+              bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+              color: mode === "light" ? "#333333" : "#f9f6ee",
+              "&:hover": {
+                bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+              },
+            }}
           >
             Cancel
           </Button>
           <Button
             onClick={handleDeleteUser}
-            variant="outlined"
+            variant="contained"
             color="error"
             startIcon={
               deleteLoading ? <CircularProgress size={20} /> : <DeleteIcon />
@@ -1504,12 +1523,20 @@ function AdminDashboard() {
           <Button
             onClick={() => setOpenResetDialog(false)}
             disabled={resetLoading}
+            variant="contained"
+            sx={{
+              bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+              color: mode === "light" ? "#333333" : "#f9f6ee",
+              "&:hover": {
+                bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+              },
+            }}
           >
             Cancel
           </Button>
           <Button
             onClick={handleSendPasswordReset}
-            variant="outlined"
+            variant="contained"
             color="success"
             startIcon={<EmailIcon />}
             disabled={resetLoading || !resetEmail}
@@ -1562,10 +1589,22 @@ function AdminDashboard() {
           </ul>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenSuspendDialog(false)}>Cancel</Button>
+          <Button
+            onClick={() => setOpenSuspendDialog(false)}
+            variant="contained"
+            sx={{
+              bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+              color: mode === "light" ? "#333333" : "#f9f6ee",
+              "&:hover": {
+                bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+              },
+            }}
+          >
+            Cancel
+          </Button>
           <Button
             onClick={confirmSuspendUser}
-            variant="outlined"
+            variant="contained"
             color="warning"
             startIcon={<BlockIcon />}
           >
@@ -1693,8 +1732,20 @@ function AdminDashboard() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenChangelogDialog(false)}>Cancel</Button>
-          <Button onClick={handleSaveChangelog} variant="outlined">
+          <Button
+            onClick={() => setOpenChangelogDialog(false)}
+            variant="contained"
+            sx={{
+              bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+              color: mode === "light" ? "#333333" : "#f9f6ee",
+              "&:hover": {
+                bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button onClick={handleSaveChangelog} variant="contained">
             {editingChangelog ? "Update Entry" : "Add Entry"}
           </Button>
         </DialogActions>

@@ -687,6 +687,14 @@ export default function Dashboard() {
           text: "Cancel",
           onClick: () => setAlertDialogOpen(false),
           color: "primary",
+          variant: "contained",
+          sx: {
+            bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+            color: mode === "light" ? "#333333" : "#f9f6ee",
+            "&:hover": {
+              bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+            },
+          },
         },
         {
           text: "Clear Cache",
@@ -714,7 +722,7 @@ export default function Dashboard() {
             setAlertDialogOpen(false);
           },
           color: "error",
-          variant: "outlined",
+          variant: "contained",
         },
       ],
     );
@@ -2457,7 +2465,7 @@ export default function Dashboard() {
         <Box display="flex" gap={2} alignItems="center">
           {/* Sync & Cache Menu Button */}
           <Button
-            variant="outlined"
+            variant="contained"
             color="primary"
             onClick={(e) => setCacheMenuAnchor(e.currentTarget)}
             disabled={isOffline || loading}
@@ -2496,7 +2504,7 @@ export default function Dashboard() {
 
           {/* Add What's New button */}
           <Button
-            variant="outlined"
+            variant="contained"
             color="success"
             onClick={() => setChangelogDialogOpen(true)}
             disabled={isOffline || loading}
@@ -2536,7 +2544,7 @@ export default function Dashboard() {
           {/* Admin Panel Button */}
           {isAdmin && (
             <Button
-              variant="outlined"
+              variant="contained"
               color="success"
               component={Link}
               to="/admin"
@@ -2554,7 +2562,7 @@ export default function Dashboard() {
 
           {/* Dark Mode Toggle Icon */}
           <Button
-            variant="outlined"
+            variant="contained"
             color="warning"
             onClick={toggleMode}
             disabled={isOffline || loading}
@@ -2570,7 +2578,7 @@ export default function Dashboard() {
 
           {/* Logout Button */}
           <Button
-            variant="outlined"
+            variant="contained"
             color="error"
             onClick={() => signOut(auth)}
             disabled={isOffline || loading}
@@ -3032,7 +3040,7 @@ export default function Dashboard() {
                             }}
                           >
                             <Button
-                              variant="outlined"
+                              variant="contained"
                               startIcon={<FitnessCenterIcon />}
                               onClick={() => setOpenWorkout(true)}
                               size="small"
@@ -3042,7 +3050,7 @@ export default function Dashboard() {
                             {workoutFilter === "today" && (
                               <>
                                 <Button
-                                  variant="outlined"
+                                  variant="contained"
                                   color="info"
                                   startIcon={<BedIcon />}
                                   onClick={() => addRestDay()}
@@ -3051,7 +3059,7 @@ export default function Dashboard() {
                                   Log Rest Day
                                 </Button>
                                 <Button
-                                  variant="outlined"
+                                  variant="contained"
                                   color="success"
                                   startIcon={<ListIcon />}
                                   onClick={() => setActiveTab(1)} // Switch to Workout Plans tab
@@ -3857,9 +3865,21 @@ export default function Dashboard() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
           <Button
-            variant="outlined"
+            variant="contained"
+            onClick={() => setDeleteTarget(null)}
+            sx={{
+              bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+              color: mode === "light" ? "#333333" : "#f9f6ee",
+              "&:hover": {
+                bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
             color="error"
             onClick={confirmDeleteWorkout}
           >
@@ -4038,14 +4058,22 @@ export default function Dashboard() {
         </DialogContent>
         <DialogActions>
           <Button
+            variant="contained"
             onClick={() => {
               setOpenBMI(false);
               clearBMIForm();
             }}
+            sx={{
+              bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+              color: mode === "light" ? "#333333" : "#f9f6ee",
+              "&:hover": {
+                bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+              },
+            }}
           >
             Cancel
           </Button>
-          <Button variant="outlined" onClick={addBMIEntry}>
+          <Button variant="contained" onClick={addBMIEntry}>
             Add / Update
           </Button>
         </DialogActions>
@@ -4432,7 +4460,7 @@ export default function Dashboard() {
 
               {/* Add Set Button */}
               <Button
-                variant="outlined"
+                variant="contained"
                 startIcon={<AddIcon />}
                 onClick={addSet}
                 sx={{ mt: 1, mb: 3 }}
@@ -4658,7 +4686,7 @@ export default function Dashboard() {
 
                 {/* Add Session Button */}
                 <Button
-                  variant="outlined"
+                  variant="contained"
                   startIcon={<AddIcon />}
                   onClick={addCardioSession}
                   sx={{ mt: 1 }}
@@ -4777,16 +4805,24 @@ export default function Dashboard() {
 
         <DialogActions>
           <Button
+            variant="contained"
             onClick={() => {
               setOpenWorkout(false);
               clearWorkoutForm();
               setEditingWorkout(null);
             }}
+            sx={{
+              bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+              color: mode === "light" ? "#333333" : "#f9f6ee",
+              "&:hover": {
+                bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+              },
+            }}
           >
             Cancel
           </Button>
           <Button
-            variant="outlined"
+            variant="contained"
             onClick={saveWorkout}
             disabled={
               workoutType === "strength"

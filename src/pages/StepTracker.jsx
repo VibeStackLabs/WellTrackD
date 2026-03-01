@@ -51,6 +51,7 @@ import googleFitService from "../services/googleFitService";
 import CountUp from "react-countup";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function StepTracker({ userId }) {
   const [stepData, setStepData] = useState([]);
@@ -68,6 +69,9 @@ export default function StepTracker({ userId }) {
   const [syncError, setSyncError] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  // Get current color theme
+  const { mode } = useTheme();
 
   // Goal states
   const [stepGoal, setStepGoal] = useState(null);
@@ -642,7 +646,7 @@ export default function StepTracker({ userId }) {
 
         <Box display="flex" gap={2} alignItems="center">
           <Button
-            variant="outlined"
+            variant="contained"
             startIcon={syncLoading ? <CircularProgress size={20} /> : <Sync />}
             onClick={handleSyncGoogleFit}
             disabled={syncLoading}
@@ -813,7 +817,7 @@ export default function StepTracker({ userId }) {
                       Set a goal to track your progress
                     </Typography>
                     <Button
-                      variant="outlined"
+                      variant="contained"
                       size="small"
                       onClick={() => setGoalDialogOpen(true)}
                       sx={{ mt: 1 }}
@@ -1149,7 +1153,19 @@ export default function StepTracker({ userId }) {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setGoalDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => setGoalDialogOpen(false)}
+            sx={{
+              bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+              color: mode === "light" ? "#333333" : "#f9f6ee",
+              "&:hover": {
+                bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+              },
+            }}
+          >
+            Cancel
+          </Button>
           <Button
             onClick={handleSetGoal}
             variant="contained"
@@ -1194,6 +1210,14 @@ export default function StepTracker({ userId }) {
           <Button
             onClick={() => setDisconnectDialogOpen(false)}
             color="primary"
+            variant="contained"
+            sx={{
+              bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+              color: mode === "light" ? "#333333" : "#f9f6ee",
+              "&:hover": {
+                bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+              },
+            }}
           >
             Cancel
           </Button>

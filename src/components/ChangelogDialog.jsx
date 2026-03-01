@@ -245,14 +245,14 @@ const ChangelogDialog = ({ open, onClose }) => {
         <Button
           startIcon={<TelegramIcon />}
           onClick={handleContactSupport}
-          variant="outlined"
+          variant="contained"
           color="primary"
         >
           Contact Support
         </Button>
         <Button
           onClick={onClose}
-          variant="outlined"
+          variant="contained"
           color="success"
           startIcon={<TaskAltIcon />}
         >

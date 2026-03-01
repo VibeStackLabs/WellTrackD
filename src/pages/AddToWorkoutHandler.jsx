@@ -15,6 +15,7 @@ import {
   Divider,
 } from "@mui/material";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function AddToWorkoutHandler({
   open,
@@ -23,6 +24,9 @@ export default function AddToWorkoutHandler({
   onConfirm,
 }) {
   const [selectedExercises, setSelectedExercises] = useState([]);
+
+  // Get current color theme
+  const { mode } = useTheme();
 
   // Reset selection when exercises change
   React.useEffect(() => {
@@ -109,7 +113,7 @@ export default function AddToWorkoutHandler({
               </Typography>
             </Box>
           </Box>
-          <Button size="small" onClick={handleSelectAll} variant="outlined">
+          <Button size="small" onClick={handleSelectAll} variant="contained">
             {selectedExercises.length === exercises.length
               ? "Deselect All"
               : "Select All"}
@@ -179,9 +183,21 @@ export default function AddToWorkoutHandler({
         </List>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
         <Button
-          variant="outlined"
+          onClick={onClose}
+          variant="contained"
+          sx={{
+            bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+            color: mode === "light" ? "#333333" : "#f9f6ee",
+            "&:hover": {
+              bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+            },
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
           onClick={handleAddSelected}
           disabled={selectedExercises.length === 0}
         >

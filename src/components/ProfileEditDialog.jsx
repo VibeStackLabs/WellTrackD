@@ -41,6 +41,7 @@ import {
 } from "firebase/auth";
 import { db, auth } from "../firebase";
 import { getAuthErrorMessage } from "../utils/authErrors";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function ProfileEditDialog({
   open,
@@ -77,6 +78,9 @@ export default function ProfileEditDialog({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [activeTab, setActiveTab] = useState("profile"); // "profile" or "password"
+
+  // Get current color theme
+  const { mode } = useTheme();
 
   // UI Avatars service - free, no API key needed
   const getUIAvatarUrl = (name, size = 200) => {
@@ -456,7 +460,7 @@ export default function ProfileEditDialog({
                 <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
                   <Button
                     size="small"
-                    variant="outlined"
+                    variant="contained"
                     color="error"
                     onClick={() => {
                       // Use UI Avatars
@@ -715,7 +719,18 @@ export default function ProfileEditDialog({
       </DialogContent>
 
       <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={onClose} disabled={loading} variant="outlined">
+        <Button
+          onClick={onClose}
+          disabled={loading}
+          variant="contained"
+          sx={{
+            bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+            color: mode === "light" ? "#333333" : "#f9f6ee",
+            "&:hover": {
+              bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+            },
+          }}
+        >
           Cancel
         </Button>
 

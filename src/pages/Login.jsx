@@ -28,6 +28,7 @@ import {
 } from "@mui/icons-material";
 import { IconButton } from "@mui/material";
 import { getAuthErrorMessage } from "../utils/authErrors";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -41,6 +42,9 @@ export default function Login() {
   const [resetSent, setResetSent] = useState(false); // reset email sent state
   const [snackbarOpen, setSnackbarOpen] = useState(false); // snackbar for success message
   const [snackbarMessage, setSnackbarMessage] = useState(""); // snackbar message
+
+  // Get current color theme
+  const { mode } = useTheme();
 
   const navigate = useNavigate();
 
@@ -165,10 +169,7 @@ export default function Login() {
 
             {/* Motivational text with fade */}
             <Fade in={showMessage} timeout={800}>
-              <Typography
-                variant="body1"
-                sx={{ mb: 3, color: "text.primary", }}
-              >
+              <Typography variant="body1" sx={{ mb: 3, color: "text.primary" }}>
                 {randomMessage}
               </Typography>
             </Fade>
@@ -220,7 +221,7 @@ export default function Login() {
                 </Button>
               </Box>
               <Button
-                variant="outlined"
+                variant="contained"
                 color="primary"
                 size="large"
                 sx={{ mt: 1, borderRadius: 3 }}
@@ -301,17 +302,29 @@ export default function Login() {
         <DialogActions>
           {!resetSent ? (
             <>
-              <Button onClick={handleForgotPasswordClose}>Cancel</Button>
+              <Button
+                onClick={handleForgotPasswordClose}
+                variant="contained"
+                sx={{
+                  bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+                  color: mode === "light" ? "#333333" : "#f9f6ee",
+                  "&:hover": {
+                    bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+                  },
+                }}
+              >
+                Cancel
+              </Button>
               <Button
                 onClick={handleForgotPassword}
-                variant="outlined"
+                variant="contained"
                 disabled={!resetEmail}
               >
                 Send Reset Link
               </Button>
             </>
           ) : (
-            <Button onClick={handleForgotPasswordClose} variant="outlined">
+            <Button onClick={handleForgotPasswordClose} variant="contained">
               Close
             </Button>
           )}

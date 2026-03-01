@@ -17,6 +17,7 @@ import {
 import { FitnessCenter, Google } from "@mui/icons-material";
 import { useGoogleLogin } from "@react-oauth/google";
 import googleFitService from "../../services/googleFitService";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const steps = ["Connect Google Account", "Grant Permissions", "Sync Data"];
 
@@ -24,6 +25,9 @@ export default function GoogleFitAuth({ open, onClose, onSuccess }) {
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Get current color theme
+  const { mode } = useTheme();
 
   const login = useGoogleLogin({
     scope: [
@@ -167,7 +171,18 @@ export default function GoogleFitAuth({ open, onClose, onSuccess }) {
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
+        <Button
+          onClick={onClose}
+          disabled={loading}
+          variant="contained"
+          sx={{
+            bgcolor: mode === "light" ? "#f9f6ee" : "#333333",
+            color: mode === "light" ? "#333333" : "#f9f6ee",
+            "&:hover": {
+              bgcolor: mode === "light" ? "#f6e4d2" : "#444444",
+            },
+          }}
+        >
           Cancel
         </Button>
         <Button
