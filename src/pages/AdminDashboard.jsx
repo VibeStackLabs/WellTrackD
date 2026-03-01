@@ -215,6 +215,16 @@ function AdminDashboard() {
     }
   };
 
+  const stripMarkdown = (text) => {
+    if (!text) return "";
+    return text
+      .replace(/#+\s/g, "")
+      .replace(/\*\*/g, "")
+      .replace(/\*/g, "")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/`([^`]+)`/g, "$1");
+  };
+
   const handleDeleteChangelog = (entry) => {
     setSelectedChangelog(entry);
     setOpenDeleteChangelogDialog(true);
@@ -1134,12 +1144,23 @@ function AdminDashboard() {
                         />
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" fontWeight="medium">
-                          {entry.title}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {entry.description?.substring(0, 60)}...
-                        </Typography>
+                        <Box sx={{ maxWidth: 300 }}>
+                          <Typography variant="body2" fontWeight="medium">
+                            {entry.title}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {stripMarkdown(entry.description)}
+                          </Typography>
+                        </Box>
                       </TableCell>
                       <TableCell>
                         <Chip
@@ -1675,6 +1696,7 @@ function AdminDashboard() {
               }
               required
               placeholder="Describe the changes in detail..."
+              helperText="Supports Markdown: **bold**, # Headers, - lists, [links](url)"
             />
             <FormControl fullWidth>
               <InputLabel>Type</InputLabel>

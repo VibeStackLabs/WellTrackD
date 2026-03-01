@@ -24,6 +24,8 @@ import {
 } from "@mui/icons-material";
 import { getPublishedChangelog } from "../utils/changelogFunctions";
 import { useTheme } from "../contexts/ThemeContext";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const ChangelogDialog = ({ open, onClose }) => {
   const [entries, setEntries] = useState([]);
@@ -211,13 +213,14 @@ const ChangelogDialog = ({ open, onClose }) => {
                   {entry.title}
                 </Typography>
 
-                <Typography
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
                   variant="body2"
                   color="text.secondary"
                   sx={{ whiteSpace: "pre-line" }}
                 >
                   {entry.description}
-                </Typography>
+                </ReactMarkdown>
 
                 {index === 0 && (
                   <Box sx={{ mt: 1, pt: 1, borderTop: "1px dashed #e0e0e0" }}>
