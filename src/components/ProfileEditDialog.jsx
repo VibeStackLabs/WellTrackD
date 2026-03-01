@@ -572,12 +572,16 @@ export default function ProfileEditDialog({
             </Box>
 
             {/* Account Info */}
-            <Paper variant="outlined" sx={{ p: 2 }}>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                display="block"
-              >
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2,
+                bgcolor: mode === "light" ? "#faf5e7" : "#333333",
+                color: mode === "light" ? "#333333" : "#faf5e7",
+                borderRadius: 2,
+              }}
+            >
+              <Typography variant="caption" display="block">
                 Account created:{" "}
                 {userData?.createdAt?.toDate?.()
                   ? new Date(userData.createdAt.toDate()).toLocaleDateString()
@@ -585,11 +589,7 @@ export default function ProfileEditDialog({
                     ? new Date(userData.createdAt).toLocaleDateString()
                     : "N/A"}
               </Typography>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                display="block"
-              >
+              <Typography variant="caption" display="block">
                 User ID: {userId?.slice(0, 8)}...
               </Typography>
             </Paper>
