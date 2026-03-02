@@ -116,6 +116,34 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
     loadPlans();
   }, [userId]);
 
+  const handleNumberChange =
+    (setter, options = {}) =>
+    (e) => {
+      const value = e.target.value;
+      const { decimal = false, max, min = 0 } = options;
+
+      // Allow empty string
+      if (value === "") {
+        setter(value);
+        return;
+      }
+
+      // Regex for numbers only (with or without decimals)
+      const regex = decimal ? /^\d*\.?\d*$/ : /^\d*$/;
+
+      if (!regex.test(value)) return;
+
+      const numValue = Number(value);
+
+      // Check min value
+      if (min !== undefined && numValue < min) return;
+
+      // Check max value
+      if (max !== undefined && numValue > max) return;
+
+      setter(value);
+    };
+
   const handleAddExercise = () => {
     const newId =
       exercises.length > 0 ? Math.max(...exercises.map((e) => e.id)) + 1 : 1;
@@ -467,28 +495,18 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           <Grid size={{ xs: 4 }}>
             <TextField
               label="Sets"
-              type="number"
+              type="text"
+              inputMode="numeric"
               fullWidth
               value={exercise.sets}
-              onChange={(e) => {
-                const value = e.target.value;
-                // Allow empty string or positive numbers
-                if (value === "" || Number(value) >= 0) {
-                  handleExerciseChange(index, "sets", value);
-                }
-              }}
-              onKeyDown={(e) => {
-                // Prevent entering negative sign
-                if (e.key === "-" || e.key === "e") {
-                  e.preventDefault();
-                }
-              }}
+              onChange={handleNumberChange(
+                (value) => handleExerciseChange(index, "sets", value),
+                { decimal: false, max: 10, min: 0 },
+              )}
               size="small"
               disabled={saving}
               inputProps={{
-                min: 0,
-                max: 10,
-                step: 1,
+                pattern: "[0-9]*",
               }}
               error={exercise.sets !== "" && Number(exercise.sets) < 0}
               helperText={
@@ -501,28 +519,18 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           <Grid size={{ xs: 4 }}>
             <TextField
               label="Reps"
-              type="number"
+              type="text"
+              inputMode="numeric"
               fullWidth
               value={exercise.reps}
-              onChange={(e) => {
-                const value = e.target.value;
-                // Allow empty string or positive numbers
-                if (value === "" || Number(value) >= 0) {
-                  handleExerciseChange(index, "reps", value);
-                }
-              }}
-              onKeyDown={(e) => {
-                // Prevent entering negative sign
-                if (e.key === "-" || e.key === "e") {
-                  e.preventDefault();
-                }
-              }}
+              onChange={handleNumberChange(
+                (value) => handleExerciseChange(index, "reps", value),
+                { decimal: false, max: 50, min: 0 },
+              )}
               size="small"
               disabled={saving}
               inputProps={{
-                min: 0,
-                max: 50,
-                step: 1,
+                pattern: "[0-9]*",
               }}
               error={exercise.reps !== "" && Number(exercise.reps) < 0}
               helperText={
@@ -535,27 +543,18 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           <Grid size={{ xs: 4 }}>
             <TextField
               label="Weight"
-              type="number"
+              type="text"
+              inputMode="decimal"
               fullWidth
               value={exercise.weight}
-              onChange={(e) => {
-                const value = e.target.value;
-                // Allow empty string or positive numbers
-                if (value === "" || Number(value) >= 0) {
-                  handleExerciseChange(index, "weight", value);
-                }
-              }}
-              onKeyDown={(e) => {
-                // Prevent entering negative sign
-                if (e.key === "-" || e.key === "e") {
-                  e.preventDefault();
-                }
-              }}
+              onChange={handleNumberChange(
+                (value) => handleExerciseChange(index, "weight", value),
+                { decimal: true, max: 10000, min: 0 },
+              )}
               size="small"
               disabled={saving}
               inputProps={{
-                min: 0,
-                step: 0.5,
+                pattern: "[0-9]*\\.?[0-9]*",
               }}
               error={exercise.weight !== "" && Number(exercise.weight) < 0}
               helperText={

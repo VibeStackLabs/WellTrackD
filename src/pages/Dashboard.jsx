@@ -241,6 +241,34 @@ export default function Dashboard() {
   const [alertDialogSeverity, setAlertDialogSeverity] = useState("info");
   const [alertDialogActions, setAlertDialogActions] = useState([]);
 
+  const handleNumberChange =
+    (setter, options = {}) =>
+    (e) => {
+      const value = e.target.value;
+      const { decimal = false, max, min = 0 } = options;
+
+      // Allow empty string
+      if (value === "") {
+        setter(value);
+        return;
+      }
+
+      // Regex for numbers only (with or without decimals)
+      const regex = decimal ? /^\d*\.?\d*$/ : /^\d*$/;
+
+      if (!regex.test(value)) return;
+
+      const numValue = Number(value);
+
+      // Check min value
+      if (min !== undefined && numValue < min) return;
+
+      // Check max value
+      if (max !== undefined && numValue > max) return;
+
+      setter(value);
+    };
+
   // Handle profile updates from Profile component
   const handleProfileUpdate = (updatedProfile) => {
     setProfile(updatedProfile);
@@ -3995,26 +4023,19 @@ export default function Dashboard() {
           <Box sx={{ display: "flex", gap: 2 }}>
             <TextField
               label="Weight"
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={weight}
-              onChange={(e) => {
-                const value = e.target.value;
-                // Allow empty string or positive numbers
-                if (value === "" || Number(value) > 0) {
-                  setWeight(value);
-                }
-              }}
-              onKeyDown={(e) => {
-                // Prevent entering negative sign
-                if (e.key === "-" || e.key === "e") {
-                  e.preventDefault();
-                }
-              }}
+              onChange={handleNumberChange(setWeight, {
+                decimal: true,
+                max: 400,
+                min: 0.1,
+              })}
               fullWidth
               margin="dense"
               inputProps={{
-                min: "0.1",
-                step: "0.1",
+                pattern: "[0-9]*\\.?[0-9]*",
+                style: { fontSize: "1rem" },
               }}
               error={weight !== "" && Number(weight) <= 0}
               helperText={
@@ -4039,26 +4060,18 @@ export default function Dashboard() {
             {heightUnit === "cm" ? (
               <TextField
                 label="Height (cm)"
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={heightCm}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  // Allow empty string or positive numbers
-                  if (value === "" || Number(value) > 0) {
-                    setHeightCm(value);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  // Prevent entering negative sign
-                  if (e.key === "-" || e.key === "e") {
-                    e.preventDefault();
-                  }
-                }}
+                onChange={handleNumberChange(setHeightCm, {
+                  decimal: true,
+                  max: 300,
+                  min: 1,
+                })}
                 fullWidth
                 margin="dense"
                 inputProps={{
-                  min: "1",
-                  step: "0.1",
+                  pattern: "[0-9]*\\.?[0-9]*",
                 }}
                 error={heightCm !== "" && Number(heightCm) <= 0}
                 helperText={
@@ -4071,27 +4084,14 @@ export default function Dashboard() {
               <>
                 <TextField
                   label="Feet"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={heightFt}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    // Allow empty string or positive numbers (including 0)
-                    if (value === "" || Number(value) >= 0) {
-                      setHeightFt(value);
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    // Prevent entering negative sign
-                    if (e.key === "-" || e.key === "e") {
-                      e.preventDefault();
-                    }
-                  }}
+                  onChange={handleNumberChange(setHeightFt, { max: 8 })}
                   sx={{ width: 100 }}
                   margin="dense"
                   inputProps={{
-                    min: "0",
-                    max: "8",
-                    step: "1",
+                    pattern: "[0-9]*",
                   }}
                   error={
                     heightFt !== "" &&
@@ -4107,30 +4107,14 @@ export default function Dashboard() {
                 />
                 <TextField
                   label="Inches"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={heightIn}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    // Allow empty string or numbers between 0 and 11
-                    if (
-                      value === "" ||
-                      (Number(value) >= 0 && Number(value) <= 11)
-                    ) {
-                      setHeightIn(value);
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    // Prevent entering negative sign
-                    if (e.key === "-" || e.key === "e") {
-                      e.preventDefault();
-                    }
-                  }}
+                  onChange={handleNumberChange(setHeightIn, { max: 11 })}
                   sx={{ width: 100 }}
                   margin="dense"
                   inputProps={{
-                    min: "0",
-                    max: "11",
-                    step: "1",
+                    pattern: "[0-9]*",
                   }}
                   error={
                     heightIn !== "" &&
@@ -4541,26 +4525,17 @@ export default function Dashboard() {
                 >
                   <Typography variant="body1">#{set.setNumber}</Typography>
                   <TextField
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     placeholder="Reps"
                     value={set.reps}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Allow empty string or positive numbers
-                      if (value === "" || Number(value) >= 0) {
-                        updateSet(index, "reps", value);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      // Prevent entering negative sign
-                      if (e.key === "-" || e.key === "e") {
-                        e.preventDefault();
-                      }
-                    }}
+                    onChange={handleNumberChange(
+                      (value) => updateSet(index, "reps", value),
+                      { max: 100 },
+                    )}
                     size="small"
                     inputProps={{
-                      min: 0,
-                      step: 1,
+                      pattern: "[0-9]*",
                     }}
                     error={set.reps !== "" && Number(set.reps) < 0}
                     helperText={
@@ -4570,26 +4545,17 @@ export default function Dashboard() {
                     }
                   />
                   <TextField
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="Weight"
                     value={set.weight}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Allow empty string or positive numbers
-                      if (value === "" || Number(value) >= 0) {
-                        updateSet(index, "weight", value);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      // Prevent entering negative sign
-                      if (e.key === "-" || e.key === "e") {
-                        e.preventDefault();
-                      }
-                    }}
+                    onChange={handleNumberChange(
+                      (value) => updateSet(index, "weight", value),
+                      { decimal: true, max: 10000, min: 0 },
+                    )}
                     size="small"
                     inputProps={{
-                      min: 0,
-                      step: 0.5,
+                      pattern: "[0-9]*\\.?[0-9]*",
                     }}
                     error={set.weight !== "" && Number(set.weight) < 0}
                     helperText={
@@ -4730,31 +4696,23 @@ export default function Dashboard() {
                       <Grid size={{ xs: 2.6 }}>
                         <TextField
                           label="Duration (min)"
-                          type="number"
+                          type="text"
+                          inputMode="decimal"
                           value={session.duration}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            // Allow empty string or positive numbers
-                            if (value === "" || Number(value) >= 0) {
+                          onChange={handleNumberChange(
+                            (value) =>
                               updateCardioSession(
                                 session.id,
                                 "duration",
                                 value,
-                              );
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            // Prevent entering negative sign
-                            if (e.key === "-" || e.key === "e") {
-                              e.preventDefault();
-                            }
-                          }}
+                              ),
+                            { decimal: true },
+                          )}
                           fullWidth
                           size="small"
                           required
                           inputProps={{
-                            step: "0.5",
-                            min: "0",
+                            pattern: "[0-9]*\\.?[0-9]*",
                           }}
                           error={
                             session.duration !== "" &&
@@ -4781,27 +4739,19 @@ export default function Dashboard() {
                                 ? `Speed (${speedUnit})`
                                 : "Speed (RPM)"
                             }
-                            type="number"
+                            type="text"
+                            inputMode="decimal"
                             value={session.speed}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              // Allow empty string or positive numbers
-                              if (value === "" || Number(value) >= 0) {
-                                updateCardioSession(session.id, "speed", value);
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              // Prevent entering negative sign
-                              if (e.key === "-" || e.key === "e") {
-                                e.preventDefault();
-                              }
-                            }}
+                            onChange={handleNumberChange(
+                              (value) =>
+                                updateCardioSession(session.id, "speed", value),
+                              { decimal: true },
+                            )}
                             fullWidth
                             size="small"
                             required
                             inputProps={{
-                              step: "0.1",
-                              min: "0",
+                              pattern: "[0-9]*\\.?[0-9]*",
                             }}
                             error={
                               session.speed !== "" && Number(session.speed) < 0
@@ -4837,34 +4787,22 @@ export default function Dashboard() {
                         <Grid size={{ xs: 2.6 }}>
                           <TextField
                             label="Incline (%)"
-                            type="number"
+                            type="text"
+                            inputMode="decimal"
                             value={session.incline}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              // Allow empty string or numbers between 0 and 15
-                              if (
-                                value === "" ||
-                                (Number(value) >= 0 && Number(value) <= 15)
-                              ) {
+                            onChange={handleNumberChange(
+                              (value) =>
                                 updateCardioSession(
                                   session.id,
                                   "incline",
                                   value,
-                                );
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              // Prevent entering negative sign
-                              if (e.key === "-" || e.key === "e") {
-                                e.preventDefault();
-                              }
-                            }}
+                                ),
+                              { decimal: true, max: 15 },
+                            )}
                             fullWidth
                             size="small"
                             inputProps={{
-                              step: "0.5",
-                              min: "0",
-                              max: "15",
+                              pattern: "[0-9]*\\.?[0-9]*",
                             }}
                             error={
                               session.incline !== "" &&
@@ -4893,31 +4831,23 @@ export default function Dashboard() {
                         <Grid size={{ xs: 2.8 }}>
                           <TextField
                             label="Resistance Level"
-                            type="number"
+                            type="text"
+                            inputMode="decimal"
                             value={session.resistance || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              // Allow empty string or positive numbers
-                              if (value === "" || Number(value) >= 0) {
+                            onChange={handleNumberChange(
+                              (value) =>
                                 updateCardioSession(
                                   session.id,
                                   "resistance",
                                   value,
-                                );
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              // Prevent entering negative sign
-                              if (e.key === "-" || e.key === "e") {
-                                e.preventDefault();
-                              }
-                            }}
+                                ),
+                              { decimal: true },
+                            )}
                             fullWidth
                             size="small"
                             placeholder="Optional"
                             inputProps={{
-                              step: "0.5",
-                              min: "0",
+                              pattern: "[0-9]*\\.?[0-9]*",
                             }}
                             error={
                               session.resistance !== "" &&
@@ -4950,27 +4880,20 @@ export default function Dashboard() {
               {/* Distance */}
               <TextField
                 label="Total Distance"
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={distance}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  // Allow empty string or positive numbers
-                  if (value === "" || Number(value) >= 0) {
+                onChange={handleNumberChange(
+                  (value) => {
                     setDistance(value);
                     setIsDistanceEdited(true);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  // Prevent entering negative sign
-                  if (e.key === "-" || e.key === "e") {
-                    e.preventDefault();
-                  }
-                }}
+                  },
+                  { decimal: true },
+                )}
                 fullWidth
                 margin="normal"
                 inputProps={{
-                  step: "0.01",
-                  min: "0",
+                  pattern: "[0-9]*\\.?[0-9]*",
                 }}
                 error={distance !== "" && Number(distance) < 0}
                 helperText={
