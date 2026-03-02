@@ -262,3 +262,23 @@ body {
   right: 20px;
   animation-delay: 1.5s;
 }
+
+/* Add will-change for better animation performance */
+.color-splash,
+.sparkle,
+.decoration {
+  will-change: transform, opacity;
+  transform: translateZ(0); /* Force GPU acceleration */
+  backface-visibility: hidden;
+}
+
+/* Reduce animation complexity when user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .color-splash,
+  .sparkle,
+  .decoration,
+  .festival-message-banner {
+    animation: none !important;
+    display: none;
+  }
+}

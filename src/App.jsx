@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -26,8 +26,10 @@ import { doc, getDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { AdminProvider } from "./contexts/AdminContext";
 import { GoogleOAuthProvider } from "@react-oauth/google";
-import FestivalBanner from "./components/FestivalBanner";
-import FestivalEffects from "./components/FestivalEffects";
+
+// Lazy load festival effects since they're not critical for initial render
+const FestivalEffects = lazy(() => import("./components/FestivalEffects"));
+const FestivalBanner = lazy(() => import("./components/FestivalBanner"));
 
 // Google OAuth client ID
 const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID";
@@ -88,8 +90,10 @@ export default function App() {
   return (
     <>
       <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-        <FestivalEffects />
-        <FestivalBanner />
+        <Suspense fallback={null}>
+          <FestivalEffects />
+          <FestivalBanner />
+        </Suspense>
         <AdminProvider>
           <Router>
             <Routes>

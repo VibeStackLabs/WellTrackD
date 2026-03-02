@@ -1,4 +1,10 @@
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  useMemo,
+} from "react";
 import {
   createTheme,
   ThemeProvider as MuiThemeProvider,
@@ -681,18 +687,21 @@ export const ThemeProvider = ({ children }) => {
     ButtonText: "text-[#f9f6ee]",
   };
 
+  const contextValue = useMemo(
+    () => ({
+      mode,
+      toggleMode,
+      tailwindTheme,
+      currentTheme,
+      currentFestival,
+      isFestivalDay: currentFestival !== null,
+      festivalEffects,
+    }),
+    [mode, currentFestival, festivalEffects],
+  );
+
   return (
-    <ThemeContext.Provider
-      value={{
-        mode,
-        toggleMode,
-        tailwindTheme,
-        currentTheme,
-        currentFestival,
-        isFestivalDay: currentFestival !== null,
-        festivalEffects,
-      }}
-    >
+    <ThemeContext.Provider value={contextValue}>
       <MuiThemeProvider theme={muiTheme}>{children}</MuiThemeProvider>
     </ThemeContext.Provider>
   );
