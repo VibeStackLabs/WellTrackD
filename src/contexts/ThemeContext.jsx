@@ -3,6 +3,7 @@ import {
   createTheme,
   ThemeProvider as MuiThemeProvider,
 } from "@mui/material/styles";
+import { getCurrentFestival } from "../utils/festivalDates";
 
 const ThemeContext = createContext();
 
@@ -12,6 +13,50 @@ export const ThemeProvider = ({ children }) => {
     // Ensure we only return 'light' or 'dark'
     return saved === "dark" ? "dark" : "light";
   });
+
+  // New state for festival theme
+  const [currentFestival, setCurrentFestival] = useState(null);
+
+  // Check for festivals on mount and when date changes
+  useEffect(() => {
+    const checkFestival = () => {
+      const festival = getCurrentFestival();
+      setCurrentFestival(festival);
+    };
+
+    // Check immediately on mount
+    checkFestival();
+
+    // Calculate time until next midnight
+    const now = new Date();
+    const nextMidnight = new Date(now);
+    nextMidnight.setHours(24, 0, 0, 0); // Next day at 00:00:00
+    const timeUntilMidnight = nextMidnight - now;
+
+    // Set timeout for exact midnight
+    const midnightTimeout = setTimeout(() => {
+      checkFestival();
+
+      // Then set up daily interval for subsequent midnights
+      const dailyInterval = setInterval(checkFestival, 24 * 60 * 60 * 1000); // 24 hours
+
+      // Clean up daily interval on unmount
+      return () => clearInterval(dailyInterval);
+    }, timeUntilMidnight);
+
+    // Clean up timeout on unmount
+    return () => {
+      clearTimeout(midnightTimeout);
+    };
+  }, []);
+
+  const festivalEffects = {
+    hasSparkles: currentFestival?.colors[mode]?.sparkle || false,
+    festivalColors: {
+      primary: currentFestival?.colors[mode]?.overlay1,
+      secondary: currentFestival?.colors[mode]?.overlay2,
+    },
+  };
 
   useEffect(() => {
     localStorage.setItem("themeMode", mode);
@@ -26,9 +71,14 @@ export const ThemeProvider = ({ children }) => {
     setMode((prev) => (prev === "light" ? "dark" : "light"));
   };
 
+  // Get festival colors based on current mode
+  const festivalColors = currentFestival?.colors[mode] || null;
+
   // Light theme
   const lightTheme = {
-    background: "linear-gradient(180deg, #f9f6ee 0%, #f6e4d2 100%)",
+    background:
+      festivalColors?.background ||
+      "linear-gradient(180deg, #f9f6ee 0%, #f6e4d2 100%)",
     surface: "#f9f6ee",
     surfaceTransparent: "#f9f6ee80",
     card: "#f9f6ee",
@@ -42,11 +92,15 @@ export const ThemeProvider = ({ children }) => {
     Button: "#333333",
     ButtonHover: "#444444",
     ButtonText: "#f9f6ee",
+    festivalMessage: currentFestival?.message || null,
+    festivalColors: festivalColors,
   };
 
   // Dark theme
   const darkTheme = {
-    background: "linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 100%)",
+    background:
+      festivalColors?.background ||
+      "linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 100%)",
     surface: "#1a1a1a",
     surfaceTransparent: "#1a1a1a80",
     card: "#1a1a1a",
@@ -60,6 +114,8 @@ export const ThemeProvider = ({ children }) => {
     Button: "#f9f6ee",
     ButtonHover: "#f6e4d2",
     ButtonText: "#333333",
+    festivalMessage: currentFestival?.message || null,
+    festivalColors: festivalColors,
   };
 
   // Current theme
@@ -632,6 +688,9 @@ export const ThemeProvider = ({ children }) => {
         toggleMode,
         tailwindTheme,
         currentTheme,
+        currentFestival,
+        isFestivalDay: currentFestival !== null,
+        festivalEffects,
       }}
     >
       <MuiThemeProvider theme={muiTheme}>{children}</MuiThemeProvider>

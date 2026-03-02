@@ -62,3 +62,203 @@ body {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #3d3d3d;
 }
+
+/* Festival Message Banner */
+.festival-message-banner {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  padding: 12px 24px;
+  border-radius: 50px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  animation:
+    slideDown 0.5s ease,
+    float 3s ease-in-out infinite;
+  font-weight: 600;
+  font-size: 1.2rem;
+  border: 2px solid rgba(255, 215, 0, 0.5);
+  color: #333;
+}
+
+.dark .festival-message-banner {
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+/* Sparkle Animation */
+@keyframes sparkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
+  }
+}
+
+.sparkle {
+  position: fixed;
+  pointer-events: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: gold;
+  box-shadow:
+    0 0 20px gold,
+    0 0 40px orange;
+  animation: sparkle 2s ease-in-out infinite;
+  z-index: 5;
+}
+
+/* Color Splash Animation */
+@keyframes splash {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1.5) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.color-splash {
+  position: fixed;
+  pointer-events: none;
+  border-radius: 50%;
+  filter: blur(30px);
+  animation: splash 6s ease-out infinite;
+  z-index: 4;
+  mix-blend-mode: overlay;
+}
+
+/* Dark mode adjustments */
+.dark .color-splash {
+  mix-blend-mode: screen;
+  opacity: 0.3;
+}
+
+/* Animations */
+@keyframes slideDown {
+  from {
+    transform: translate(-50%, -100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+  50% {
+    transform: translate(-50%, -10px);
+  }
+}
+
+/* Festival-specific overlays */
+.festival-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.festival-overlay::before,
+.festival-overlay::after {
+  content: "";
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.3;
+  animation: float 20s ease-in-out infinite;
+}
+
+.festival-overlay::before {
+  top: -100px;
+  left: -100px;
+  background: var(--festival-color-1, #ff4d4d);
+}
+
+.festival-overlay::after {
+  bottom: -100px;
+  right: -100px;
+  background: var(--festival-color-2, #4dff4d);
+  animation-delay: -10s;
+}
+
+/* Festival Effects Container */
+.festival-effects,
+.sparkle-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+}
+
+/* Corner Decorations */
+.corner-decorations {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.decoration {
+  position: fixed;
+  font-size: 2.5rem;
+  opacity: 0.8;
+  animation: float 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+}
+
+.decoration.top-left {
+  top: 20px;
+  left: 20px;
+  animation-delay: 0s;
+}
+
+.decoration.top-right {
+  top: 20px;
+  right: 20px;
+  animation-delay: 0.5s;
+}
+
+.decoration.bottom-left {
+  bottom: 20px;
+  left: 20px;
+  animation-delay: 1s;
+}
+
+.decoration.bottom-right {
+  bottom: 20px;
+  right: 20px;
+  animation-delay: 1.5s;
+}

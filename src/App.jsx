@@ -26,6 +26,8 @@ import { doc, getDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { AdminProvider } from "./contexts/AdminContext";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import FestivalBanner from "./components/FestivalBanner";
+import FestivalEffects from "./components/FestivalEffects";
 
 // Google OAuth client ID
 const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID";
@@ -86,6 +88,8 @@ export default function App() {
   return (
     <>
       <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <FestivalEffects />
+        <FestivalBanner />
         <AdminProvider>
           <Router>
             <Routes>
