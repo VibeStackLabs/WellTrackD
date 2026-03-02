@@ -157,6 +157,23 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
       return;
     }
 
+    // Check for negative values in exercises
+    const hasNegativeValues = exercises.some((ex) => {
+      return (
+        (ex.sets !== "" && Number(ex.sets) < 0) ||
+        (ex.reps !== "" && Number(ex.reps) < 0) ||
+        (ex.weight !== "" && Number(ex.weight) < 0)
+      );
+    });
+
+    if (hasNegativeValues) {
+      setValidationMessage(
+        "Please fix negative values in sets, reps, or weight fields",
+      );
+      setValidationDialogOpen(true);
+      return;
+    }
+
     setSaving(true);
     try {
       const planId = editingPlan
@@ -453,12 +470,32 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
               type="number"
               fullWidth
               value={exercise.sets}
-              onChange={(e) =>
-                handleExerciseChange(index, "sets", e.target.value)
-              }
+              onChange={(e) => {
+                const value = e.target.value;
+                // Allow empty string or positive numbers
+                if (value === "" || Number(value) >= 0) {
+                  handleExerciseChange(index, "sets", value);
+                }
+              }}
+              onKeyDown={(e) => {
+                // Prevent entering negative sign
+                if (e.key === "-" || e.key === "e") {
+                  e.preventDefault();
+                }
+              }}
               size="small"
               disabled={saving}
-              inputProps={{ min: 0, max: 10 }}
+              inputProps={{
+                min: 0,
+                max: 10,
+                step: 1,
+              }}
+              error={exercise.sets !== "" && Number(exercise.sets) < 0}
+              helperText={
+                exercise.sets !== "" && Number(exercise.sets) < 0
+                  ? "Sets cannot be negative"
+                  : ""
+              }
             />
           </Grid>
           <Grid size={{ xs: 4 }}>
@@ -467,12 +504,32 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
               type="number"
               fullWidth
               value={exercise.reps}
-              onChange={(e) =>
-                handleExerciseChange(index, "reps", e.target.value)
-              }
+              onChange={(e) => {
+                const value = e.target.value;
+                // Allow empty string or positive numbers
+                if (value === "" || Number(value) >= 0) {
+                  handleExerciseChange(index, "reps", value);
+                }
+              }}
+              onKeyDown={(e) => {
+                // Prevent entering negative sign
+                if (e.key === "-" || e.key === "e") {
+                  e.preventDefault();
+                }
+              }}
               size="small"
               disabled={saving}
-              inputProps={{ min: 0, max: 50 }}
+              inputProps={{
+                min: 0,
+                max: 50,
+                step: 1,
+              }}
+              error={exercise.reps !== "" && Number(exercise.reps) < 0}
+              helperText={
+                exercise.reps !== "" && Number(exercise.reps) < 0
+                  ? "Reps cannot be negative"
+                  : ""
+              }
             />
           </Grid>
           <Grid size={{ xs: 4 }}>
@@ -481,11 +538,31 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
               type="number"
               fullWidth
               value={exercise.weight}
-              onChange={(e) =>
-                handleExerciseChange(index, "weight", e.target.value)
-              }
+              onChange={(e) => {
+                const value = e.target.value;
+                // Allow empty string or positive numbers
+                if (value === "" || Number(value) >= 0) {
+                  handleExerciseChange(index, "weight", value);
+                }
+              }}
+              onKeyDown={(e) => {
+                // Prevent entering negative sign
+                if (e.key === "-" || e.key === "e") {
+                  e.preventDefault();
+                }
+              }}
               size="small"
               disabled={saving}
+              inputProps={{
+                min: 0,
+                step: 0.5,
+              }}
+              error={exercise.weight !== "" && Number(exercise.weight) < 0}
+              helperText={
+                exercise.weight !== "" && Number(exercise.weight) < 0
+                  ? "Weight cannot be negative"
+                  : ""
+              }
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">

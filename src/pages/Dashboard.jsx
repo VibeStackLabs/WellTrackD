@@ -3997,9 +3997,31 @@ export default function Dashboard() {
               label="Weight"
               type="number"
               value={weight}
-              onChange={(e) => setWeight(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Allow empty string or positive numbers
+                if (value === "" || Number(value) > 0) {
+                  setWeight(value);
+                }
+              }}
+              onKeyDown={(e) => {
+                // Prevent entering negative sign
+                if (e.key === "-" || e.key === "e") {
+                  e.preventDefault();
+                }
+              }}
               fullWidth
               margin="dense"
+              inputProps={{
+                min: "0.1",
+                step: "0.1",
+              }}
+              error={weight !== "" && Number(weight) <= 0}
+              helperText={
+                weight !== "" && Number(weight) <= 0
+                  ? "Weight must be greater than 0"
+                  : ""
+              }
             />
             <TextField
               select
@@ -4019,9 +4041,31 @@ export default function Dashboard() {
                 label="Height (cm)"
                 type="number"
                 value={heightCm}
-                onChange={(e) => setHeightCm(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Allow empty string or positive numbers
+                  if (value === "" || Number(value) > 0) {
+                    setHeightCm(value);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  // Prevent entering negative sign
+                  if (e.key === "-" || e.key === "e") {
+                    e.preventDefault();
+                  }
+                }}
                 fullWidth
                 margin="dense"
+                inputProps={{
+                  min: "1",
+                  step: "0.1",
+                }}
+                error={heightCm !== "" && Number(heightCm) <= 0}
+                helperText={
+                  heightCm !== "" && Number(heightCm) <= 0
+                    ? "Height must be greater than 0"
+                    : ""
+                }
               />
             ) : (
               <>
@@ -4029,17 +4073,76 @@ export default function Dashboard() {
                   label="Feet"
                   type="number"
                   value={heightFt}
-                  onChange={(e) => setHeightFt(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Allow empty string or positive numbers (including 0)
+                    if (value === "" || Number(value) >= 0) {
+                      setHeightFt(value);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    // Prevent entering negative sign
+                    if (e.key === "-" || e.key === "e") {
+                      e.preventDefault();
+                    }
+                  }}
                   sx={{ width: 100 }}
                   margin="dense"
+                  inputProps={{
+                    min: "0",
+                    max: "8",
+                    step: "1",
+                  }}
+                  error={
+                    heightFt !== "" &&
+                    (Number(heightFt) < 0 || Number(heightFt) > 8)
+                  }
+                  helperText={
+                    heightFt !== "" && Number(heightFt) < 0
+                      ? "Feet cannot be negative"
+                      : heightFt !== "" && Number(heightFt) > 8
+                        ? "Feet cannot exceed 8"
+                        : ""
+                  }
                 />
                 <TextField
                   label="Inches"
                   type="number"
                   value={heightIn}
-                  onChange={(e) => setHeightIn(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Allow empty string or numbers between 0 and 11
+                    if (
+                      value === "" ||
+                      (Number(value) >= 0 && Number(value) <= 11)
+                    ) {
+                      setHeightIn(value);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    // Prevent entering negative sign
+                    if (e.key === "-" || e.key === "e") {
+                      e.preventDefault();
+                    }
+                  }}
                   sx={{ width: 100 }}
                   margin="dense"
+                  inputProps={{
+                    min: "0",
+                    max: "11",
+                    step: "1",
+                  }}
+                  error={
+                    heightIn !== "" &&
+                    (Number(heightIn) < 0 || Number(heightIn) > 11)
+                  }
+                  helperText={
+                    heightIn !== "" && Number(heightIn) < 0
+                      ? "Inches cannot be negative"
+                      : heightIn !== "" && Number(heightIn) > 11
+                        ? "Inches cannot exceed 11"
+                        : ""
+                  }
                 />
               </>
             )}
@@ -4073,7 +4176,18 @@ export default function Dashboard() {
           >
             Cancel
           </Button>
-          <Button variant="contained" onClick={addBMIEntry}>
+          <Button
+            variant="contained"
+            onClick={addBMIEntry}
+            disabled={
+              !weight ||
+              Number(weight) <= 0 ||
+              (heightUnit === "cm" && (!heightCm || Number(heightCm) <= 0)) ||
+              (heightUnit === "ft/in" &&
+                ((heightFt && Number(heightFt) < 0) ||
+                  (heightIn && Number(heightIn) < 0)))
+            }
+          >
             Add / Update
           </Button>
         </DialogActions>
@@ -4430,15 +4544,59 @@ export default function Dashboard() {
                     type="number"
                     placeholder="Reps"
                     value={set.reps}
-                    onChange={(e) => updateSet(index, "reps", e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Allow empty string or positive numbers
+                      if (value === "" || Number(value) >= 0) {
+                        updateSet(index, "reps", value);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      // Prevent entering negative sign
+                      if (e.key === "-" || e.key === "e") {
+                        e.preventDefault();
+                      }
+                    }}
                     size="small"
+                    inputProps={{
+                      min: 0,
+                      step: 1,
+                    }}
+                    error={set.reps !== "" && Number(set.reps) < 0}
+                    helperText={
+                      set.reps !== "" && Number(set.reps) < 0
+                        ? "Reps cannot be negative"
+                        : ""
+                    }
                   />
                   <TextField
                     type="number"
                     placeholder="Weight"
                     value={set.weight}
-                    onChange={(e) => updateSet(index, "weight", e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Allow empty string or positive numbers
+                      if (value === "" || Number(value) >= 0) {
+                        updateSet(index, "weight", value);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      // Prevent entering negative sign
+                      if (e.key === "-" || e.key === "e") {
+                        e.preventDefault();
+                      }
+                    }}
                     size="small"
+                    inputProps={{
+                      min: 0,
+                      step: 0.5,
+                    }}
+                    error={set.weight !== "" && Number(set.weight) < 0}
+                    helperText={
+                      set.weight !== "" && Number(set.weight) < 0
+                        ? "Weight cannot be negative"
+                        : ""
+                    }
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
@@ -4574,17 +4732,40 @@ export default function Dashboard() {
                           label="Duration (min)"
                           type="number"
                           value={session.duration}
-                          onChange={(e) =>
-                            updateCardioSession(
-                              session.id,
-                              "duration",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Allow empty string or positive numbers
+                            if (value === "" || Number(value) >= 0) {
+                              updateCardioSession(
+                                session.id,
+                                "duration",
+                                value,
+                              );
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            // Prevent entering negative sign
+                            if (e.key === "-" || e.key === "e") {
+                              e.preventDefault();
+                            }
+                          }}
                           fullWidth
                           size="small"
                           required
-                          inputProps={{ step: "0.5", min: "0" }}
+                          inputProps={{
+                            step: "0.5",
+                            min: "0",
+                          }}
+                          error={
+                            session.duration !== "" &&
+                            Number(session.duration) < 0
+                          }
+                          helperText={
+                            session.duration !== "" &&
+                            Number(session.duration) < 0
+                              ? "Duration cannot be negative"
+                              : ""
+                          }
                         />
                       </Grid>
 
@@ -4602,17 +4783,34 @@ export default function Dashboard() {
                             }
                             type="number"
                             value={session.speed}
-                            onChange={(e) =>
-                              updateCardioSession(
-                                session.id,
-                                "speed",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              // Allow empty string or positive numbers
+                              if (value === "" || Number(value) >= 0) {
+                                updateCardioSession(session.id, "speed", value);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              // Prevent entering negative sign
+                              if (e.key === "-" || e.key === "e") {
+                                e.preventDefault();
+                              }
+                            }}
                             fullWidth
                             size="small"
                             required
-                            inputProps={{ step: "0.1", min: "0" }}
+                            inputProps={{
+                              step: "0.1",
+                              min: "0",
+                            }}
+                            error={
+                              session.speed !== "" && Number(session.speed) < 0
+                            }
+                            helperText={
+                              session.speed !== "" && Number(session.speed) < 0
+                                ? "Speed cannot be negative"
+                                : ""
+                            }
                           />
                         </Grid>
                       )}
@@ -4641,16 +4839,47 @@ export default function Dashboard() {
                             label="Incline (%)"
                             type="number"
                             value={session.incline}
-                            onChange={(e) =>
-                              updateCardioSession(
-                                session.id,
-                                "incline",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              // Allow empty string or numbers between 0 and 15
+                              if (
+                                value === "" ||
+                                (Number(value) >= 0 && Number(value) <= 15)
+                              ) {
+                                updateCardioSession(
+                                  session.id,
+                                  "incline",
+                                  value,
+                                );
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              // Prevent entering negative sign
+                              if (e.key === "-" || e.key === "e") {
+                                e.preventDefault();
+                              }
+                            }}
                             fullWidth
                             size="small"
-                            inputProps={{ step: "0.5", min: "0", max: "15" }}
+                            inputProps={{
+                              step: "0.5",
+                              min: "0",
+                              max: "15",
+                            }}
+                            error={
+                              session.incline !== "" &&
+                              (Number(session.incline) < 0 ||
+                                Number(session.incline) > 15)
+                            }
+                            helperText={
+                              session.incline !== "" &&
+                              Number(session.incline) < 0
+                                ? "Incline cannot be negative"
+                                : session.incline !== "" &&
+                                    Number(session.incline) > 15
+                                  ? "Incline cannot exceed 15%"
+                                  : ""
+                            }
                           />
                         </Grid>
                       )}
@@ -4666,17 +4895,40 @@ export default function Dashboard() {
                             label="Resistance Level"
                             type="number"
                             value={session.resistance || ""}
-                            onChange={(e) =>
-                              updateCardioSession(
-                                session.id,
-                                "resistance",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              // Allow empty string or positive numbers
+                              if (value === "" || Number(value) >= 0) {
+                                updateCardioSession(
+                                  session.id,
+                                  "resistance",
+                                  value,
+                                );
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              // Prevent entering negative sign
+                              if (e.key === "-" || e.key === "e") {
+                                e.preventDefault();
+                              }
+                            }}
                             fullWidth
                             size="small"
                             placeholder="Optional"
-                            inputProps={{ step: "0.5", min: "0" }}
+                            inputProps={{
+                              step: "0.5",
+                              min: "0",
+                            }}
+                            error={
+                              session.resistance !== "" &&
+                              Number(session.resistance) < 0
+                            }
+                            helperText={
+                              session.resistance !== "" &&
+                              Number(session.resistance) < 0
+                                ? "Resistance cannot be negative"
+                                : ""
+                            }
                           />
                         </Grid>
                       )}
@@ -4701,12 +4953,31 @@ export default function Dashboard() {
                 type="number"
                 value={distance}
                 onChange={(e) => {
-                  setDistance(e.target.value);
-                  setIsDistanceEdited(true);
+                  const value = e.target.value;
+                  // Allow empty string or positive numbers
+                  if (value === "" || Number(value) >= 0) {
+                    setDistance(value);
+                    setIsDistanceEdited(true);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  // Prevent entering negative sign
+                  if (e.key === "-" || e.key === "e") {
+                    e.preventDefault();
+                  }
                 }}
                 fullWidth
                 margin="normal"
-                inputProps={{ step: "0.01" }}
+                inputProps={{
+                  step: "0.01",
+                  min: "0",
+                }}
+                error={distance !== "" && Number(distance) < 0}
+                helperText={
+                  distance !== "" && Number(distance) < 0
+                    ? "Distance cannot be negative"
+                    : "Auto-calculated from sessions"
+                }
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -4723,7 +4994,6 @@ export default function Dashboard() {
                     </InputAdornment>
                   ),
                 }}
-                helperText="Auto-calculated from sessions"
               />
 
               {/* Intensity */}
