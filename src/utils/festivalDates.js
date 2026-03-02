@@ -67,7 +67,7 @@ export const festivals = [
         overlay4: "#000080",
       },
     },
-    message: "🎨 Happy Holi! 🌈",
+    message: "❤️ Happy Holi! ❤️",
   },
   {
     id: "ugadi",
@@ -243,7 +243,7 @@ export const festivals = [
         overlay2: "#8B1A1A",
       },
     },
-    message: "🐘 Ganpati Bappa Morya! 🐘",
+    message: "ᬒᬁ Ganpati Bappa Morya! ᬒᬁ",
   },
   {
     id: "navratri-start",
@@ -304,7 +304,7 @@ export const festivals = [
         overlay1: "#FFD700",
         overlay2: "#FFA500",
         overlay3: "#FF6347",
-        sparkle: true,
+        firework: true,
       },
       dark: {
         background:
@@ -312,10 +312,10 @@ export const festivals = [
         overlay1: "#B8860B",
         overlay2: "#CD5C5C",
         overlay3: "#8B1A1A",
-        sparkle: true,
+        firework: true,
       },
     },
-    message: "🪔 Happy Diwali! 🪔",
+    message: "🪔 Happy Diwali! 🎆",
   },
   {
     id: "guru-nanak-jayanti",

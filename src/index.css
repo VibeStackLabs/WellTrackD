@@ -117,6 +117,170 @@ body {
   z-index: 5;
 }
 
+/* Fireworks Container */
+.fireworks-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+}
+
+/* Firework Burst */
+.firework-burst {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  transform: translate(-50%, -50%);
+  animation: pop-in 0.2s ease-out;
+}
+
+/* Burst Particles */
+.burst-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: -4px;
+  margin-top: -4px;
+  opacity: 0;
+  animation: burst 1.2s ease-out forwards;
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes burst {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--rotation, 0deg)) translate(0, 0) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(var(--rotation, 0deg)) translate(0, -60px) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--rotation, 0deg)) translate(0, -80px) scale(0.5);
+  }
+}
+
+/* Ground-level sparklers/crackers */
+.ground-effects {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.sparkler {
+  position: absolute;
+  width: 4px;
+  height: 30px;
+  background: linear-gradient(to top, #8b4513, #ffd700);
+  border-radius: 2px;
+  transform-origin: bottom;
+  animation: sparkle-shake 0.5s infinite alternate;
+}
+
+.sparkler-spark {
+  position: absolute;
+  top: -5px;
+  left: -8px;
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, #ffd700 0%, #ffa500 50%, transparent 80%);
+  border-radius: 50%;
+  animation: sparkle-glow 0.3s infinite alternate;
+}
+
+@keyframes sparkle-shake {
+  from {
+    transform: rotate(-2deg);
+  }
+  to {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes sparkle-glow {
+  from {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Flower pot effect (ground level) */
+.flower-pot {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 30px;
+  background: #8b4513;
+  border-radius: 5px 5px 0 0;
+  z-index: 6;
+}
+
+.flower-pot::before {
+  content: "✨";
+  position: absolute;
+  top: -20px;
+  left: 10px;
+  font-size: 20px;
+  animation: flower-pot-spark 0.5s infinite alternate;
+}
+
+@keyframes flower-pot-spark {
+  from {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Performance optimizations */
+.burst-particle,
+.sparkler,
+.sparkler-spark {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .firework-burst,
+  .burst-particle,
+  .sparkler,
+  .sparkler-spark {
+    animation: none !important;
+    display: none;
+  }
+}
+
 /* Color Splash Animation */
 @keyframes splash {
   0% {
@@ -278,6 +442,268 @@ body {
   .sparkle,
   .decoration,
   .festival-message-banner {
+    animation: none !important;
+    display: none;
+  }
+}
+
+/* Color Throw Container */
+.color-throw-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 6;
+  overflow: hidden;
+}
+
+/* Color Throw Base */
+.color-throw {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  animation: throw-color 2.5s ease-out forwards;
+}
+
+/* Source Positions */
+.color-throw.from-top-left {
+  top: -50px;
+  left: -50px;
+}
+
+.color-throw.from-top-right {
+  top: -50px;
+  right: -50px;
+}
+
+.color-throw.from-bottom-left {
+  bottom: -50px;
+  left: -50px;
+}
+
+.color-throw.from-bottom-right {
+  bottom: -50px;
+  right: -50px;
+}
+
+.color-throw.from-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Color Cloud */
+.color-cloud {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at center,
+    var(--color1) 0%,
+    var(--color2) 40%,
+    var(--color3) 70%,
+    transparent 100%
+  );
+  border-radius: 50%;
+  filter: blur(30px);
+  animation: expand-cloud 2s ease-out forwards;
+}
+
+/* Color Droplets */
+.color-droplets {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.droplet {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  background: var(--color1);
+  border-radius: 50% 50% 50% 0;
+  filter: blur(3px);
+  animation: fly-droplet 1.8s ease-out forwards;
+  transform: rotate(-45deg);
+}
+
+.droplet:nth-child(1) {
+  top: 20%;
+  left: 20%;
+  animation-delay: 0.1s;
+  background: var(--color1);
+}
+.droplet:nth-child(2) {
+  top: 60%;
+  left: 30%;
+  animation-delay: 0.2s;
+  background: var(--color2);
+}
+.droplet:nth-child(3) {
+  top: 30%;
+  left: 70%;
+  animation-delay: 0.15s;
+  background: var(--color3);
+}
+.droplet:nth-child(4) {
+  top: 70%;
+  left: 60%;
+  animation-delay: 0.25s;
+  background: var(--color1);
+}
+.droplet:nth-child(5) {
+  top: 40%;
+  left: 40%;
+  animation-delay: 0.3s;
+  background: var(--color2);
+}
+
+/* Different throw paths for each source */
+.from-top-left .color-throw {
+  animation: throw-from-top-left 2.5s ease-out forwards;
+}
+
+.from-top-right .color-throw {
+  animation: throw-from-top-right 2.5s ease-out forwards;
+}
+
+.from-bottom-left .color-throw {
+  animation: throw-from-bottom-left 2.5s ease-out forwards;
+}
+
+.from-bottom-right .color-throw {
+  animation: throw-from-bottom-right 2.5s ease-out forwards;
+}
+
+.from-center .color-throw {
+  animation: throw-from-center 2.5s ease-out forwards;
+}
+
+@keyframes throw-from-top-left {
+  0% {
+    transform: translate(0, 0) scale(0.1);
+  }
+  100% {
+    transform: translate(70vw, 70vh) scale(1.5) rotate(720deg);
+  }
+}
+
+@keyframes throw-from-top-right {
+  0% {
+    transform: translate(0, 0) scale(0.1);
+  }
+  100% {
+    transform: translate(-70vw, 70vh) scale(1.5) rotate(-720deg);
+  }
+}
+
+@keyframes throw-from-bottom-left {
+  0% {
+    transform: translate(0, 0) scale(0.1);
+  }
+  100% {
+    transform: translate(70vw, -70vh) scale(1.5) rotate(-720deg);
+  }
+}
+
+@keyframes throw-from-bottom-right {
+  0% {
+    transform: translate(0, 0) scale(0.1);
+  }
+  100% {
+    transform: translate(-70vw, -70vh) scale(1.5) rotate(720deg);
+  }
+}
+
+@keyframes throw-from-center {
+  0% {
+    transform: translate(-50%, -50%) scale(0.1);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3);
+    opacity: 0;
+  }
+}
+
+@keyframes expand-cloud {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+@keyframes fly-droplet {
+  0% {
+    transform: rotate(-45deg) scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-45deg) scale(2) translate(50px, 50px);
+    opacity: 0;
+  }
+}
+
+/* Floating Gulal Powder */
+.gulal-powder {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 4;
+  overflow: hidden;
+}
+
+.gulal-particle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0;
+  filter: blur(2px);
+  animation: float-gulal linear infinite;
+}
+
+@keyframes float-gulal {
+  0% {
+    transform: translateY(100vh) scale(0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.4;
+  }
+  80% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateY(-100vh) scale(2);
+    opacity: 0;
+  }
+}
+
+/* Performance optimizations */
+.color-throw,
+.droplet,
+.gulal-particle {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .color-throw,
+  .droplet,
+  .gulal-particle {
     animation: none !important;
     display: none;
   }
