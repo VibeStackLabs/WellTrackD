@@ -1,5 +1,5 @@
 import React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { db, auth, enableOfflineSupport, isOnline } from "../firebase";
 import {
   collection,
@@ -53,6 +53,7 @@ import {
   DialogContentText,
   ToggleButton,
   ToggleButtonGroup,
+  useMediaQuery,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
@@ -101,6 +102,7 @@ import Profile from "../components/Profile";
 import StepTracker from "./StepTracker";
 import BMIChart from "../components/BMIChart";
 import { useTheme } from "../contexts/ThemeContext";
+import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 const PREDEFINED_STRENGTH_WORKOUTS = [
   "Bench Press",
@@ -148,6 +150,9 @@ const PREDEFINED_STRENGTH_WORKOUTS = [
 export default function Dashboard() {
   const { isAdmin } = useAdmin();
   const { mode, toggleMode, tailwindTheme } = useTheme();
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(muiTheme.breakpoints.down("md"));
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0); // 0 for Workout, 1 for Workout Plans, 2 for Health Metrics
@@ -189,6 +194,9 @@ export default function Dashboard() {
 
   // Table styles
   const tableStyles = {
+    overflowX: "auto",
+    WebkitOverflowScrolling: "touch",
+    maxWidth: "100%",
     "& .MuiTableRow-root:hover": {
       backgroundColor: mode === "light" ? "#f6e4d280" : "#2d2d2d80",
     },
@@ -2389,29 +2397,63 @@ export default function Dashboard() {
 
     const formattedBest = `${previousBest.reps} reps × ${previousBest.weight?.toFixed(1)} kg`;
 
+    const prTextStyle = {
+      fontSize: { xs: "0.65rem", sm: "0.75rem" },
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    };
+
     return (
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: { xs: 0.25, sm: 0.5 },
+          flexWrap: "wrap",
+          maxWidth: "100%",
+        }}
+      >
         <Chip
           label={
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.5,
+                overflow: "hidden",
+              }}
+            >
               {isNewRecord ? (
                 <>
                   <WhatshotIcon fontSize="small" color="error" />
-                  <Typography variant="caption" color="error.main">
+                  <Typography
+                    variant="caption"
+                    color="error.main"
+                    sx={prTextStyle}
+                  >
                     New PR! Was: {formattedBest}
                   </Typography>
                 </>
               ) : isSame ? (
                 <>
                   <BarChartIcon fontSize="small" color="info" />
-                  <Typography variant="caption" color="info.main">
+                  <Typography
+                    variant="caption"
+                    color="info.main"
+                    sx={prTextStyle}
+                  >
                     Matched best: {formattedBest}
                   </Typography>
                 </>
               ) : (
                 <>
                   <TrendingUpIcon fontSize="small" color="success" />
-                  <Typography variant="caption" color="success.main">
+                  <Typography
+                    variant="caption"
+                    color="success.main"
+                    sx={prTextStyle}
+                  >
                     Previous best: {formattedBest}
                   </Typography>
                 </>
@@ -2463,8 +2505,40 @@ export default function Dashboard() {
     },
   ];
 
+  const mobileButtonStyle = (mode) => ({
+    textTransform: "none",
+    backgroundColor: mode === "light" ? "#333333" : "#f9f6ee",
+    color: mode === "light" ? "#f9f6ee" : "#333333",
+    "&:hover": {
+      bgcolor: mode === "light" ? "#444444" : "#f6e4d2",
+    },
+  });
+
+  const badgeStyle = {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "error.main",
+    color: "white",
+    borderRadius: "50%",
+    width: 18,
+    height: 18,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "0.7rem",
+    fontWeight: "bold",
+    border: "2px solid white",
+  };
+
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container
+      maxWidth="lg"
+      sx={{
+        py: { xs: 2, sm: 3, md: 4 },
+        px: { xs: 1.5, sm: 2, md: 3 },
+      }}
+    >
       {loading && <LinearProgress sx={{ mb: 2 }} />}
 
       <Box
@@ -2492,133 +2566,166 @@ export default function Dashboard() {
 
         <Box display="flex" gap={2} alignItems="center">
           {/* Sync & Cache Menu Button */}
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={(e) => setCacheMenuAnchor(e.currentTarget)}
-            disabled={isOffline || loading}
-            startIcon={<RefreshIcon />}
-            sx={{
-              textTransform: "none",
-              minWidth: "auto",
-              px: 2,
-              position: "relative",
-            }}
-          >
-            Refresh
-            {syncQueue.length > 0 && (
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: -6,
-                  right: -6,
-                  backgroundColor: "error.main",
-                  color: "white",
-                  borderRadius: "50%",
-                  width: 18,
-                  height: 18,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "0.7rem",
-                  fontWeight: "bold",
-                  border: "2px solid white",
-                }}
-              >
-                {syncQueue.length}
-              </Box>
-            )}
-          </Button>
+          {isMobile ? (
+            <IconButton
+              variant="contained"
+              color="primary"
+              onClick={(e) => setCacheMenuAnchor(e.currentTarget)}
+              disabled={isOffline || loading}
+              sx={mobileButtonStyle(mode)}
+            >
+              <RefreshIcon />
+              {syncQueue.length > 0 && (
+                <Box sx={badgeStyle}>{syncQueue.length}</Box>
+              )}
+            </IconButton>
+          ) : (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={(e) => setCacheMenuAnchor(e.currentTarget)}
+              disabled={isOffline || loading}
+              startIcon={<RefreshIcon />}
+              sx={{
+                textTransform: "none",
+                minWidth: "auto",
+                px: 2,
+                position: "relative",
+              }}
+            >
+              Refresh
+              {syncQueue.length > 0 && (
+                <Box sx={badgeStyle}>{syncQueue.length}</Box>
+              )}
+            </Button>
+          )}
 
           {/* Add What's New button */}
-          <Button
-            variant="contained"
-            color="success"
-            onClick={() => setChangelogDialogOpen(true)}
-            disabled={isOffline || loading}
-            startIcon={<NewReleasesIcon />}
-            sx={{
-              textTransform: "none",
-              minWidth: "auto",
-              px: 2,
-              position: "relative",
-            }}
-          >
-            What's New
-            {unreadUpdates > 0 && (
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: -6,
-                  right: -6,
-                  backgroundColor: "error.main",
-                  color: "white",
-                  borderRadius: "50%",
-                  width: 18,
-                  height: 18,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "0.7rem",
-                  fontWeight: "bold",
-                  border: "2px solid white",
-                }}
-              >
-                {unreadUpdates}
-              </Box>
-            )}
-          </Button>
-
-          {/* Admin Panel Button */}
-          {isAdmin && (
+          {isMobile ? (
+            <IconButton
+              variant="contained"
+              color="success"
+              onClick={() => setChangelogDialogOpen(true)}
+              disabled={isOffline || loading}
+              sx={mobileButtonStyle(mode)}
+            >
+              <NewReleasesIcon />
+              {unreadUpdates > 0 && <Box sx={badgeStyle}>{unreadUpdates}</Box>}
+            </IconButton>
+          ) : (
             <Button
               variant="contained"
               color="success"
-              component={Link}
-              to="/admin"
+              onClick={() => setChangelogDialogOpen(true)}
               disabled={isOffline || loading}
-              startIcon={<SecurityIcon />}
+              startIcon={<NewReleasesIcon />}
+              sx={{
+                textTransform: "none",
+                minWidth: "auto",
+                px: 2,
+                position: "relative",
+              }}
+            >
+              What's New
+              {unreadUpdates > 0 && <Box sx={badgeStyle}>{unreadUpdates}</Box>}
+            </Button>
+          )}
+
+          {/* Admin Panel Button */}
+          {isAdmin &&
+            (isMobile ? (
+              <IconButton
+                variant="contained"
+                color="success"
+                component={Link}
+                to="/admin"
+                disabled={isOffline || loading}
+                sx={{
+                  textTransform: "none",
+                  backgroundColor: mode === "light" ? "#333333" : "#f9f6ee",
+                  color: mode === "light" ? "#f9f6ee" : "#333333",
+                  "&:hover": {
+                    bgcolor: mode === "light" ? "#444444" : "#f6e4d2",
+                  },
+                }}
+              >
+                <SecurityIcon />
+              </IconButton>
+            ) : (
+              <Button
+                variant="contained"
+                color="success"
+                component={Link}
+                to="/admin"
+                disabled={isOffline || loading}
+                startIcon={<SecurityIcon />}
+                sx={{
+                  textTransform: "none",
+                  minWidth: "auto",
+                  px: 2,
+                }}
+              >
+                Admin Panel
+              </Button>
+            ))}
+
+          {/* Dark Mode Toggle Icon */}
+          {isMobile ? (
+            <IconButton
+              variant="contained"
+              color="warning"
+              onClick={toggleMode}
+              disabled={isOffline || loading}
+              sx={mobileButtonStyle(mode)}
+            >
+              {mode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
+            </IconButton>
+          ) : (
+            <Button
+              variant="contained"
+              color="warning"
+              onClick={toggleMode}
+              disabled={isOffline || loading}
+              startIcon={
+                mode === "light" ? <DarkModeIcon /> : <LightModeIcon />
+              }
               sx={{
                 textTransform: "none",
                 minWidth: "auto",
                 px: 2,
               }}
             >
-              Admin Panel
+              {mode === "light" ? "Dark Mode" : "Light Mode"}
             </Button>
           )}
 
-          {/* Dark Mode Toggle Icon */}
-          <Button
-            variant="contained"
-            color="warning"
-            onClick={toggleMode}
-            disabled={isOffline || loading}
-            startIcon={mode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
-            sx={{
-              textTransform: "none",
-              minWidth: "auto",
-              px: 2,
-            }}
-          >
-            Toggle Theme
-          </Button>
-
           {/* Logout Button */}
-          <Button
-            variant="contained"
-            color="error"
-            onClick={() => signOut(auth)}
-            disabled={isOffline || loading}
-            startIcon={<LogoutIcon />}
-            sx={{
-              textTransform: "none",
-              minWidth: "auto",
-              px: 2,
-            }}
-          >
-            Logout
-          </Button>
+          {isMobile ? (
+            <IconButton
+              variant="contained"
+              color="error"
+              onClick={() => signOut(auth)}
+              disabled={isOffline || loading}
+              sx={mobileButtonStyle(mode)}
+            >
+              <LogoutIcon />
+            </IconButton>
+          ) : (
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => signOut(auth)}
+              disabled={isOffline || loading}
+              startIcon={<LogoutIcon />}
+              sx={{
+                textTransform: "none",
+                minWidth: "auto",
+                px: 2,
+              }}
+            >
+              Logout
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -2702,7 +2809,14 @@ export default function Dashboard() {
           }}
         >
           <CardContent>
-            <Box display="flex" alignItems="center" gap={2}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                flexWrap: "wrap",
+              }}
+            >
               <Typography fontWeight="bold">⚠️ You're offline</Typography>
               <Typography variant="body2">
                 {hasPersistentData
@@ -2759,13 +2873,13 @@ export default function Dashboard() {
 
       {/* Summary Cards */}
       <Grid container spacing={2} mb={4}>
-        <Grid size={{ xs: 12, sm: 2.3 }}>
+        <Grid size={{ xs: 6, sm: 2.3, md: 2.3 }}>
           <Paper
             variant="outlined"
             sx={{
               display: "flex",
               alignItems: "center",
-              p: 2,
+              p: { xs: 1.5, sm: 2, md: 2 },
               gap: 1,
               borderRadius: 2,
               backgroundColor: "background.paper",
@@ -2777,7 +2891,7 @@ export default function Dashboard() {
             <ScaleIcon color="warning" fontSize="large" />
             <Box>
               <Typography variant="body2" color="textSecondary">
-                Latest Body Weight
+                {isMobile ? "Latest Weight" : "Latest Body Weight"}
               </Typography>
               <Typography variant="h6">
                 {latestBMIEntry.bodyweight != null ? (
@@ -2798,13 +2912,13 @@ export default function Dashboard() {
           </Paper>
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 2 }}>
+        <Grid size={{ xs: 6, sm: 2, md: 2 }}>
           <Paper
             variant="outlined"
             sx={{
               display: "flex",
               alignItems: "center",
-              p: 2,
+              p: { xs: 1.5, sm: 2, md: 2 },
               gap: 1,
               borderRadius: 2,
               backgroundColor: "background.paper",
@@ -2833,13 +2947,13 @@ export default function Dashboard() {
           </Paper>
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 2.4 }}>
+        <Grid size={{ xs: 6, sm: 2.4, md: 2.4 }}>
           <Paper
             variant="outlined"
             sx={{
               display: "flex",
               alignItems: "center",
-              p: 2,
+              p: { xs: 1.5, sm: 2, md: 2 },
               gap: 1,
               borderRadius: 2,
               backgroundColor: "background.paper",
@@ -2861,13 +2975,13 @@ export default function Dashboard() {
           </Paper>
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 2.3 }}>
+        <Grid size={{ xs: 6, sm: 2.3, md: 2.3 }}>
           <Paper
             variant="outlined"
             sx={{
               display: "flex",
               alignItems: "center",
-              p: 2,
+              p: { xs: 1.5, sm: 2, md: 2 },
               gap: 1,
               borderRadius: 2,
               backgroundColor: "background.paper",
@@ -2889,13 +3003,13 @@ export default function Dashboard() {
           </Paper>
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 3 }}>
+        <Grid size={{ xs: 12, sm: 3, md: 3 }}>
           <Paper
             variant="outlined"
             sx={{
               display: "flex",
               alignItems: "center",
-              p: 2,
+              p: { xs: 1.5, sm: 2, md: 2 },
               gap: 1,
               borderRadius: 2,
               backgroundColor: "background.paper",
@@ -2915,7 +3029,14 @@ export default function Dashboard() {
               </Typography>
 
               {/* Dropdown + value on same line */}
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  flexWrap: { xs: "wrap", sm: "nowrap" },
+                }}
+              >
                 <Button
                   variant="text"
                   onClick={(e) => setAnchorEl(e.currentTarget)}
@@ -2972,6 +3093,13 @@ export default function Dashboard() {
         <Tabs
           value={activeTab}
           onChange={(e, newValue) => setActiveTab(newValue)}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            "& .MuiTab-root": {
+              textTransform: "none",
+            },
+          }}
         >
           <Tab label="Workout History" />
           <Tab label="Workout Plans" />
@@ -2984,21 +3112,36 @@ export default function Dashboard() {
       {activeTab === 0 && (
         <>
           {/* Workout Table */}
-          <Card variant="outlined" sx={{ p: 3, mb: 10 }}>
+          <Card
+            variant="outlined"
+            sx={{
+              p: { xs: 2, md: 3 },
+              mb: { xs: 6, md: 10 },
+            }}
+          >
             <Typography variant="h6" mb={2}>
               Workout History
             </Typography>
 
-            <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                mb: 2,
+                flexWrap: "wrap",
+              }}
+            >
               <ToggleButtonGroup
                 value={workoutFilter}
                 exclusive
                 onChange={handleWorkoutFilterChange}
                 size="small"
                 sx={{
+                  flexWrap: "wrap",
                   "& .MuiToggleButton-root": {
                     textTransform: "none",
-                    px: 2,
+                    px: { xs: 1.8, sm: 2 },
+                    fontSize: { xs: "0.75rem", sm: "0.875rem" },
                   },
                   "& .MuiToggleButton-root.Mui-selected": {
                     backgroundColor: "primary.main",
@@ -3017,7 +3160,7 @@ export default function Dashboard() {
             </Box>
 
             <TableContainer component={Paper} sx={tableStyles}>
-              <Table>
+              <Table sx={{ minWidth: 900 }}>
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ fontWeight: "bold", pr: 8 }}>
@@ -3048,15 +3191,18 @@ export default function Dashboard() {
                           <Typography color="text.primary" sx={{ mb: 2 }}>
                             {workoutFilter === "today" ? (
                               <>
-                                No activities found for today 💤
-                                <br />
+                                <Typography>
+                                  No activities found for today 💤
+                                </Typography>
                                 <Typography variant="caption">
                                   Taking a rest day? Log it to maintain your
                                   streak!
                                 </Typography>
                               </>
                             ) : (
-                              "No activities found for this period 💤"
+                              <Typography>
+                                "No activities found for this period 💤"
+                              </Typography>
                             )}
                           </Typography>
                           <Box
@@ -3065,6 +3211,7 @@ export default function Dashboard() {
                               gap: 1,
                               justifyContent: "center",
                               flexWrap: "wrap",
+                              mt: 2,
                             }}
                           >
                             <Button
@@ -3347,7 +3494,7 @@ export default function Dashboard() {
                                                       key={idx}
                                                       variant="outlined"
                                                       sx={{
-                                                        p: 0.5,
+                                                        pl: 1,
                                                         borderLeft: "3px solid",
                                                         borderLeftColor:
                                                           idx % 2 === 0
@@ -3743,6 +3890,7 @@ export default function Dashboard() {
                                       display: "flex",
                                       justifyContent: "center",
                                       gap: 0.5,
+                                      flexWrap: "nowrap",
                                     }}
                                   >
                                     {isRestDay ? (
@@ -3818,12 +3966,13 @@ export default function Dashboard() {
       {activeTab === 2 && (
         <>
           {/* Chart */}
-          <Card variant="outlined" sx={{ p: 3, mb: 4 }}>
+          <Card variant="outlined" sx={{ p: { xs: 2, md: 3 }, mb: 4 }}>
             <Box
               sx={{
                 display: "flex",
                 justifyContent: "space-between",
-                alignItems: "center",
+                flexDirection: { xs: "column", md: "row" },
+                gap: { xs: 1, md: 0 },
                 mb: 2,
               }}
             >
@@ -3835,9 +3984,11 @@ export default function Dashboard() {
                 onChange={handleChartFilterChange}
                 size="small"
                 sx={{
+                  flexWrap: "wrap",
                   "& .MuiToggleButton-root": {
                     textTransform: "none",
-                    px: 2,
+                    px: { xs: 1.2, md: 2 },
+                    fontSize: { xs: "0.7rem", md: "0.8rem" },
                   },
                   "& .MuiToggleButton-root.Mui-selected": {
                     backgroundColor: "primary.main",
@@ -3874,6 +4025,8 @@ export default function Dashboard() {
       <Dialog
         open={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
+        fullWidth
+        maxWidth="xs"
       >
         <DialogTitle>Delete Workout</DialogTitle>
         <DialogContent>
@@ -3989,7 +4142,11 @@ export default function Dashboard() {
       {/* FAB */}
       <SpeedDial
         ariaLabel="Add Entry"
-        sx={{ position: "fixed", bottom: 30, right: 30 }}
+        sx={{
+          position: "fixed",
+          bottom: { xs: 20, md: 30 },
+          right: { xs: 20, md: 30 },
+        }}
         icon={<AddIcon />}
         open={fabOpen}
         onClick={() => setFabOpen((prev) => !prev)}
@@ -4049,7 +4206,7 @@ export default function Dashboard() {
               label="Unit"
               value={weightUnit}
               onChange={(e) => setWeightUnit(e.target.value)}
-              sx={{ width: 100 }}
+              sx={{ width: { xs: "100%", sm: 100 } }}
               margin="dense"
             >
               <MenuItem value="kg">kg</MenuItem>
@@ -4088,7 +4245,7 @@ export default function Dashboard() {
                   inputMode="numeric"
                   value={heightFt}
                   onChange={handleNumberChange(setHeightFt, { max: 8 })}
-                  sx={{ width: 100 }}
+                  sx={{ width: { xs: "100%", sm: 100 } }}
                   margin="dense"
                   inputProps={{
                     pattern: "[0-9]*",
@@ -4111,7 +4268,7 @@ export default function Dashboard() {
                   inputMode="numeric"
                   value={heightIn}
                   onChange={handleNumberChange(setHeightIn, { max: 11 })}
-                  sx={{ width: 100 }}
+                  sx={{ width: { xs: "100%", sm: 100 } }}
                   margin="dense"
                   inputProps={{
                     pattern: "[0-9]*",
@@ -4135,7 +4292,7 @@ export default function Dashboard() {
               label="Unit"
               value={heightUnit}
               onChange={(e) => setHeightUnit(e.target.value)}
-              sx={{ width: 100 }}
+              sx={{ width: { xs: "100%", sm: 100 } }}
               margin="dense"
             >
               <MenuItem value="cm">cm</MenuItem>
@@ -4381,6 +4538,8 @@ export default function Dashboard() {
                       flexWrap: "wrap",
                       gap: 0.5,
                       mb: 1.5,
+                      maxHeight: { xs: 120, md: "none" },
+                      overflowY: { xs: "auto", md: "visible" },
                     }}
                   >
                     {[
@@ -4434,7 +4593,14 @@ export default function Dashboard() {
           )}
 
           {/* Workout Type Toggle */}
-          <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+          <Box
+            sx={{
+              display: "flex",
+              gap: 2,
+              mb: 3,
+              flexDirection: { xs: "column", sm: "row" },
+            }}
+          >
             <Button
               fullWidth
               variant={workoutType === "strength" ? "contained" : "outlined"}
@@ -4497,9 +4663,13 @@ export default function Dashboard() {
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr auto",
+                  gridTemplateColumns: {
+                    xs: "0.3fr 0.7fr 1fr auto", // mobile
+                    sm: "0.6fr 0.9fr 1.2fr auto", // tablet
+                    md: "1fr 1fr 1fr auto", // desktop
+                  },
                   gap: 2,
-                  mb: 1,
+                  mb: 2,
                   alignItems: "center",
                 }}
               >
@@ -4517,7 +4687,11 @@ export default function Dashboard() {
                   key={index}
                   sx={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr auto",
+                    gridTemplateColumns: {
+                      xs: "0.3fr 0.7fr 1fr auto", // mobile
+                      sm: "0.6fr 0.9fr 1.2fr auto", // tablet
+                      md: "1fr 1fr 1fr auto", // desktop
+                    },
                     gap: 2,
                     mb: 2,
                     alignItems: "center",
@@ -4665,7 +4839,7 @@ export default function Dashboard() {
                     key={session.id}
                     sx={{
                       mb: 2,
-                      p: 2,
+                      p: { xs: 1.5, sm: 2 },
                       border: "1px solid #ccc",
                       borderRadius: 1,
                     }}
@@ -4693,7 +4867,7 @@ export default function Dashboard() {
                     </Box>
 
                     <Grid container spacing={2}>
-                      <Grid size={{ xs: 2.6 }}>
+                      <Grid size={{ xs: 12, sm: 2.6 }}>
                         <TextField
                           label="Duration (min)"
                           type="text"
@@ -4731,7 +4905,10 @@ export default function Dashboard() {
                         cardioType === "cycle" ||
                         cardioType === "airbike") && (
                         <Grid
-                          size={{ xs: cardioType === "treadmill" ? 2.6 : 2.6 }}
+                          size={{
+                            xs: cardioType === "treadmill" ? 12 : 12,
+                            sm: cardioType === "treadmill" ? 2.6 : 2.6,
+                          }}
                         >
                           <TextField
                             label={
@@ -4767,7 +4944,7 @@ export default function Dashboard() {
 
                       {/* Speed unit selector (only for treadmill) */}
                       {cardioType === "treadmill" && (
-                        <Grid size={{ xs: 2 }}>
+                        <Grid size={{ xs: 12, sm: 2.6 }}>
                           <TextField
                             select
                             label="Unit"
@@ -4784,7 +4961,7 @@ export default function Dashboard() {
                       )}
 
                       {cardioType === "treadmill" && (
-                        <Grid size={{ xs: 2.6 }}>
+                        <Grid size={{ xs: 12, sm: 2.6 }}>
                           <TextField
                             label="Incline (%)"
                             type="text"
@@ -4797,7 +4974,7 @@ export default function Dashboard() {
                                   "incline",
                                   value,
                                 ),
-                              { decimal: true, max: 15 },
+                              { decimal: true, max: 20 },
                             )}
                             fullWidth
                             size="small"
@@ -4807,15 +4984,15 @@ export default function Dashboard() {
                             error={
                               session.incline !== "" &&
                               (Number(session.incline) < 0 ||
-                                Number(session.incline) > 15)
+                                Number(session.incline) > 20)
                             }
                             helperText={
                               session.incline !== "" &&
                               Number(session.incline) < 0
                                 ? "Incline cannot be negative"
                                 : session.incline !== "" &&
-                                    Number(session.incline) > 15
-                                  ? "Incline cannot exceed 15%"
+                                    Number(session.incline) > 20
+                                  ? "Incline cannot exceed 20%"
                                   : ""
                             }
                           />
@@ -4828,7 +5005,7 @@ export default function Dashboard() {
                         cardioType === "airbike" ||
                         cardioType === "stairmaster" ||
                         cardioType === "rowing") && (
-                        <Grid size={{ xs: 2.8 }}>
+                        <Grid size={{ xs: 12, sm: 2.6 }}>
                           <TextField
                             label="Resistance Level"
                             type="text"
@@ -4984,7 +5161,9 @@ export default function Dashboard() {
               mt: 3,
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "center",
+              alignItems: { xs: "flex-start", sm: "center" },
+              flexDirection: { xs: "column", sm: "row" },
+              gap: 1,
             }}
           >
             <Typography variant="subtitle1">
