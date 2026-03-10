@@ -1,10 +1,4 @@
-import React, {
-  createContext,
-  useState,
-  useContext,
-  useEffect,
-  useMemo,
-} from "react";
+import { createContext, useState, useContext, useEffect, useMemo } from "react";
 import {
   createTheme,
   ThemeProvider as MuiThemeProvider,

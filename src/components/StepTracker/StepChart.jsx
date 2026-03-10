@@ -12,7 +12,6 @@ import {
   Legend,
   Area,
   AreaChart,
-  ComposedChart,
 } from "recharts";
 import {
   Box,

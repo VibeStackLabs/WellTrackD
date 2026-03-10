@@ -98,8 +98,6 @@ export default function BMIChart({
     return { label: "Obese", color: "error.main" };
   };
 
-  const latestBMI = chartData[chartData.length - 1]?.bmi;
-
   const renderChart = () => {
     switch (chartType) {
       case "bar":

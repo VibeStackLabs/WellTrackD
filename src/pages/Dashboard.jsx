@@ -1,5 +1,4 @@
-import React from "react";
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { db, auth, enableOfflineSupport, isOnline } from "../firebase";
 import {
   collection,
@@ -76,15 +75,6 @@ import NewReleasesIcon from "@mui/icons-material/NewReleases";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import { Link } from "react-router-dom";
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import {
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
 } from "@mui/icons-material";
@@ -152,7 +142,6 @@ export default function Dashboard() {
   const { mode, toggleMode, tailwindTheme } = useTheme();
   const muiTheme = useMuiTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
-  const isTablet = useMediaQuery(muiTheme.breakpoints.down("md"));
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0); // 0 for Workout, 1 for Workout Plans, 2 for Health Metrics
@@ -374,7 +363,6 @@ export default function Dashboard() {
   };
 
   // Workout Plan States
-  const [showWorkoutPlans, setShowWorkoutPlans] = useState(false);
   const [addingPlanExercises, setAddingPlanExercises] = useState([]);
   const [addExercisesDialogOpen, setAddExercisesDialogOpen] = useState(false);
   const [exercisesToAdd, setExercisesToAdd] = useState([]);

@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useAdmin } from "../contexts/AdminContext";
 import {
   getAllUsers,
-  deleteUser,
   deleteUserWithDetails,
   updateUser,
   getSystemStats,
@@ -150,7 +149,6 @@ function AdminDashboard() {
   const { mode, toggleMode } = useTheme();
   const muiTheme = useMuiTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
-  const isTablet = useMediaQuery(muiTheme.breakpoints.down("md"));
 
   const loadChangelog = async () => {
     setChangelogLoading(true);

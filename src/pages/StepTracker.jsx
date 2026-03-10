@@ -39,7 +39,6 @@ import {
   Timeline,
   Logout,
   MoreVert,
-  CheckCircle,
   Error as ErrorIcon,
   AccountCircle,
   Flag,
