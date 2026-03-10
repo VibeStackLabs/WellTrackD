@@ -2428,6 +2428,7 @@ export default function Dashboard() {
                 <>
                   <WhatshotIcon fontSize="small" color="error" />
                   <Typography
+                    component="span"
                     variant="caption"
                     color="error.main"
                     sx={prTextStyle}
@@ -2439,6 +2440,7 @@ export default function Dashboard() {
                 <>
                   <BarChartIcon fontSize="small" color="info" />
                   <Typography
+                    component="span"
                     variant="caption"
                     color="info.main"
                     sx={prTextStyle}
@@ -2450,6 +2452,7 @@ export default function Dashboard() {
                 <>
                   <TrendingUpIcon fontSize="small" color="success" />
                   <Typography
+                    component="span"
                     variant="caption"
                     color="success.main"
                     sx={prTextStyle}
@@ -3188,23 +3191,25 @@ export default function Dashboard() {
                     <TableRow>
                       <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                         <Box sx={{ textAlign: "center" }}>
-                          <Typography color="text.primary" sx={{ mb: 2 }}>
-                            {workoutFilter === "today" ? (
-                              <>
-                                <Typography>
-                                  No activities found for today 💤
-                                </Typography>
-                                <Typography variant="caption">
-                                  Taking a rest day? Log it to maintain your
-                                  streak!
-                                </Typography>
-                              </>
-                            ) : (
-                              <Typography>
-                                "No activities found for this period 💤"
+                          {workoutFilter === "today" ? (
+                            <>
+                              <Typography color="text.primary" sx={{ mb: 2 }}>
+                                No activities found for today 💤
                               </Typography>
-                            )}
-                          </Typography>
+                              <Typography
+                                variant="caption"
+                                component="p"
+                                sx={{ mb: 2 }}
+                              >
+                                Taking a rest day? Log it to maintain your
+                                streak!
+                              </Typography>
+                            </>
+                          ) : (
+                            <Typography color="text.primary" sx={{ mb: 2 }}>
+                              "No activities found for this period 💤"
+                            </Typography>
+                          )}
                           <Box
                             sx={{
                               display: "flex",
