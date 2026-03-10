@@ -127,22 +127,21 @@ export default function Login() {
   return (
     <Box
       sx={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
         display: "flex",
-        alignItems: "center",
+        alignItems: { xs: "flex-start", sm: "center" },
         justifyContent: "center",
-        p: 2,
+        pt: { xs: 6, sm: 2 },
+        px: 2,
       }}
     >
       <Container maxWidth="sm">
         <Box textAlign="center" mb={3}>
-          <Link to="/">
-            <img
-              src="/favicon.svg"
-              alt="WellTrackD Logo"
-              style={{ height: 50 }}
-            />
-          </Link>
+          <img
+            src="/favicon.svg"
+            alt="WellTrackD Logo"
+            style={{ height: 50 }}
+          />
 
           <Typography
             sx={{
@@ -156,13 +155,14 @@ export default function Login() {
           </Typography>
         </Box>
 
-        <Card sx={{ borderRadius: 4, p: 5, boxShadow: 10 }}>
+        <Card sx={{ borderRadius: 4, p: { xs: 3, sm: 5 }, boxShadow: 10 }}>
           <CardContent>
             <Typography
               variant="h4"
               fontWeight="bold"
               gutterBottom
               color="primary"
+              sx={{ fontSize: { xs: "1.8rem", sm: "2rem" } }}
             >
               Welcome Back!
             </Typography>
@@ -174,7 +174,13 @@ export default function Login() {
               </Typography>
             </Fade>
 
-            <Box display="flex" flexDirection="column" gap={2}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: { xs: 1.8, sm: 2.2 },
+              }}
+            >
               <TextField
                 label="Email"
                 type="email"
@@ -207,10 +213,11 @@ export default function Login() {
                   ),
                 }}
               />
-              <Box sx={{ textAlign: "right", mb: 1 }}>
+              <Box sx={{ textAlign: "right" }}>
                 <Button
-                  color="error.main"
-                  variant="outlined"
+                  variant="text"
+                  color="primary"
+                  size="small"
                   sx={{
                     textTransform: "none",
                     color: "error.main",
@@ -224,7 +231,7 @@ export default function Login() {
                 variant="contained"
                 color="primary"
                 size="large"
-                sx={{ mt: 1, borderRadius: 3 }}
+                sx={{ borderRadius: 3 }}
                 onClick={handleLogin}
               >
                 Start Tracking

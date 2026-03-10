@@ -183,22 +183,21 @@ export default function Signup() {
   return (
     <Box
       sx={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
         display: "flex",
-        alignItems: "center",
+        alignItems: { xs: "flex-start", sm: "center" },
         justifyContent: "center",
-        p: 2,
+        pt: { xs: 6, sm: 2 },
+        px: 2,
       }}
     >
       <Container maxWidth="sm">
         <Box textAlign="center" mb={3}>
-          <Link to="/">
-            <img
-              src="/favicon.svg"
-              alt="WellTrackD Logo"
-              style={{ height: 50 }}
-            />
-          </Link>
+          <img
+            src="/favicon.svg"
+            alt="WellTrackD Logo"
+            style={{ height: 50 }}
+          />
 
           <Typography
             sx={{
@@ -212,13 +211,14 @@ export default function Signup() {
           </Typography>
         </Box>
 
-        <Card sx={{ borderRadius: 4, p: 5, boxShadow: 10 }}>
+        <Card sx={{ borderRadius: 4, p: { xs: 3, sm: 5 }, boxShadow: 10 }}>
           <CardContent>
             <Typography
               variant="h4"
               fontWeight="bold"
               gutterBottom
               color="primary"
+              sx={{ fontSize: { xs: "1.8rem", sm: "2rem" } }}
             >
               Create Your Account
             </Typography>
@@ -230,7 +230,13 @@ export default function Signup() {
               </Typography>
             </Fade>
 
-            <Box display="flex" flexDirection="column" gap={2}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: { xs: 1.8, sm: 2.2 },
+              }}
+            >
               <TextField
                 label="Full Name"
                 fullWidth
@@ -305,7 +311,7 @@ export default function Signup() {
                 variant="contained"
                 size="large"
                 fullWidth
-                sx={{ mt: 1, borderRadius: 3 }}
+                sx={{ borderRadius: 3 }}
                 onClick={handleSignup}
                 disabled={
                   loading ||
