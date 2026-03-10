@@ -16,6 +16,7 @@ import {
   ListItemButton,
   Divider,
   Chip,
+  useMediaQuery,
 } from "@mui/material";
 import ImportExportOutlinedIcon from "@mui/icons-material/ImportExportOutlined";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
@@ -25,6 +26,7 @@ import CollectionsIcon from "@mui/icons-material/Collections";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { useTheme } from "../contexts/ThemeContext";
+import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 export default function WorkoutPlanExcelHandler({
   open,
@@ -38,6 +40,8 @@ export default function WorkoutPlanExcelHandler({
 
   // Get current color theme
   const { mode } = useTheme();
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
 
   const downloadTemplate = () => {
     try {
@@ -427,7 +431,14 @@ export default function WorkoutPlanExcelHandler({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            flexWrap: "wrap",
+          }}
+        >
           <ImportExportOutlinedIcon color="primary" />
           Import/Export Workout Plans
         </Box>
@@ -442,7 +453,14 @@ export default function WorkoutPlanExcelHandler({
 
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" gutterBottom>
-            <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                flexWrap: "wrap",
+              }}
+            >
               <DownloadOutlinedIcon />
               Import Workout Plan
             </Box>
@@ -452,12 +470,21 @@ export default function WorkoutPlanExcelHandler({
             back.
           </Typography>
 
-          <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 3 }}>
+          <Box
+            sx={{
+              display: "flex",
+              gap: 2,
+              flexWrap: "wrap",
+              mb: 3,
+              flexDirection: { xs: "column", sm: "row" },
+            }}
+          >
             <Button
               variant="contained"
               startIcon={<DownloadOutlinedIcon />}
               onClick={downloadTemplate}
               disabled={loading}
+              fullWidth={isMobile}
             >
               Download Template
             </Button>
@@ -474,6 +501,7 @@ export default function WorkoutPlanExcelHandler({
                 )
               }
               disabled={loading}
+              fullWidth={isMobile}
             >
               Upload & Import
               <input
@@ -509,7 +537,14 @@ export default function WorkoutPlanExcelHandler({
         {/* Export Section */}
         <Box>
           <Typography variant="h6" gutterBottom>
-            <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                flexWrap: "wrap",
+              }}
+            >
               <UploadOutlinedIcon />
               Export Workout Plan
             </Box>
@@ -526,7 +561,10 @@ export default function WorkoutPlanExcelHandler({
                 startIcon={<CollectionsIcon />}
                 onClick={exportAllPlans}
                 fullWidth
-                sx={{ mb: 2 }}
+                sx={{
+                  mb: 2,
+                  py: { xs: 1.5, sm: 1 },
+                }}
               >
                 Export ALL Plans ({plans.length} plans)
               </Button>
@@ -545,58 +583,129 @@ export default function WorkoutPlanExcelHandler({
               </Typography>
               <List
                 sx={{
-                  maxHeight: 300,
+                  maxHeight: { xs: 260, sm: 300 },
                   overflow: "auto",
                   border: "1px solid #e0e0e0",
                   borderRadius: 1,
                 }}
               >
-                {plans.map((plan) => (
-                  <ListItem
-                    key={plan.id}
-                    disablePadding
-                    secondaryAction={
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={() => exportPlan(plan)}
+                {plans.map((plan) =>
+                  isMobile ? (
+                    <ListItem key={plan.id} disablePadding>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: { xs: "column", sm: "row" },
+                          alignItems: { xs: "stretch", sm: "center" },
+                          justifyContent: "space-between",
+                          width: "100%",
+                          gap: 1,
+                        }}
                       >
-                        Export
-                      </Button>
-                    }
-                  >
-                    <ListItemButton>
-                      <ListItemIcon>
-                        <FitnessCenterIcon fontSize="small" color="primary" />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={plan.name}
-                        secondary={
-                          <Box
+                        <ListItemButton>
+                          <ListItemIcon>
+                            <FitnessCenterIcon
+                              fontSize="small"
+                              color="primary"
+                            />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={plan.name}
+                            secondary={
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                  mt: 0.5,
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                <Chip
+                                  label={`${plan.exercises?.length || 0} exercises`}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                                <Chip
+                                  label={`${plan.exercises?.reduce((sum, e) => sum + (parseInt(e.sets) || 0), 0) || 0} sets`}
+                                  size="small"
+                                  variant="outlined"
+                                  color="secondary"
+                                />
+                              </Box>
+                            }
+                          />
+                        </ListItemButton>
+                        <Box
+                          sx={{
+                            width: "100%",
+                            display: "flex",
+                            justifyContent: "center",
+                            mt: 1,
+                          }}
+                        >
+                          <Button
+                            size="small"
+                            variant="contained"
+                            onClick={() => exportPlan(plan)}
                             sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 1,
-                              mt: 0.5,
+                              width: "95%",
+                              maxWidth: 300,
                             }}
                           >
-                            <Chip
-                              label={`${plan.exercises?.length || 0} exercises`}
-                              size="small"
-                              variant="outlined"
-                            />
-                            <Chip
-                              label={`${plan.exercises?.reduce((sum, e) => sum + (parseInt(e.sets) || 0), 0) || 0} sets`}
-                              size="small"
-                              variant="outlined"
-                              color="secondary"
-                            />
-                          </Box>
-                        }
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                ))}
+                            Export
+                          </Button>
+                        </Box>
+                      </Box>
+                    </ListItem>
+                  ) : (
+                    <ListItem
+                      key={plan.id}
+                      disablePadding
+                      secondaryAction={
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={() => exportPlan(plan)}
+                        >
+                          Export
+                        </Button>
+                      }
+                    >
+                      <ListItemButton>
+                        <ListItemIcon>
+                          <FitnessCenterIcon fontSize="small" color="primary" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={plan.name}
+                          secondary={
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                                mt: 0.5,
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <Chip
+                                label={`${plan.exercises?.length || 0} exercises`}
+                                size="small"
+                                variant="outlined"
+                              />
+                              <Chip
+                                label={`${plan.exercises?.reduce((sum, e) => sum + (parseInt(e.sets) || 0), 0) || 0} sets`}
+                                size="small"
+                                variant="outlined"
+                                color="secondary"
+                              />
+                            </Box>
+                          }
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  ),
+                )}
               </List>
             </>
           ) : (

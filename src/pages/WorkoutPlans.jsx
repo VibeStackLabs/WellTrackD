@@ -23,6 +23,8 @@ import {
   DialogContentText,
   Alert,
   Snackbar,
+  useTheme as useMuiTheme,
+  useMediaQuery,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
@@ -83,6 +85,8 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
 
   // Get current color theme
   const { mode } = useTheme();
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
 
   // Load plans from Firestore
   useEffect(() => {
@@ -416,7 +420,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           />
         </Box>
         <Grid container spacing={1}>
-          <Grid size={{ xs: 4 }}>
+          <Grid size={{ xs: 6, sm: 4 }}>
             <Typography variant="caption" color="text.secondary">
               Sets
             </Typography>
@@ -424,7 +428,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
               {setsValue > 0 ? setsValue : "Not set"}
             </Typography>
           </Grid>
-          <Grid size={{ xs: 4 }}>
+          <Grid size={{ xs: 6, sm: 4 }}>
             <Typography variant="caption" color="text.secondary">
               Reps
             </Typography>
@@ -432,7 +436,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
               {exercise.reps || "Not set"}
             </Typography>
           </Grid>
-          <Grid size={{ xs: 4 }}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <Typography variant="caption" color="text.secondary">
               Weight
             </Typography>
@@ -492,7 +496,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
               placeholder="e.g., Bench Press, Squats, Pull-ups"
             />
           </Grid>
-          <Grid size={{ xs: 4 }}>
+          <Grid size={{ xs: 6, sm: 4 }}>
             <TextField
               label="Sets"
               type="text"
@@ -516,7 +520,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
               }
             />
           </Grid>
-          <Grid size={{ xs: 4 }}>
+          <Grid size={{ xs: 6, sm: 4 }}>
             <TextField
               label="Reps"
               type="text"
@@ -540,7 +544,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
               }
             />
           </Grid>
-          <Grid size={{ xs: 4 }}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <TextField
               label="Weight"
               type="text"
@@ -605,7 +609,8 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
         sx={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          flexDirection: { xs: "column", md: "row" },
+          gap: { xs: 1, md: 0 },
           mb: 2,
         }}
       >
@@ -613,12 +618,21 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           Workout Plans
         </Typography>
 
-        <Box sx={{ display: "flex", gap: 1 }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1,
+            flexDirection: { xs: "column", sm: "row" },
+            width: { xs: "100%", sm: "auto" },
+            pb: { xs: 1, sm: 0 },
+          }}
+        >
           <Button
             variant="contained"
             startIcon={<ImportExportIcon />}
             onClick={() => setExcelHandlerOpen(true)}
             disabled={saving}
+            fullWidth={isMobile}
           >
             Import/Export
           </Button>
@@ -631,6 +645,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
               setOpenDialog(true);
             }}
             disabled={saving}
+            fullWidth={isMobile}
           >
             Create New Plan
           </Button>
@@ -1006,6 +1021,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
             onClick={handleAddExercise}
             sx={{ mt: 1 }}
             disabled={saving}
+            variant="contained"
           >
             Add Another Exercise
           </Button>

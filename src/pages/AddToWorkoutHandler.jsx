@@ -13,6 +13,8 @@ import {
   Box,
   Typography,
   Divider,
+  useTheme as useMuiTheme,
+  useMediaQuery,
 } from "@mui/material";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import { useTheme } from "../contexts/ThemeContext";
@@ -27,6 +29,8 @@ export default function AddToWorkoutHandler({
 
   // Get current color theme
   const { mode } = useTheme();
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
 
   // Reset selection when exercises change
   React.useEffect(() => {
@@ -100,6 +104,8 @@ export default function AddToWorkoutHandler({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flexDirection: { xs: "column", sm: "row" },
+            gap: 1,
           }}
         >
           <Box>
@@ -113,7 +119,12 @@ export default function AddToWorkoutHandler({
               </Typography>
             </Box>
           </Box>
-          <Button size="small" onClick={handleSelectAll} variant="contained">
+          <Button
+            size="small"
+            onClick={handleSelectAll}
+            variant="contained"
+            fullWidth={isMobile}
+          >
             {selectedExercises.length === exercises.length
               ? "Deselect All"
               : "Select All"}
@@ -153,7 +164,13 @@ export default function AddToWorkoutHandler({
                 </ListItemIcon>
                 <ListItemText
                   primary={
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                      }}
+                    >
                       <Typography
                         variant="body2"
                         fontWeight={isSelected ? "bold" : "normal"}
