@@ -13,11 +13,13 @@ import {
   Step,
   StepLabel,
   Paper,
+  useMediaQuery,
 } from "@mui/material";
 import { FitnessCenter, Google } from "@mui/icons-material";
 import { useGoogleLogin } from "@react-oauth/google";
 import googleFitService from "../../services/googleFitService";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 const steps = ["Connect Google Account", "Grant Permissions", "Sync Data"];
 
@@ -28,6 +30,8 @@ export default function GoogleFitAuth({ open, onClose, onSuccess }) {
 
   // Get current color theme
   const { mode } = useTheme();
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
 
   const login = useGoogleLogin({
     scope: [
@@ -124,8 +128,24 @@ export default function GoogleFitAuth({ open, onClose, onSuccess }) {
       </DialogTitle>
 
       <DialogContent>
-        <Box sx={{ mb: 4 }}>
-          <Stepper activeStep={activeStep} alternativeLabel>
+        <Box
+          sx={{
+            mb: { xs: 2, sm: 4 },
+            px: { xs: 1, sm: 2 },
+          }}
+        >
+          <Stepper
+            activeStep={activeStep}
+            alternativeLabel
+            sx={{
+              "& .MuiStepLabel-label": {
+                fontSize: { xs: "0.65rem", sm: "0.875rem" },
+              },
+              "& .MuiStepIcon-root": {
+                fontSize: { xs: 20, sm: 24 },
+              },
+            }}
+          >
             {steps.map((label) => (
               <Step key={label}>
                 <StepLabel>{label}</StepLabel>
@@ -134,24 +154,41 @@ export default function GoogleFitAuth({ open, onClose, onSuccess }) {
           </Stepper>
         </Box>
 
-        <Paper variant="outlined" sx={{ p: 3, mb: 2 }}>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: { xs: 2, sm: 3 },
+            mb: 2,
+          }}
+        >
           <Box
             display="flex"
             flexDirection="column"
             alignItems="center"
             gap={2}
           >
-            <Google sx={{ fontSize: 48, color: "#4285F4" }} />
+            <Google
+              sx={{
+                fontSize: { xs: 42, sm: 48 },
+                color: "#4285F4",
+              }}
+            />
             <Typography variant="body1" textAlign="center">
               Connect your Google account to sync your real step data from
-              Google Fit. We'll access your activity data for the last 30 days.
+              Google Fit. We'll access your activity data for the last 90 days.
             </Typography>
 
             <Box sx={{ width: "100%", mt: 2 }}>
               <Typography variant="subtitle2" gutterBottom>
                 What we'll access:
               </Typography>
-              <ul style={{ margin: 0, paddingLeft: 20 }}>
+              <ul
+                style={{
+                  margin: 0,
+                  paddingLeft: 20,
+                  fontSize: "0.9rem",
+                }}
+              >
                 <li>Daily step count (read/write)</li>
                 <li>Distance traveled</li>
                 <li>Calories burned</li>
@@ -170,8 +207,15 @@ export default function GoogleFitAuth({ open, onClose, onSuccess }) {
         )}
       </DialogContent>
 
-      <DialogActions>
+      <DialogActions
+        sx={{
+          flexDirection: { xs: "column", sm: "row" },
+          gap: 1,
+          p: 2,
+        }}
+      >
         <Button
+          fullWidth={isMobile}
           onClick={onClose}
           disabled={loading}
           variant="contained"
@@ -186,6 +230,7 @@ export default function GoogleFitAuth({ open, onClose, onSuccess }) {
           Cancel
         </Button>
         <Button
+          fullWidth={isMobile}
           variant="contained"
           onClick={handleConnect}
           disabled={loading}

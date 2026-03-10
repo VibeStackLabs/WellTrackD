@@ -610,10 +610,14 @@ export default function StepTracker({ userId }) {
 
       {/* Header with account info and menu */}
       <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={4}
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          alignItems: { xs: "flex-start", md: "center" },
+          justifyContent: "space-between",
+          gap: 2,
+          mb: 4,
+        }}
       >
         <Box display="flex" alignItems="center" gap={2}>
           <DirectionsWalk sx={{ fontSize: 40, color: "primary.main" }} />
@@ -621,20 +625,21 @@ export default function StepTracker({ userId }) {
             <Typography variant="h5" sx={{ color: "text.primary" }}>
               Step Tracker
             </Typography>
-            <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-              <Box display="flex" alignItems="center" gap={0.5}>
-                <CheckCircle color="success" sx={{ fontSize: 16 }} />
-                <Typography variant="body2" color="text.secondary">
-                  Connected as
-                </Typography>
-                <Chip
-                  size="small"
-                  avatar={getUserAvatar()}
-                  label={getUserDisplay()}
-                  variant="outlined"
-                  sx={{ ml: 0.5 }}
-                />
-              </Box>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                alignItems: { xs: "flex-start", sm: "center" },
+                gap: 1,
+                mt: 0.5,
+              }}
+            >
+              <Chip
+                size="small"
+                avatar={getUserAvatar()}
+                label={getUserDisplay()}
+                variant="outlined"
+              />
               {lastSyncTime && (
                 <Typography variant="caption" color="text.secondary">
                   Last sync: {format(lastSyncTime, "hh:mm a")}
@@ -644,17 +649,45 @@ export default function StepTracker({ userId }) {
           </Box>
         </Box>
 
-        <Box display="flex" gap={2} alignItems="center">
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            width: { xs: "100%", sm: "auto" },
+          }}
+        >
           <Button
             variant="contained"
-            startIcon={syncLoading ? <CircularProgress size={20} /> : <Sync />}
+            fullWidth
+            startIcon={
+              syncLoading ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                <Sync />
+              )
+            }
             onClick={handleSyncGoogleFit}
             disabled={syncLoading}
+            sx={{
+              borderRadius: 2,
+              textTransform: "none",
+              fontWeight: 600,
+              px: 3,
+            }}
           >
             {syncLoading ? "Syncing..." : "Sync Now"}
           </Button>
 
-          <IconButton onClick={handleMenuOpen} size="small">
+          <IconButton
+            onClick={handleMenuOpen}
+            sx={{
+              alignSelf: { xs: "flex-end", sm: "center" },
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 2,
+            }}
+          >
             <MoreVert />
           </IconButton>
 
@@ -662,6 +695,18 @@ export default function StepTracker({ userId }) {
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
+            anchorOrigin={{
+              vertical: "bottom",
+              horizontal: "right",
+            }}
+            transformOrigin={{
+              vertical: "top",
+              horizontal: "right",
+            }}
+            PaperProps={{
+              elevation: 3,
+              sx: { minWidth: 220, mr: 1 },
+            }}
           >
             <MenuItem>
               <ListItemIcon>
@@ -749,7 +794,14 @@ export default function StepTracker({ userId }) {
         <CardContent>
           <Grid container spacing={3} alignItems="center">
             <Grid size={{ xs: 12, md: 4 }}>
-              <Box display="flex" justifyContent="space-around" gap={3}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-around",
+                  gap: { xs: 2, sm: 3 },
+                  flexWrap: "wrap",
+                }}
+              >
                 <Box textAlign="center">
                   <Typography variant="h5" color="primary">
                     <CountUp end={todaySteps} duration={1} separator="," />
@@ -863,7 +915,7 @@ export default function StepTracker({ userId }) {
 
       {/* Stats Cards */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 6, sm: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Paper
             variant="outlined"
             sx={{
@@ -885,7 +937,7 @@ export default function StepTracker({ userId }) {
           </Paper>
         </Grid>
 
-        <Grid size={{ xs: 6, sm: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Paper
             variant="outlined"
             sx={{
@@ -906,7 +958,7 @@ export default function StepTracker({ userId }) {
           </Paper>
         </Grid>
 
-        <Grid size={{ xs: 6, sm: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Paper
             variant="outlined"
             sx={{
@@ -933,8 +985,10 @@ export default function StepTracker({ userId }) {
         <Box
           sx={{
             display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: { xs: "flex-start", sm: "center" },
             justifyContent: "space-between",
-            alignItems: "center",
+            gap: 2,
             mb: 3,
           }}
         >
@@ -966,9 +1020,11 @@ export default function StepTracker({ userId }) {
             onChange={handleTimeRangeChange}
             size="small"
             sx={{
+              flexWrap: "wrap",
               "& .MuiToggleButton-root": {
                 textTransform: "none",
-                px: 2,
+                px: { xs: 1.5, md: 2 },
+                fontSize: { xs: "0.7rem", md: "0.8rem" },
               },
               "& .MuiToggleButton-root.Mui-selected": {
                 backgroundColor: "primary.main",
@@ -1063,7 +1119,12 @@ export default function StepTracker({ userId }) {
                         <>
                           <Box
                             component="span"
-                            sx={{ display: "inline-flex", gap: 2, mt: 0.5 }}
+                            sx={{
+                              display: "flex",
+                              flexDirection: { xs: "column", sm: "row" },
+                              gap: 1,
+                              mt: 0.5,
+                            }}
                           >
                             <Typography component="span" variant="body2">
                               Steps: {entry.steps.toLocaleString()}
@@ -1132,7 +1193,12 @@ export default function StepTracker({ userId }) {
       </Card>
 
       {/* Set Goal Dialog */}
-      <Dialog open={goalDialogOpen} onClose={() => setGoalDialogOpen(false)}>
+      <Dialog
+        open={goalDialogOpen}
+        onClose={() => setGoalDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle>Set Daily Step Goal</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
@@ -1182,6 +1248,8 @@ export default function StepTracker({ userId }) {
         onClose={() => setDisconnectDialogOpen(false)}
         aria-labelledby="disconnect-dialog-title"
         aria-describedby="disconnect-dialog-description"
+        fullWidth
+        maxWidth="xs"
       >
         <DialogTitle id="disconnect-dialog-title">
           <Box display="flex" alignItems="center" gap={1}>

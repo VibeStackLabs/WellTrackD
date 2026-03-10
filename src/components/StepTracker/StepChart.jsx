@@ -20,13 +20,19 @@ import {
   Paper,
   ToggleButtonGroup,
   ToggleButton,
+  useMediaQuery,
 } from "@mui/material";
 import { format, parseISO, eachDayOfInterval, subDays } from "date-fns";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import ShowChartIcon from "@mui/icons-material/ShowChart";
+import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 export default function StepChart({ data, days = 7 }) {
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
+  const mobileTick = isMobile ? { fontSize: 12 } : undefined;
+
   const [chartType, setChartType] = React.useState("area");
 
   const handleChartTypeChange = (event, newType) => {
@@ -82,15 +88,31 @@ export default function StepChart({ data, days = 7 }) {
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-              <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+              <XAxis
+                dataKey="date"
+                tick={mobileTick}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                yAxisId="left"
+                orientation="left"
+                stroke="#8884d8"
+                tick={mobileTick}
+                width={isMobile ? 30 : 50}
+              />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                stroke="#82ca9d"
+                tick={mobileTick}
+                width={isMobile ? 30 : 50}
+              />
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
                     return (
-                      <Paper sx={{ p: 2 }}>
+                      <Paper sx={{ p: 1.5, maxWidth: 180 }}>
                         <Typography variant="subtitle2">
                           {data.fullDate}
                         </Typography>
@@ -129,14 +151,18 @@ export default function StepChart({ data, days = 7 }) {
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
+              <XAxis
+                dataKey="date"
+                tick={mobileTick}
+                interval="preserveStartEnd"
+              />
               <YAxis />
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
                     return (
-                      <Paper sx={{ p: 2 }}>
+                      <Paper sx={{ p: 1.5, maxWidth: 180 }}>
                         <Typography variant="subtitle2">
                           {data.fullDate}
                         </Typography>
@@ -190,14 +216,18 @@ export default function StepChart({ data, days = 7 }) {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
+              <XAxis
+                dataKey="date"
+                tick={mobileTick}
+                interval="preserveStartEnd"
+              />
               <YAxis />
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
                     return (
-                      <Paper sx={{ p: 2 }}>
+                      <Paper sx={{ p: 1.5, maxWidth: 180 }}>
                         <Typography variant="subtitle2">
                           {data.fullDate}
                         </Typography>
@@ -279,7 +309,11 @@ export default function StepChart({ data, days = 7 }) {
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: {
+            xs: "repeat(2, 1fr)",
+            sm: "repeat(2, 1fr)",
+            md: "repeat(4, 1fr)",
+          },
           gap: 2,
           mb: 3,
         }}
