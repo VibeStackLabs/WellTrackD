@@ -11,6 +11,7 @@ import {
   Paper,
   IconButton,
   Divider,
+  CircularProgress,
 } from "@mui/material";
 import {
   Close as CloseIcon,
@@ -129,7 +130,17 @@ const ChangelogDialog = ({ open, onClose }) => {
 
       <DialogContent sx={{ pt: 2 }}>
         {loading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              py: 4,
+              gap: 2,
+            }}
+          >
+            <CircularProgress size={60} />
             <Typography>Loading updates...</Typography>
           </Box>
         ) : entries.length === 0 ? (
@@ -213,12 +224,7 @@ const ChangelogDialog = ({ open, onClose }) => {
                   {entry.title}
                 </Typography>
 
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ whiteSpace: "pre-line" }}
-                >
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {entry.description}
                 </ReactMarkdown>
 
@@ -244,7 +250,7 @@ const ChangelogDialog = ({ open, onClose }) => {
 
       <Divider />
 
-      <DialogActions sx={{ px: 3, py: 2 }}>
+      <DialogActions sx={{ px: 2.6, py: 2 }}>
         <Button
           startIcon={<TelegramIcon />}
           onClick={handleContactSupport}

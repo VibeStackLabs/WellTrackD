@@ -7,7 +7,6 @@ import {
   Chip,
   Tooltip,
 } from "@mui/material";
-import { AccountCircle as AccountCircleIcon } from "@mui/icons-material";
 import ProfileEditDialog from "./ProfileEditDialog";
 
 // UI Avatars service - free, no API key needed
@@ -77,7 +76,14 @@ export default function Profile({ userData, onUpdate, isOffline }) {
 
   return (
     <>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          flexWrap: { xs: "wrap", sm: "nowrap" },
+        }}
+      >
         {/* Clickable Profile Avatar */}
         <Tooltip title="Edit Profile">
           <IconButton
@@ -98,8 +104,8 @@ export default function Profile({ userData, onUpdate, isOffline }) {
             <Avatar
               src={getAvatarSrc()}
               sx={{
-                width: 44,
-                height: 44,
+                width: { xs: 40, sm: 44 },
+                height: { xs: 40, sm: 44 },
                 bgcolor: getAvatarColor(),
                 fontSize: "1.2rem",
                 fontWeight: 600,
@@ -111,11 +117,14 @@ export default function Profile({ userData, onUpdate, isOffline }) {
         </Tooltip>
 
         {/* Welcome Text with Name */}
-        <Box sx={{ display: { xs: "none", sm: "block" } }}>
+        <Box sx={{ display: "flex", flexDirection: "column" }}>
           <Typography
             variant="body2"
             color="text.secondary"
-            sx={{ lineHeight: 1.2 }}
+            sx={{
+              lineHeight: 1.2,
+              fontSize: { xs: "0.7rem", sm: "0.8rem" },
+            }}
           >
             Welcome back,
           </Typography>
@@ -124,7 +133,13 @@ export default function Profile({ userData, onUpdate, isOffline }) {
               variant="subtitle1"
               fontWeight="bold"
               color="primary.main"
-              sx={{ cursor: "pointer" }}
+              sx={{
+                cursor: "pointer",
+                fontSize: { xs: "0.9rem", sm: "1rem" },
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
               onClick={handleProfileClick}
             >
               {userData?.name || "User"}
@@ -135,7 +150,10 @@ export default function Profile({ userData, onUpdate, isOffline }) {
                 size="small"
                 color="warning"
                 variant="outlined"
-                sx={{ fontSize: "0.6rem", height: 20 }}
+                sx={{
+                  fontSize: { xs: "0.55rem", sm: "0.6rem" },
+                  height: { xs: 18, sm: 20 },
+                }}
               />
             )}
           </Box>

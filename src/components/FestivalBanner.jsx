@@ -20,7 +20,7 @@ const FestivalBanner = () => {
     }
   }, [currentFestival]);
 
-  if (!currentFestival) return null;
+  if (!currentFestival || !open) return null; // Remove || !open if you want to show banner whole day
 
   return (
     <>

@@ -384,7 +384,14 @@ export default function ProfileEditDialog({
         )}
 
         {/* Tab Selection */}
-        <Box sx={{ display: "flex", gap: 1, mb: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1,
+            mb: 3,
+            flexDirection: { xs: "column", sm: "row" },
+          }}
+        >
           <Button
             variant={activeTab === "profile" ? "contained" : "outlined"}
             onClick={() => setActiveTab("profile")}
@@ -581,7 +588,11 @@ export default function ProfileEditDialog({
                 borderRadius: 2,
               }}
             >
-              <Typography variant="caption" display="block">
+              <Typography
+                variant="caption"
+                display="block"
+                sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}
+              >
                 Member since:{" "}
                 {userData?.createdAt?.toDate?.()
                   ? new Date(userData.createdAt.toDate()).toLocaleDateString(
@@ -600,7 +611,11 @@ export default function ProfileEditDialog({
                       })
                     : "N/A"}
               </Typography>
-              <Typography variant="caption" display="block">
+              <Typography
+                variant="caption"
+                display="block"
+                sx={{ fontSize: { xs: "0.7rem", sm: "0.75rem" } }}
+              >
                 User ID: {userId}
               </Typography>
             </Paper>
@@ -729,7 +744,7 @@ export default function ProfileEditDialog({
         )}
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, py: 2 }}>
+      <DialogActions sx={{ px: 2.6, py: 2 }}>
         <Button
           onClick={onClose}
           disabled={loading}

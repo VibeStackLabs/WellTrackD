@@ -5,6 +5,16 @@ const FestivalEffects = () => {
   const { currentFestival, festivalEffects } = useTheme();
   const [fireworks, setFireworks] = useState([]);
   const [colorThrows, setColorThrows] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Generate color throws for Holi (from corners AND center)
   useEffect(() => {
@@ -34,8 +44,9 @@ const FestivalEffects = () => {
   useEffect(() => {
     if (currentFestival?.id === "diwali") {
       // Create initial set of fireworks
-      const initialFireworks = Array.from({ length: 6 }, (_, i) =>
-        createFirework(i),
+      const initialFireworks = Array.from(
+        { length: isMobile ? 3 : 6 },
+        (_, i) => createFirework(i),
       );
       setFireworks(initialFireworks);
 
@@ -121,7 +132,7 @@ const FestivalEffects = () => {
 
           {/* Floating color powder */}
           <div className="gulal-powder">
-            {[...Array(30)].map((_, i) => (
+            {[...Array(isMobile ? 12 : 30)].map((_, i) => (
               <div
                 key={i}
                 className="gulal-particle"

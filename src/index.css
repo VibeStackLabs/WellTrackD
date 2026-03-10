@@ -90,6 +90,34 @@ body {
   border-color: rgba(255, 215, 0, 0.3);
 }
 
+/* Mobile optimization for Festival Banner */
+@media (max-width: 600px) {
+  .festival-message-banner {
+    font-size: 0.9rem;
+    max-width: 92%;
+    padding: 10px 16px;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.3;
+  }
+}
+
+@media (max-width: 768px) {
+  .decoration {
+    font-size: 1.5rem;
+  }
+
+  .burst-particle {
+    width: 5px;
+    height: 5px;
+    animation: burst 0.9s ease-out forwards;
+  }
+
+  .color-splash {
+    filter: blur(15px);
+  }
+}
+
 /* Sparkle Animation */
 @keyframes sparkle {
   0%,
