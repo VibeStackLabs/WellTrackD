@@ -48,6 +48,7 @@ import {
   AlertTitle,
   FormControlLabel,
   Switch,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Delete as DeleteIcon,
@@ -88,6 +89,7 @@ import {
 
 // Import MUI theme
 import { useTheme } from "../contexts/ThemeContext";
+import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 // Import date picker
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -146,6 +148,9 @@ function AdminDashboard() {
 
   // Get current color theme
   const { mode, toggleMode } = useTheme();
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(muiTheme.breakpoints.down("md"));
 
   const loadChangelog = async () => {
     setChangelogLoading(true);
@@ -596,6 +601,15 @@ function AdminDashboard() {
     }
   };
 
+  const mobileButtonStyle = (mode) => ({
+    textTransform: "none",
+    backgroundColor: mode === "light" ? "#333333" : "#f9f6ee",
+    color: mode === "light" ? "#f9f6ee" : "#333333",
+    "&:hover": {
+      bgcolor: mode === "light" ? "#444444" : "#f6e4d2",
+    },
+  });
+
   if (adminLoading || loading) {
     return (
       <Box
@@ -648,40 +662,84 @@ function AdminDashboard() {
           {/* Right side buttons */}
           <Grid>
             <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-              <Button
-                variant="contained"
-                startIcon={<RefreshIcon />}
-                onClick={loadData}
-                disabled={loading}
-              >
-                Refresh
-              </Button>
-
+              {isMobile ? (
+                <IconButton
+                  variant="contained"
+                  onClick={loadData}
+                  disabled={loading}
+                  sx={mobileButtonStyle(mode)}
+                >
+                  <RefreshIcon />
+                </IconButton>
+              ) : (
+                <Button
+                  variant="contained"
+                  onClick={loadData}
+                  disabled={loading}
+                  startIcon={<RefreshIcon />}
+                  sx={{
+                    textTransform: "none",
+                    minWidth: "auto",
+                    px: 2,
+                  }}
+                >
+                  Refresh
+                </Button>
+              )}
               {/* Dark Mode Toggle Icon */}
-              <Button
-                variant="contained"
-                color="warning"
-                onClick={toggleMode}
-                startIcon={
-                  mode === "light" ? <DarkModeIcon /> : <LightModeIcon />
-                }
-                sx={{
-                  textTransform: "none",
-                  minWidth: "auto",
-                  px: 2,
-                }}
-              >
-                Toggle Theme
-              </Button>
-
-              <Button
-                variant="contained"
-                color="error"
-                startIcon={<LogoutIcon />}
-                onClick={handleLogout}
-              >
-                Back to App
-              </Button>
+              {isMobile ? (
+                <IconButton
+                  variant="contained"
+                  color="warning"
+                  onClick={toggleMode}
+                  disabled={loading}
+                  sx={mobileButtonStyle(mode)}
+                >
+                  {mode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
+                </IconButton>
+              ) : (
+                <Button
+                  variant="contained"
+                  onClick={toggleMode}
+                  disabled={loading}
+                  startIcon={
+                    mode === "light" ? <DarkModeIcon /> : <LightModeIcon />
+                  }
+                  sx={{
+                    textTransform: "none",
+                    minWidth: "auto",
+                    px: 2,
+                  }}
+                >
+                  {mode === "light" ? "Dark Mode" : "Light Mode"}
+                </Button>
+              )}
+              {/* Back to App */}
+              {isMobile ? (
+                <IconButton
+                  variant="contained"
+                  color="error"
+                  onClick={handleLogout}
+                  disabled={loading}
+                  sx={mobileButtonStyle(mode)}
+                >
+                  <LogoutIcon />
+                </IconButton>
+              ) : (
+                <Button
+                  variant="contained"
+                  onClick={handleLogout}
+                  disabled={loading}
+                  startIcon={<LogoutIcon />}
+                  sx={{
+                    textTransform: "none",
+                    minWidth: "auto",
+                    px: 2,
+                  }}
+                >
+                  Back to App
+                </Button>
+              )}
             </Box>
           </Grid>
         </Grid>
@@ -1578,6 +1636,7 @@ function AdminDashboard() {
             color="success"
             startIcon={<EmailIcon />}
             disabled={resetLoading || !resetEmail}
+            size="small"
           >
             {resetLoading ? "Sending..." : "Send Reset Email"}
           </Button>
