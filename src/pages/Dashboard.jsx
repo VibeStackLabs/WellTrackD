@@ -1825,7 +1825,7 @@ export default function Dashboard() {
             workoutUnit === "lbs"
               ? Number(set.weight) * 0.453592
               : Number(set.weight);
-          return sum + (weight || 0) * set.setNumber;
+          return sum + (weight || 0) * set.setNumber * Number(set.reps);
         }, 0),
         calories: Number(calculateTotalCalories()),
         date: selectedDate,
