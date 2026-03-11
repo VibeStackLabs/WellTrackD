@@ -3446,7 +3446,7 @@ export default function Dashboard() {
                             </>
                           ) : (
                             <Typography color="text.primary" sx={{ mb: 2 }}>
-                              "No activities found for this period 💤"
+                              No activities found for this period 💤
                             </Typography>
                           )}
                           <Box
