@@ -5,10 +5,6 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import Signup from "./pages/Signup";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import AdminDashboard from "./pages/AdminDashboard";
 import { useAuthState } from "react-firebase-hooks/auth";
 import {
   Box,
@@ -26,6 +22,12 @@ import { doc, getDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { AdminProvider } from "./contexts/AdminContext";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+
+// Lazy load pages
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 
 // Lazy load festival effects since they're not critical for initial render
 const FestivalEffects = lazy(() => import("./components/FestivalEffects"));
