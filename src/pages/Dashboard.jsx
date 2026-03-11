@@ -157,6 +157,7 @@ export default function Dashboard() {
   // Changelog State
   const [changelogDialogOpen, setChangelogDialogOpen] = useState(false);
   const [unreadUpdates, setUnreadUpdates] = useState(0);
+  const [lastSeenUpdate, setLastSeenUpdate] = useState(null);
 
   // BMI States
   const [weight, setWeight] = useState("");
@@ -923,16 +924,47 @@ export default function Dashboard() {
   }, [userId]);
 
   useEffect(() => {
+    const fetchLastSeenUpdate = async () => {
+      if (!userId) return;
+
+      try {
+        const userRef = doc(db, "users", userId);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          const storedLastSeen = userData.lastSeenUpdate;
+
+          if (storedLastSeen) {
+            setLastSeenUpdate(storedLastSeen);
+            // Also store in localStorage as cache for offline use
+            localStorage.setItem("lastSeenUpdate", storedLastSeen);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching lastSeenUpdate:", error);
+        // Fall back to localStorage cache if offline
+        const cached = localStorage.getItem("lastSeenUpdate");
+        if (cached) {
+          setLastSeenUpdate(cached);
+        }
+      }
+    };
+
+    fetchLastSeenUpdate();
+  }, [userId]);
+
+  useEffect(() => {
     const checkForNewUpdates = async () => {
+      if (!userId) return;
+
       try {
         const entries = await getPublishedChangelog();
         if (entries.length > 0) {
           // Get the latest entry date
           const latestDate = entries[0].date;
 
-          // Check if user has seen this update
-          const lastSeenUpdate = localStorage.getItem("lastSeenUpdate");
-
+          // Check if user has seen this update (using lastSeenUpdate from state)
           if (
             !lastSeenUpdate ||
             new Date(latestDate) > new Date(lastSeenUpdate)
@@ -944,6 +976,8 @@ export default function Dashboard() {
                 new Date(entry.date) > new Date(lastSeenUpdate),
             );
             setUnreadUpdates(unseenEntries.length);
+          } else {
+            setUnreadUpdates(0);
           }
         }
       } catch (error) {
@@ -952,16 +986,80 @@ export default function Dashboard() {
     };
 
     checkForNewUpdates();
-  }, []);
+  }, [userId, lastSeenUpdate]);
+
+  useEffect(() => {
+    const migrateLastSeenUpdate = async () => {
+      if (!userId) return;
+
+      const localLastSeen = localStorage.getItem("lastSeenUpdate");
+      if (localLastSeen && !lastSeenUpdate) {
+        try {
+          const userRef = doc(db, "users", userId);
+          await updateDoc(userRef, {
+            lastSeenUpdate: localLastSeen,
+          });
+          setLastSeenUpdate(localLastSeen);
+          console.log("Migrated lastSeenUpdate to Firestore");
+        } catch (error) {
+          console.error("Error migrating lastSeenUpdate:", error);
+        }
+      }
+    };
+
+    migrateLastSeenUpdate();
+  }, [userId, lastSeenUpdate]);
 
   // Update when dialog is closed (mark as seen)
-  const handleChangelogClose = () => {
+  const handleChangelogClose = async () => {
     setChangelogDialogOpen(false);
 
-    // Mark all updates as seen
-    const today = new Date().toISOString().split("T")[0];
-    localStorage.setItem("lastSeenUpdate", today);
-    setUnreadUpdates(0);
+    if (!userId) return;
+
+    try {
+      // Get the latest changelog date
+      const entries = await getPublishedChangelog();
+
+      if (entries.length > 0) {
+        const latestDate = entries[0].date;
+
+        // Update in Firestore
+        const userRef = doc(db, "users", userId);
+        await updateDoc(userRef, {
+          lastSeenUpdate: latestDate,
+        });
+
+        // Update local state
+        setLastSeenUpdate(latestDate);
+
+        // Also update localStorage cache
+        localStorage.setItem("lastSeenUpdate", latestDate);
+        setUnreadUpdates(0);
+      }
+    } catch (error) {
+      console.error("Error updating lastSeenUpdate:", error);
+
+      // Offline fallback - store in localStorage only
+      const entries = await getPublishedChangelog().catch(() => []);
+      if (entries.length > 0) {
+        const latestDate = entries[0].date;
+
+        // Add to sync queue for when back online
+        setSyncQueue((prev) => [
+          ...prev,
+          {
+            type: "updateProfile",
+            data: { lastSeenUpdate: latestDate },
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+
+        // Optimistic update
+        setLastSeenUpdate(latestDate);
+        localStorage.setItem("lastSeenUpdate", latestDate);
+        setUnreadUpdates(0);
+      }
+    }
   };
 
   // --- BMI ---
