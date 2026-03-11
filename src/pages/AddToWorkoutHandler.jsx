@@ -174,6 +174,7 @@ export default function AddToWorkoutHandler({
                       <Typography
                         variant="body2"
                         fontWeight={isSelected ? "bold" : "normal"}
+                        component="span"
                       >
                         {exerciseDetails}
                       </Typography>
@@ -183,8 +184,14 @@ export default function AddToWorkoutHandler({
                     typeof exercise === "object" &&
                     exercise.sets &&
                     exercise.reps && (
-                      <Box sx={{ mt: 0.5 }}>
-                        <Typography variant="caption" color="primary.main">
+                      <Box sx={{ mt: 0.5 }} component="span">
+                        {" "}
+                        <Typography
+                          variant="caption"
+                          color="primary.main"
+                          component="span"
+                        >
+                          {" "}
                           {exercise.sets} sets × {exercise.reps} reps
                         </Typography>
                       </Box>
