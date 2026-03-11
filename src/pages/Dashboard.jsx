@@ -73,6 +73,7 @@ import ListIcon from "@mui/icons-material/List";
 import SecurityIcon from "@mui/icons-material/Security";
 import NewReleasesIcon from "@mui/icons-material/NewReleases";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import ShareIcon from "@mui/icons-material/Share";
 import { Link } from "react-router-dom";
 import {
   DarkMode as DarkModeIcon,
@@ -93,6 +94,7 @@ import StepTracker from "./StepTracker";
 import BMIChart from "../components/BMIChart";
 import { useTheme } from "../contexts/ThemeContext";
 import { useTheme as useMuiTheme } from "@mui/material/styles";
+import ShareDialog from "../components/ShareDialog";
 
 const PREDEFINED_STRENGTH_WORKOUTS = [
   "Bench Press",
@@ -368,6 +370,83 @@ export default function Dashboard() {
   const [exercisesToAdd, setExercisesToAdd] = useState([]);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [isProcessingBatch, setIsProcessingBatch] = useState(false);
+
+  // Share Dialog State
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareContent, setShareContent] = useState("");
+  const [shareTitle, setShareTitle] = useState("");
+  const [shareData, setShareData] = useState({});
+
+  // Share Functions
+  const generateWorkoutShareContent = () => {
+    const today = new Date().toISOString().split("T")[0];
+    const todayWorkouts = workouts.filter((w) => w.date === today);
+
+    if (todayWorkouts.length === 0) {
+      setSnackbarMessage("No workouts logged today to share");
+      setSnackbarSeverity("info");
+      setSnackbarOpen(true);
+      return;
+    }
+
+    let content = `💪 My Workout Summary - ${format(new Date(), "dd MMM yyyy")}\n\n`;
+    let totalCalories = 0;
+    let workoutDetails = [];
+
+    todayWorkouts.forEach((workout, index) => {
+      if (workout.type === "rest") {
+        content += `🛌 Rest Day - Active Recovery\n`;
+      } else if (workout.workoutType === "strength") {
+        content += `💪 ${workout.exercise}\n`;
+        workout.sets?.forEach((set) => {
+          content += `  Set ${set.setNumber}: ${set.reps} reps × ${set.weight?.toFixed(1)} kg\n`;
+        });
+        totalCalories += workout.calories || 0;
+
+        workoutDetails.push({
+          exercise: workout.exercise,
+          sets: workout.sets?.length || 0,
+          totalReps: workout.totalReps || 0,
+          totalWeight: workout.totalWeight?.toFixed(1) || 0,
+        });
+      } else if (workout.workoutType === "cardio") {
+        content += `🏃 ${workout.exercise}\n`;
+        content += `  Duration: ${workout.duration} min\n`;
+        if (workout.distance)
+          content += `  Distance: ${workout.distance} ${workout.distanceUnit}\n`;
+        if (workout.avgSpeed)
+          content += `  Avg Speed: ${workout.avgSpeed.toFixed(1)} km/h\n`;
+        totalCalories += workout.calories || 0;
+
+        workoutDetails.push({
+          type: workout.cardioType,
+          duration: workout.duration,
+          distance: workout.distance
+            ? `${workout.distance} ${workout.distanceUnit}`
+            : null,
+        });
+      }
+      if (index < todayWorkouts.length - 1) content += `\n`;
+    });
+
+    content += `\n🔥 Total Calories: ${totalCalories.toFixed(0)} kcal`;
+    content += `\n📊 Total Workouts: ${todayWorkouts.length}`;
+
+    if (workoutDetails.length > 0) {
+      content += `\n——\nWellTrackD\n#FitnessTracker #Workout #Fitness`;
+    }
+
+    setShareTitle(`My Workout - ${format(new Date(), "dd MMM yyyy")}`);
+    setShareContent(content);
+    setShareData({
+      Workouts: todayWorkouts.length,
+      Calories: `${totalCalories.toFixed(0)} kcal`,
+      ...(workoutDetails[0]?.exercise && {
+        "Main Exercise": workoutDetails[0].exercise,
+      }),
+    });
+    setShareDialogOpen(true);
+  };
 
   // Alert Dialog Helper Function
   const showAlert = (title, message, severity = "info", actions = []) => {
@@ -3105,15 +3184,34 @@ export default function Dashboard() {
           {/* Workout Table */}
           <Card
             variant="outlined"
-            sx={{
-              p: { xs: 2, md: 3 },
-              mb: { xs: 6, md: 10 },
-            }}
+            sx={{ p: { xs: 2, md: 3 }, mb: { xs: 6, md: 10 } }}
           >
-            <Typography variant="h6" mb={2}>
-              Workout History
-            </Typography>
-
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
+              <Typography variant="h6" mb={2}>
+                {" "}
+                Workout History{" "}
+              </Typography>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<ShareIcon />}
+                onClick={generateWorkoutShareContent}
+                size="small"
+                sx={{
+                  textTransform: "none",
+                  borderRadius: 2,
+                }}
+              >
+                Share Today
+              </Button>
+            </Box>
             <Box
               sx={{
                 display: "flex",
@@ -5227,6 +5325,16 @@ export default function Dashboard() {
       <ChangelogDialog
         open={changelogDialogOpen}
         onClose={handleChangelogClose}
+      />
+
+      {/* Share Dialog */}
+      <ShareDialog
+        open={shareDialogOpen}
+        onClose={() => setShareDialogOpen(false)}
+        title={shareTitle}
+        content={shareContent}
+        shareData={shareData}
+        type="Workout"
       />
     </Container>
   );

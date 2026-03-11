@@ -30,6 +30,8 @@ import {
   DialogContentText,
   DialogActions,
   TextField,
+  useTheme as useMuiTheme,
+  useMediaQuery,
 } from "@mui/material";
 import {
   DirectionsWalk,
@@ -42,6 +44,7 @@ import {
   Error as ErrorIcon,
   AccountCircle,
   Flag,
+  Share as ShareIcon,
 } from "@mui/icons-material";
 import { format, subDays, eachDayOfInterval } from "date-fns";
 import StepChart from "../components/StepTracker/StepChart";
@@ -51,6 +54,7 @@ import CountUp from "react-countup";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 import { useTheme } from "../contexts/ThemeContext";
+import ShareDialog from "../components/ShareDialog";
 
 export default function StepTracker({ userId }) {
   const [stepData, setStepData] = useState([]);
@@ -71,6 +75,8 @@ export default function StepTracker({ userId }) {
 
   // Get current color theme
   const { mode } = useTheme();
+  const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
 
   // Goal states
   const [stepGoal, setStepGoal] = useState(null);
@@ -88,6 +94,72 @@ export default function StepTracker({ userId }) {
     totalHeartPoints: 0,
     totalMoveMinutes: 0,
   });
+
+  // Share Dialog State
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareContent, setShareContent] = useState("");
+  const [shareTitle, setShareTitle] = useState("");
+  const [shareData, setShareData] = useState({});
+
+  // Share Function
+  const generateStepShareContent = () => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    const todayData = stepData.find((d) => d.date === today) || {
+      steps: 0,
+      distance: 0,
+      calories: 0,
+      heartPoints: 0,
+      moveMinutes: 0,
+    };
+
+    let content = `👟 My Step Tracking Summary - ${format(new Date(), "dd MMM yyyy")}\n\n`;
+
+    content += `🚶 Steps: ${todayData.steps.toLocaleString()}`;
+    if (stepGoal) {
+      const percent = ((todayData.steps / stepGoal) * 100).toFixed(0);
+      content += ` / ${stepGoal.toLocaleString()} (${percent}% of goal)`;
+      if (todayData.steps >= stepGoal) {
+        content += ` 🎯 Goal Achieved!`;
+      }
+    }
+    content += `\n`;
+
+    if (todayData.distance > 0) {
+      content += `📏 Distance: ${todayData.distance.toFixed(2)} km\n`;
+    }
+    if (todayData.calories > 0) {
+      content += `🔥 Calories: ${todayData.calories.toFixed(0)} kcal\n`;
+    }
+    if (todayData.heartPoints > 0) {
+      content += `💓 Heart Points: ${todayData.heartPoints}\n`;
+    }
+    if (todayData.moveMinutes > 0) {
+      content += `⏱️ Move Minutes: ${todayData.moveMinutes}\n`;
+    }
+
+    // Add weekly stats
+    const weekData = getFilteredData(stepData, "week");
+    const weekTotal = weekData.reduce((sum, day) => sum + day.steps, 0);
+    const weekAvg = Math.round(weekTotal / weekData.length);
+
+    content += `\n📊 This Week:\n`;
+    content += `  Total Steps: ${weekTotal.toLocaleString()}\n`;
+    content += `  Daily Avg: ${weekAvg.toLocaleString()}\n`;
+
+    content += `\n——\nWellTrackD\n#StepTracker #Fitness #GoogleFit #Healthy`;
+
+    setShareTitle(`My Steps - ${format(new Date(), "dd MMM yyyy")}`);
+    setShareContent(content);
+    setShareData({
+      Steps: todayData.steps.toLocaleString(),
+      ...(stepGoal && {
+        Goal: `${((todayData.steps / stepGoal) * 100).toFixed(0)}%`,
+      }),
+      Distance: `${todayData.distance.toFixed(2)} km`,
+      Calories: `${todayData.calories.toFixed(0)} kcal`,
+    });
+    setShareDialogOpen(true);
+  };
 
   // Network status listener
   useEffect(() => {
@@ -651,14 +723,31 @@ export default function StepTracker({ userId }) {
         <Box
           sx={{
             display: "flex",
-            alignItems: "center",
-            gap: 1.5,
+            gap: 1,
+            flexDirection: { xs: "column", sm: "row" },
             width: { xs: "100%", sm: "auto" },
+            pb: { xs: 1, sm: 0 },
           }}
         >
           <Button
             variant="contained"
-            fullWidth
+            color="success"
+            fullWidth={isMobile}
+            startIcon={<ShareIcon />}
+            onClick={generateStepShareContent}
+            sx={{
+              borderRadius: 2,
+              textTransform: "none",
+              fontWeight: 600,
+              px: 3,
+            }}
+          >
+            Share Today
+          </Button>
+
+          <Button
+            variant="contained"
+            fullWidth={isMobile}
             startIcon={
               syncLoading ? (
                 <CircularProgress size={20} color="inherit" />
@@ -678,17 +767,32 @@ export default function StepTracker({ userId }) {
             {syncLoading ? "Syncing..." : "Sync Now"}
           </Button>
 
-          <IconButton
-            onClick={handleMenuOpen}
-            sx={{
-              alignSelf: { xs: "flex-end", sm: "center" },
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: 2,
-            }}
-          >
-            <MoreVert />
-          </IconButton>
+          {isMobile ? (
+            <Button
+              variant="outlined"
+              fullWidth
+              startIcon={<MoreVert />}
+              onClick={handleMenuOpen}
+              sx={{
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 2,
+              }}
+            >
+              More Options
+            </Button>
+          ) : (
+            <IconButton
+              onClick={handleMenuOpen}
+              sx={{
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 2,
+              }}
+            >
+              <MoreVert />
+            </IconButton>
+          )}
 
           <Menu
             anchorEl={anchorEl}
@@ -1319,6 +1423,16 @@ export default function StepTracker({ userId }) {
           {snackbarMessage}
         </Alert>
       </Snackbar>
+
+      {/* Share Dialog */}
+      <ShareDialog
+        open={shareDialogOpen}
+        onClose={() => setShareDialogOpen(false)}
+        title={shareTitle}
+        content={shareContent}
+        shareData={shareData}
+        type="Workout"
+      />
     </Container>
   );
 }
