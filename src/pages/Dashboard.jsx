@@ -222,7 +222,14 @@ export default function Dashboard() {
   // Sync State
   const [isOffline, setIsOffline] = useState(false);
   const [hasPersistentData, setHasPersistentData] = useState(false);
-  const [syncQueue, setSyncQueue] = useState([]);
+  const [syncQueue, setSyncQueue] = useState(() => {
+    try {
+      const saved = localStorage.getItem("syncQueue");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [isSyncing, setIsSyncing] = useState(false);
   const [localCache, setLocalCache] = useState({
     workouts: [],
@@ -621,6 +628,11 @@ export default function Dashboard() {
     };
   }, [syncQueue]);
 
+  // Persist syncQueue to localStorage so it survives browser refreshes
+  useEffect(() => {
+    localStorage.setItem("syncQueue", JSON.stringify(syncQueue));
+  }, [syncQueue]);
+
   // Fetch Profile with offline support
   const fetchProfile = async () => {
     if (!userId) return;
@@ -688,12 +700,13 @@ export default function Dashboard() {
             const cachedWorkouts = JSON.parse(
               localStorage.getItem("cachedWorkouts") || "[]",
             );
-            const tempWorkoutIndex = cachedWorkouts.findIndex(
-              (w) =>
-                w.date === operation.data.date &&
-                w.type === operation.data.type &&
-                w.id &&
-                w.id.startsWith("offline-"),
+            const tempWorkoutIndex = cachedWorkouts.findIndex((w) =>
+              operation.tempId
+                ? w.id === operation.tempId
+                : w.date === operation.data.date &&
+                  w.type === operation.data.type &&
+                  w.id &&
+                  w.id.startsWith("offline-"),
             );
 
             if (tempWorkoutIndex !== -1) {
@@ -704,14 +717,19 @@ export default function Dashboard() {
               );
 
               // Update state with real ID
+              const matchTempId = operation.tempId || null;
               setWorkouts((prev) =>
                 prev.map((w) =>
-                  w.date === operation.data.date &&
-                  w.type === operation.data.type &&
-                  w.id &&
-                  w.id.startsWith("offline-")
-                    ? { ...w, id: docRef.id }
-                    : w,
+                  matchTempId
+                    ? w.id === matchTempId
+                      ? { ...w, id: docRef.id }
+                      : w
+                    : w.date === operation.data.date &&
+                        w.type === operation.data.type &&
+                        w.id &&
+                        w.id.startsWith("offline-")
+                      ? { ...w, id: docRef.id }
+                      : w,
                 ),
               );
             }
@@ -806,6 +824,7 @@ export default function Dashboard() {
             localStorage.removeItem("cachedWorkouts");
             localStorage.removeItem("cachedBMI");
             localStorage.removeItem("cachedProfile");
+            localStorage.removeItem("syncQueue");
 
             // Clear sync queue
             setSyncQueue([]);
@@ -1141,8 +1160,14 @@ export default function Dashboard() {
         ]);
 
         // Update local state optimistically
-        setBmiEntries((prev) => [...prev, { id: "temp-offline", ...bmiData }]);
+        const tempBmiId = `offline-bmi-${Date.now()}`;
+        setBmiEntries((prev) => [...prev, { id: tempBmiId, ...bmiData }]);
         setProfile((prev) => ({ ...prev, ...heightData }));
+
+        // Persist offline BMI entry to localStorage cache
+        const cachedBMI = JSON.parse(localStorage.getItem("cachedBMI") || "[]");
+        cachedBMI.push({ id: tempBmiId, ...bmiData });
+        localStorage.setItem("cachedBMI", JSON.stringify(cachedBMI));
 
         showAlert(
           "Saved Locally",
@@ -1949,15 +1974,41 @@ export default function Dashboard() {
               timestamp: new Date().toISOString(),
             },
           ]);
+
+          // Update cached workouts with edited data
+          const cachedWorkouts = JSON.parse(
+            localStorage.getItem("cachedWorkouts") || "[]",
+          );
+          const updatedCached = cachedWorkouts.map((w) =>
+            w.id === editingWorkout.id ? { ...w, ...payload } : w,
+          );
+          localStorage.setItem("cachedWorkouts", JSON.stringify(updatedCached));
         } else {
+          const tempId = `offline-${Date.now()}`;
           setSyncQueue((prev) => [
             ...prev,
             {
               type: "addWorkout",
               data: payload,
+              tempId,
               timestamp: new Date().toISOString(),
             },
           ]);
+
+          // Replace optimistic "temp" ID with persistent offline ID
+          setWorkouts((prev) =>
+            prev.map((w) => (w.id === "temp" ? { id: tempId, ...payload } : w)),
+          );
+
+          // Persist offline workout to localStorage cache
+          const cachedWorkouts = JSON.parse(
+            localStorage.getItem("cachedWorkouts") || "[]",
+          );
+          cachedWorkouts.push({ id: tempId, ...payload });
+          localStorage.setItem(
+            "cachedWorkouts",
+            JSON.stringify(cachedWorkouts),
+          );
         }
 
         // Show offline success message
