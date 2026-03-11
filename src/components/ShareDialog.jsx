@@ -14,15 +14,13 @@ import {
   Divider,
   Chip,
 } from "@mui/material";
-import {
-  Share as ShareIcon,
-  ContentCopy as CopyIcon,
-  WhatsApp as WhatsAppIcon,
-  Twitter as TwitterIcon,
-  Facebook as FacebookIcon,
-  Telegram as TelegramIcon,
-  Close as CloseIcon,
-} from "@mui/icons-material";
+import ShareIcon from "@mui/icons-material/Share";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import TwitterIcon from "@mui/icons-material/Twitter";
+import FacebookIcon from "@mui/icons-material/Facebook";
+import TelegramIcon from "@mui/icons-material/Telegram";
+import CloseIcon from "@mui/icons-material/Close";
 import { useTheme } from "../contexts/ThemeContext";
 
 export default function ShareDialog({
@@ -234,7 +232,7 @@ export default function ShareDialog({
             <Button
               variant="contained"
               onClick={handleCopy}
-              startIcon={<CopyIcon />}
+              startIcon={<ContentCopyIcon />}
               sx={{
                 minWidth: 100,
                 bgcolor: copied ? "success.main" : "primary.main",

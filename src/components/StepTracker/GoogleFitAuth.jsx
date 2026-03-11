@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -15,7 +15,8 @@ import {
   Paper,
   useMediaQuery,
 } from "@mui/material";
-import { FitnessCenter, Google } from "@mui/icons-material";
+import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
+import GoogleIcon from "@mui/icons-material/Google";
 import { useGoogleLogin } from "@react-oauth/google";
 import googleFitService from "../../services/googleFitService";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -122,7 +123,7 @@ export default function GoogleFitAuth({ open, onClose, onSuccess }) {
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={1}>
-          <FitnessCenter color="primary" />
+          <FitnessCenterIcon color="primary" />
           <Typography variant="h6">Connect Google Fit</Typography>
         </Box>
       </DialogTitle>
@@ -167,7 +168,7 @@ export default function GoogleFitAuth({ open, onClose, onSuccess }) {
             alignItems="center"
             gap={2}
           >
-            <Google
+            <GoogleIcon
               sx={{
                 fontSize: { xs: 42, sm: 48 },
                 color: "#4285F4",
@@ -234,7 +235,7 @@ export default function GoogleFitAuth({ open, onClose, onSuccess }) {
           variant="contained"
           onClick={handleConnect}
           disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} /> : <Google />}
+          startIcon={loading ? <CircularProgress size={20} /> : <GoogleIcon />}
         >
           {loading ? "Connecting..." : "Connect Google Fit"}
         </Button>

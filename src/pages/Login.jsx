@@ -22,10 +22,8 @@ import {
   Alert,
   Snackbar,
 } from "@mui/material";
-import {
-  VisibilityOutlined as VisibilityOutlinedIcon,
-  VisibilityOffOutlined as VisibilityOffOutlinedIcon,
-} from "@mui/icons-material";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
 import { IconButton } from "@mui/material";
 import { getAuthErrorMessage } from "../utils/authErrors";
 import { useTheme } from "../contexts/ThemeContext";

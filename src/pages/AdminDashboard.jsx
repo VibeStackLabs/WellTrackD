@@ -49,34 +49,32 @@ import {
   Switch,
   useMediaQuery,
 } from "@mui/material";
-import {
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  Refresh as RefreshIcon,
-  Person as PersonIcon,
-  BarChart as BarChartIcon,
-  Security as SecurityIcon,
-  Logout as LogoutIcon,
-  Email as EmailIcon,
-  Block as BlockIcon,
-  CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon,
-  LockReset as LockResetIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
-  CalendarToday as CalendarTodayIcon,
-  People as PeopleIcon,
-  TrendingUp as TrendingUpIcon,
-  Add as AddIcon,
-  Article as ArticleIcon,
-  DateRange as DateRangeIcon,
-  Upgrade as UpgradeIcon,
-  BugReport as BugReportIcon,
-  Build as BuildIcon,
-  OpenInNew as OpenInNewIcon,
-  DarkMode as DarkModeIcon,
-  LightMode as LightModeIcon,
-} from "@mui/icons-material";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import PersonIcon from "@mui/icons-material/Person";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import SecurityIcon from "@mui/icons-material/Security";
+import LogoutIcon from "@mui/icons-material/Logout";
+import EmailIcon from "@mui/icons-material/Email";
+import BlockIcon from "@mui/icons-material/Block";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ErrorIcon from "@mui/icons-material/Error";
+import LockResetIcon from "@mui/icons-material/LockReset";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import PeopleIcon from "@mui/icons-material/People";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import AddIcon from "@mui/icons-material/Add";
+import ArticleIcon from "@mui/icons-material/Article";
+import DateRangeIcon from "@mui/icons-material/DateRange";
+import UpgradeIcon from "@mui/icons-material/Upgrade";
+import BugReportIcon from "@mui/icons-material/BugReport";
+import BuildIcon from "@mui/icons-material/Build";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
 
 // Import changelog functions
 import {
@@ -1261,9 +1259,9 @@ function AdminDashboard() {
                           variant="outlined"
                           icon={
                             entry.published ? (
-                              <VisibilityIcon />
+                              <VisibilityOutlinedIcon />
                             ) : (
-                              <VisibilityOffIcon />
+                              <VisibilityOffOutlinedIcon />
                             )
                           }
                         />

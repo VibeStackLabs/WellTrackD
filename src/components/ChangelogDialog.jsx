@@ -13,16 +13,14 @@ import {
   Divider,
   CircularProgress,
 } from "@mui/material";
-import {
-  Close as CloseIcon,
-  Upgrade as UpgradeIcon,
-  BugReport as BugReportIcon,
-  Security as SecurityIcon,
-  Build as BuildIcon,
-  Telegram as TelegramIcon,
-  NewReleases as NewReleasesIcon,
-  TaskAlt as TaskAltIcon,
-} from "@mui/icons-material";
+import CloseIcon from "@mui/icons-material/Close";
+import UpgradeIcon from "@mui/icons-material/Upgrade";
+import BugReportIcon from "@mui/icons-material/BugReport";
+import SecurityIcon from "@mui/icons-material/Security";
+import BuildIcon from "@mui/icons-material/Build";
+import TelegramIcon from "@mui/icons-material/Telegram";
+import NewReleasesIcon from "@mui/icons-material/NewReleases";
+import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import { getPublishedChangelog } from "../utils/changelogFunctions";
 import { useTheme } from "../contexts/ThemeContext";
 import ReactMarkdown from "react-markdown";

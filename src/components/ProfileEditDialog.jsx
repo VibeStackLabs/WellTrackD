@@ -16,15 +16,13 @@ import {
   Paper,
   Avatar,
 } from "@mui/material";
-import {
-  Save as SaveIcon,
-  Close as CloseIcon,
-  VisibilityOutlined,
-  VisibilityOffOutlined,
-  Person as PersonIcon,
-  Lock as LockIcon,
-  Email as EmailIcon,
-} from "@mui/icons-material";
+import SaveIcon from "@mui/icons-material/Save";
+import CloseIcon from "@mui/icons-material/Close";
+import VisibilityOutlined from "@mui/icons-material/VisibilityOutlined";
+import VisibilityOffOutlined from "@mui/icons-material/VisibilityOffOutlined";
+import PersonIcon from "@mui/icons-material/Person";
+import LockIcon from "@mui/icons-material/Lock";
+import EmailIcon from "@mui/icons-material/Email";
 import {
   doc,
   getDoc,

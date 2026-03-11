@@ -33,19 +33,17 @@ import {
   useTheme as useMuiTheme,
   useMediaQuery,
 } from "@mui/material";
-import {
-  DirectionsWalk,
-  Sync,
-  Google,
-  EmojiEvents,
-  Timeline,
-  Logout,
-  MoreVert,
-  Error as ErrorIcon,
-  AccountCircle,
-  Flag,
-  Share as ShareIcon,
-} from "@mui/icons-material";
+import DirectionsWalkIcon from "@mui/icons-material/DirectionsWalk";
+import SyncIcon from "@mui/icons-material/Sync";
+import GoogleIcon from "@mui/icons-material/Google";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import TimelineIcon from "@mui/icons-material/Timeline";
+import LogoutIcon from "@mui/icons-material/Logout";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import ErrorIcon from "@mui/icons-material/Error";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import FlagIcon from "@mui/icons-material/Flag";
+import ShareIcon from "@mui/icons-material/Share";
 import { format, subDays, eachDayOfInterval } from "date-fns";
 import StepChart from "../components/StepTracker/StepChart";
 import GoogleFitAuth from "../components/StepTracker/GoogleFitAuth";
@@ -643,7 +641,7 @@ export default function StepTracker({ userId }) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Card variant="outlined" sx={{ p: 4, textAlign: "center" }}>
-          <Google sx={{ fontSize: 64, color: "#4285F4", mb: 2 }} />
+          <GoogleIcon sx={{ fontSize: 64, color: "#4285F4", mb: 2 }} />
           <Typography variant="h5" gutterBottom>
             Connect to Google Fit
           </Typography>
@@ -654,7 +652,7 @@ export default function StepTracker({ userId }) {
           <Button
             variant="contained"
             size="large"
-            startIcon={<Google />}
+            startIcon={<GoogleIcon />}
             onClick={() => setGoogleFitDialogOpen(true)}
           >
             Connect Google Fit
@@ -691,7 +689,7 @@ export default function StepTracker({ userId }) {
         }}
       >
         <Box display="flex" alignItems="center" gap={2}>
-          <DirectionsWalk sx={{ fontSize: 40, color: "primary.main" }} />
+          <DirectionsWalkIcon sx={{ fontSize: 40, color: "primary.main" }} />
           <Box>
             <Typography variant="h5" sx={{ color: "text.primary" }}>
               Step Tracker
@@ -752,7 +750,7 @@ export default function StepTracker({ userId }) {
               syncLoading ? (
                 <CircularProgress size={20} color="inherit" />
               ) : (
-                <Sync />
+                <SyncIcon />
               )
             }
             onClick={handleSyncGoogleFit}
@@ -771,7 +769,7 @@ export default function StepTracker({ userId }) {
             <Button
               variant="outlined"
               fullWidth
-              startIcon={<MoreVert />}
+              startIcon={<MoreVertIcon />}
               onClick={handleMenuOpen}
               sx={{
                 border: "1px solid",
@@ -790,7 +788,7 @@ export default function StepTracker({ userId }) {
                 borderRadius: 2,
               }}
             >
-              <MoreVert />
+              <MoreVertIcon />
             </IconButton>
           )}
 
@@ -820,7 +818,7 @@ export default function StepTracker({ userId }) {
                     imgProps={{ referrerPolicy: "no-referrer" }}
                   />
                 ) : (
-                  <AccountCircle fontSize="small" />
+                  <AccountCircleIcon fontSize="small" />
                 )}
               </ListItemIcon>
               <ListItemText
@@ -836,7 +834,7 @@ export default function StepTracker({ userId }) {
               }}
             >
               <ListItemIcon>
-                <Flag fontSize="small" color="primary" />
+                <FlagIcon fontSize="small" color="primary" />
               </ListItemIcon>
               <ListItemText
                 primary="Set Step Goal"
@@ -854,7 +852,7 @@ export default function StepTracker({ userId }) {
               }}
             >
               <ListItemIcon>
-                <Logout fontSize="small" color="error" />
+                <LogoutIcon fontSize="small" color="error" />
               </ListItemIcon>
               <ListItemText primary="Disconnect Google Fit" />
             </MenuItem>
@@ -1099,7 +1097,7 @@ export default function StepTracker({ userId }) {
             <Typography variant="h6">Step Tracking</Typography>
 
             <Chip
-              icon={<Google />}
+              icon={<GoogleIcon />}
               label="Live Google Fit Data"
               color="primary"
               variant="outlined"
@@ -1194,11 +1192,11 @@ export default function StepTracker({ userId }) {
                       }}
                     >
                       {stepGoal && entry.steps >= stepGoal ? (
-                        <EmojiEvents />
+                        <EmojiEventsIcon />
                       ) : entry.steps > 0 ? (
-                        <DirectionsWalk />
+                        <DirectionsWalkIcon />
                       ) : (
-                        <Timeline />
+                        <TimelineIcon />
                       )}
                     </Avatar>
                   </ListItemAvatar>
@@ -1284,7 +1282,7 @@ export default function StepTracker({ userId }) {
                   <Chip
                     label="Google Fit"
                     size="small"
-                    icon={<Google />}
+                    icon={<GoogleIcon />}
                     color="primary"
                     variant="outlined"
                   />
@@ -1356,7 +1354,7 @@ export default function StepTracker({ userId }) {
       >
         <DialogTitle id="disconnect-dialog-title">
           <Box display="flex" alignItems="center" gap={1}>
-            <Logout color="error" />
+            <LogoutIcon color="error" />
             <Typography variant="h6">Disconnect Google Fit?</Typography>
           </Box>
         </DialogTitle>
@@ -1396,7 +1394,7 @@ export default function StepTracker({ userId }) {
             onClick={handleDisconnectGoogleFit}
             color="error"
             variant="contained"
-            startIcon={<Logout />}
+            startIcon={<LogoutIcon />}
           >
             Disconnect
           </Button>

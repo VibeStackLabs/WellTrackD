@@ -52,6 +52,9 @@ import {
   DialogContentText,
   ToggleButton,
   ToggleButtonGroup,
+  IconButton,
+  ListItemIcon,
+  ListItemText,
   useMediaQuery,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
@@ -63,8 +66,6 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import DirectionsRunIcon from "@mui/icons-material/DirectionsRun";
 import WhatshotIcon from "@mui/icons-material/Whatshot";
-import IconButton from "@mui/material/IconButton";
-import { ListItemIcon, ListItemText } from "@mui/material";
 import SyncIcon from "@mui/icons-material/Sync";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -74,11 +75,9 @@ import SecurityIcon from "@mui/icons-material/Security";
 import NewReleasesIcon from "@mui/icons-material/NewReleases";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import ShareIcon from "@mui/icons-material/Share";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
 import { Link } from "react-router-dom";
-import {
-  DarkMode as DarkModeIcon,
-  LightMode as LightModeIcon,
-} from "@mui/icons-material";
 import { format, parseISO } from "date-fns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers";

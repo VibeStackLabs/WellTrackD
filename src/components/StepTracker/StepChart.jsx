@@ -21,7 +21,7 @@ import {
   ToggleButton,
   useMediaQuery,
 } from "@mui/material";
-import { format, parseISO, eachDayOfInterval, subDays } from "date-fns";
+import { format, eachDayOfInterval, subDays } from "date-fns";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import ShowChartIcon from "@mui/icons-material/ShowChart";
