@@ -3505,6 +3505,10 @@ export default function Dashboard() {
                                                             alignItems:
                                                               "center",
                                                             gap: 1,
+                                                            fontSize: {
+                                                              xs: "0.65rem",
+                                                              sm: "0.75rem",
+                                                            },
                                                             flexWrap: "wrap",
                                                           }}
                                                         >
