@@ -1700,17 +1700,15 @@ export default function Dashboard() {
       return calculateCardioCalories();
     }
 
-    // Strength training calculation
+    // Original strength training calculation
     return sets
       .reduce((total, set) => {
         const weightKg =
           workoutUnit === "lbs"
             ? Number(set.weight) * 0.453592
             : Number(set.weight);
-        const caloriesPerSet = weightKg * Number(set.reps) * 0.1; // MET factor
-        return (
-          total + (isNaN(caloriesPerSet) ? 0 : caloriesPerSet * set.setNumber)
-        ); // Multiply by number of sets
+        const calories = weightKg * Number(set.reps) * 0.1; // MET factor
+        return total + (isNaN(calories) ? 0 : calories);
       }, 0)
       .toFixed(1);
   };
@@ -1841,16 +1839,13 @@ export default function Dashboard() {
               ? Number(set.weight) * 0.453592
               : Number(set.weight),
         })),
-        totalReps: sets.reduce(
-          (sum, set) => sum + Number(set.reps || 0) * set.setNumber,
-          0,
-        ),
+        totalReps: sets.reduce((sum, set) => sum + Number(set.reps || 0), 0),
         totalWeight: sets.reduce((sum, set) => {
           const weight =
             workoutUnit === "lbs"
               ? Number(set.weight) * 0.453592
               : Number(set.weight);
-          return sum + (weight || 0) * set.setNumber * Number(set.reps);
+          return sum + (weight || 0) * Number(set.reps);
         }, 0),
         calories: Number(calculateTotalCalories()),
         date: selectedDate,
@@ -4912,7 +4907,7 @@ export default function Dashboard() {
                 sx={{
                   display: "grid",
                   gridTemplateColumns: {
-                    xs: "0.6fr 0.7fr 1fr auto", // mobile
+                    xs: "0.3fr 0.7fr 1fr auto", // mobile
                     sm: "0.6fr 0.9fr 1.2fr auto", // tablet
                     md: "1fr 1fr 1fr auto", // desktop
                   },
@@ -4921,7 +4916,7 @@ export default function Dashboard() {
                   alignItems: "center",
                 }}
               >
-                <Typography variant="subtitle2">Sets</Typography>
+                <Typography variant="subtitle2">Set</Typography>
                 <Typography variant="subtitle2">Reps</Typography>
                 <Typography variant="subtitle2">
                   Weight ({workoutUnit})
@@ -4929,14 +4924,14 @@ export default function Dashboard() {
                 <Typography variant="subtitle2">Action</Typography>
               </Box>
 
-              {/* Single Set Row with Number of Sets Dropdown */}
+              {/* Dynamic Sets */}
               {sets.map((set, index) => (
                 <Box
                   key={index}
                   sx={{
                     display: "grid",
                     gridTemplateColumns: {
-                      xs: "0.6fr 0.7fr 1fr auto", // mobile
+                      xs: "0.3fr 0.7fr 1fr auto", // mobile
                       sm: "0.6fr 0.9fr 1.2fr auto", // tablet
                       md: "1fr 1fr 1fr auto", // desktop
                     },
@@ -4945,31 +4940,11 @@ export default function Dashboard() {
                     alignItems: "center",
                   }}
                 >
-                  {/* Number of Sets Dropdown */}
-                  <TextField
-                    select
-                    value={set.setNumber}
-                    onChange={(e) =>
-                      updateSet(index, "setNumber", parseInt(e.target.value))
-                    }
-                    size="small"
-                    variant="outlined"
-                    disabled={editingWorkout}
-                    sx={{ width: "100%" }}
-                  >
-                    {[1, 2, 3, 4, 5, 6].map((num) => (
-                      <MenuItem key={num} value={num}>
-                        {isMobile
-                          ? num
-                          : `${num} ${num === 1 ? "set" : "sets"}`}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-
+                  <Typography variant="body1">#{set.setNumber}</Typography>
                   <TextField
                     type="text"
                     inputMode="numeric"
-                    placeholder="Reps per set"
+                    placeholder="Reps"
                     value={set.reps}
                     onChange={handleNumberChange(
                       (value) => updateSet(index, "reps", value),
@@ -5006,7 +4981,7 @@ export default function Dashboard() {
                         : ""
                     }
                     InputProps={{
-                      endAdornment: !isMobile && (
+                      endAdornment: (
                         <InputAdornment position="end">
                           {workoutUnit}
                         </InputAdornment>
@@ -5030,7 +5005,6 @@ export default function Dashboard() {
                 startIcon={<AddIcon />}
                 onClick={addSet}
                 sx={{ mt: 1, mb: 3 }}
-                disabled={editingWorkout || sets.length >= 10}
               >
                 Add Another Set
               </Button>
