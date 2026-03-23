@@ -400,10 +400,14 @@ export default function Dashboard() {
     let totalCalories = 0;
     let workoutDetails = [];
 
+    // Count only non-rest activities for workout count
+    let workoutCount = 0;
+
     todayWorkouts.forEach((workout, index) => {
       if (workout.type === "rest") {
         content += `🛌 Rest Day - Active Recovery\n`;
       } else if (workout.workoutType === "strength") {
+        workoutCount++; // Count strength workouts
         content += `💪 ${workout.exercise}\n`;
         workout.sets?.forEach((set) => {
           content += `  Set ${set.setNumber}: ${set.reps} reps × ${set.weight?.toFixed(1)} kg\n`;
@@ -417,6 +421,7 @@ export default function Dashboard() {
           totalWeight: workout.totalWeight?.toFixed(1) || 0,
         });
       } else if (workout.workoutType === "cardio") {
+        workoutCount++; // Count cardio workouts
         content += `🏃 ${workout.exercise}\n`;
         content += `  Duration: ${workout.duration} min\n`;
         if (workout.distance)
@@ -437,7 +442,7 @@ export default function Dashboard() {
     });
 
     content += `\n🔥 Total Calories: ${totalCalories.toFixed(0)} kcal`;
-    content += `\n📊 Total Workouts: ${todayWorkouts.length}`;
+    content += `\n📊 Total Workouts: ${workoutCount}`;
 
     if (workoutDetails.length > 0) {
       content += `\n——\nWellTrackD\n#FitnessTracker #Workout #Fitness`;
@@ -446,7 +451,7 @@ export default function Dashboard() {
     setShareTitle(`My Workout - ${format(new Date(), "dd MMM yyyy")}`);
     setShareContent(content);
     setShareData({
-      Workouts: todayWorkouts.length,
+      Workouts: workoutCount,
       Calories: `${totalCalories.toFixed(0)} kcal`,
       ...(workoutDetails[0]?.exercise && {
         "Main Exercise": workoutDetails[0].exercise,
