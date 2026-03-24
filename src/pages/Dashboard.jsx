@@ -251,13 +251,18 @@ export default function Dashboard() {
   const handleNumberChange =
     (setter, options = {}) =>
     (e) => {
-      const value = e.target.value;
+      let value = e.target.value;
       const { decimal = false, max, min = 0 } = options;
 
       // Allow empty string
       if (value === "") {
         setter(value);
         return;
+      }
+
+      // For number inputs, value comes as a number, convert to string
+      if (typeof value === "number") {
+        value = value.toString();
       }
 
       // Regex for numbers only (with or without decimals)
@@ -4481,8 +4486,7 @@ export default function Dashboard() {
           <Box sx={{ display: "flex", gap: 2 }}>
             <TextField
               label="Weight"
-              type="text"
-              inputMode="decimal"
+              type="number"
               value={weight}
               onChange={handleNumberChange(setWeight, {
                 decimal: true,
@@ -4492,8 +4496,12 @@ export default function Dashboard() {
               fullWidth
               margin="dense"
               inputProps={{
+                step: "0.1",
+                min: "0.1",
+                max: "400",
                 pattern: "[0-9]*\\.?[0-9]*",
                 style: { fontSize: "1rem" },
+                inputMode: "decimal",
               }}
               error={weight !== "" && Number(weight) <= 0}
               helperText={
@@ -4518,8 +4526,7 @@ export default function Dashboard() {
             {heightUnit === "cm" ? (
               <TextField
                 label="Height (cm)"
-                type="text"
-                inputMode="decimal"
+                type="number"
                 value={heightCm}
                 onChange={handleNumberChange(setHeightCm, {
                   decimal: true,
@@ -4530,6 +4537,10 @@ export default function Dashboard() {
                 margin="dense"
                 inputProps={{
                   pattern: "[0-9]*\\.?[0-9]*",
+                  step: "0.1",
+                  min: "1",
+                  max: "300",
+                  inputMode: "decimal",
                 }}
                 error={heightCm !== "" && Number(heightCm) <= 0}
                 helperText={
@@ -4542,14 +4553,17 @@ export default function Dashboard() {
               <>
                 <TextField
                   label="Feet"
-                  type="text"
-                  inputMode="numeric"
+                  type="number"
                   value={heightFt}
                   onChange={handleNumberChange(setHeightFt, { max: 8 })}
                   sx={{ width: { xs: "100%", sm: 100 } }}
                   margin="dense"
                   inputProps={{
                     pattern: "[0-9]*",
+                    step: "1",
+                    min: "0",
+                    max: "8",
+                    inputMode: "numeric",
                   }}
                   error={
                     heightFt !== "" &&
@@ -4565,14 +4579,17 @@ export default function Dashboard() {
                 />
                 <TextField
                   label="Inches"
-                  type="text"
-                  inputMode="numeric"
+                  type="number"
                   value={heightIn}
                   onChange={handleNumberChange(setHeightIn, { max: 11 })}
                   sx={{ width: { xs: "100%", sm: 100 } }}
                   margin="dense"
                   inputProps={{
                     pattern: "[0-9]*",
+                    step: "1",
+                    min: "0",
+                    max: "11",
+                    inputMode: "numeric",
                   }}
                   error={
                     heightIn !== "" &&
@@ -5000,8 +5017,7 @@ export default function Dashboard() {
                 >
                   <Typography variant="body1">#{set.setNumber}</Typography>
                   <TextField
-                    type="text"
-                    inputMode="numeric"
+                    type="number"
                     placeholder="Reps"
                     value={set.reps}
                     onChange={handleNumberChange(
@@ -5011,6 +5027,10 @@ export default function Dashboard() {
                     size="small"
                     inputProps={{
                       pattern: "[0-9]*",
+                      step: "1",
+                      min: "0",
+                      max: "100",
+                      inputMode: "numeric",
                     }}
                     error={set.reps !== "" && Number(set.reps) < 0}
                     helperText={
@@ -5020,8 +5040,7 @@ export default function Dashboard() {
                     }
                   />
                   <TextField
-                    type="text"
-                    inputMode="decimal"
+                    type="number"
                     placeholder="Weight"
                     value={set.weight}
                     onChange={handleNumberChange(
@@ -5031,6 +5050,10 @@ export default function Dashboard() {
                     size="small"
                     inputProps={{
                       pattern: "[0-9]*\\.?[0-9]*",
+                      step: "0.5",
+                      min: "0",
+                      max: "10000",
+                      inputMode: "decimal",
                     }}
                     error={set.weight !== "" && Number(set.weight) < 0}
                     helperText={
@@ -5171,8 +5194,7 @@ export default function Dashboard() {
                       <Grid size={{ xs: 12, sm: 2.6 }}>
                         <TextField
                           label="Duration (min)"
-                          type="text"
-                          inputMode="decimal"
+                          type="number"
                           value={session.duration}
                           onChange={handleNumberChange(
                             (value) =>
@@ -5188,6 +5210,9 @@ export default function Dashboard() {
                           required
                           inputProps={{
                             pattern: "[0-9]*\\.?[0-9]*",
+                            step: "0.5",
+                            min: "0",
+                            inputMode: "decimal",
                           }}
                           error={
                             session.duration !== "" &&
@@ -5217,8 +5242,7 @@ export default function Dashboard() {
                                 ? `Speed (${speedUnit})`
                                 : "Speed (RPM)"
                             }
-                            type="text"
-                            inputMode="decimal"
+                            type="number"
                             value={session.speed}
                             onChange={handleNumberChange(
                               (value) =>
@@ -5230,6 +5254,12 @@ export default function Dashboard() {
                             required
                             inputProps={{
                               pattern: "[0-9]*\\.?[0-9]*",
+                              step: cardioType === "treadmill" ? "0.1" : "1",
+                              min: "0",
+                              inputMode:
+                                cardioType === "treadmill"
+                                  ? "decimal"
+                                  : "numeric",
                             }}
                             error={
                               session.speed !== "" && Number(session.speed) < 0
@@ -5265,8 +5295,7 @@ export default function Dashboard() {
                         <Grid size={{ xs: 12, sm: 2.6 }}>
                           <TextField
                             label="Incline (%)"
-                            type="text"
-                            inputMode="decimal"
+                            type="number"
                             value={session.incline}
                             onChange={handleNumberChange(
                               (value) =>
@@ -5281,6 +5310,10 @@ export default function Dashboard() {
                             size="small"
                             inputProps={{
                               pattern: "[0-9]*\\.?[0-9]*",
+                              step: "0.5",
+                              min: "0",
+                              max: "20",
+                              inputMode: "decimal",
                             }}
                             error={
                               session.incline !== "" &&
@@ -5309,8 +5342,7 @@ export default function Dashboard() {
                         <Grid size={{ xs: 12, sm: 2.6 }}>
                           <TextField
                             label="Resistance Level"
-                            type="text"
-                            inputMode="decimal"
+                            type="number"
                             value={session.resistance || ""}
                             onChange={handleNumberChange(
                               (value) =>
@@ -5326,6 +5358,9 @@ export default function Dashboard() {
                             placeholder="Optional"
                             inputProps={{
                               pattern: "[0-9]*\\.?[0-9]*",
+                              step: "1",
+                              min: "0",
+                              inputMode: "numeric",
                             }}
                             error={
                               session.resistance !== "" &&
@@ -5358,8 +5393,7 @@ export default function Dashboard() {
               {/* Distance */}
               <TextField
                 label="Total Distance"
-                type="text"
-                inputMode="decimal"
+                type="number"
                 value={distance}
                 onChange={handleNumberChange(
                   (value) => {
@@ -5372,6 +5406,9 @@ export default function Dashboard() {
                 margin="normal"
                 inputProps={{
                   pattern: "[0-9]*\\.?[0-9]*",
+                  step: "0.1",
+                  min: "0",
+                  inputMode: "decimal",
                 }}
                 error={distance !== "" && Number(distance) < 0}
                 helperText={

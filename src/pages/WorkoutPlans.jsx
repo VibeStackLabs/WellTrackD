@@ -499,8 +499,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           <Grid size={{ xs: 6, sm: 4 }}>
             <TextField
               label="Sets"
-              type="text"
-              inputMode="numeric"
+              type="number"
               fullWidth
               value={exercise.sets}
               onChange={handleNumberChange(
@@ -511,6 +510,10 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
               disabled={saving}
               inputProps={{
                 pattern: "[0-9]*",
+                step: "1",
+                min: "0",
+                max: "100",
+                inputMode: "numeric",
               }}
               error={exercise.sets !== "" && Number(exercise.sets) < 0}
               helperText={
@@ -523,8 +526,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           <Grid size={{ xs: 6, sm: 4 }}>
             <TextField
               label="Reps"
-              type="text"
-              inputMode="numeric"
+              type="number"
               fullWidth
               value={exercise.reps}
               onChange={handleNumberChange(
@@ -535,6 +537,10 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
               disabled={saving}
               inputProps={{
                 pattern: "[0-9]*",
+                step: "1",
+                min: "0",
+                max: "100",
+                inputMode: "numeric",
               }}
               error={exercise.reps !== "" && Number(exercise.reps) < 0}
               helperText={
@@ -547,8 +553,7 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
           <Grid size={{ xs: 12, sm: 4 }}>
             <TextField
               label="Weight"
-              type="text"
-              inputMode="decimal"
+              type="number"
               fullWidth
               value={exercise.weight}
               onChange={handleNumberChange(
@@ -559,6 +564,10 @@ export default function WorkoutPlans({ userId, onAddToToday }) {
               disabled={saving}
               inputProps={{
                 pattern: "[0-9]*\\.?[0-9]*",
+                step: "0.5",
+                min: "0",
+                max: "10000",
+                inputMode: "decimal",
               }}
               error={exercise.weight !== "" && Number(exercise.weight) < 0}
               helperText={

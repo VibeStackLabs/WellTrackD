@@ -1309,13 +1309,12 @@ export default function StepTracker({ userId }) {
           <TextField
             autoFocus
             label="Daily Step Goal"
-            type="text"
-            inputMode="numeric"
+            type="number"
             fullWidth
             value={newGoal}
             onChange={(e) => setNewGoal(e.target.value.replace(/\D/g, ""))}
             placeholder="e.g., 8000"
-            inputProps={{ min: 1, step: 100 }}
+            inputProps={{ min: 1, step: 100, inputMode: "numeric" }}
             helperText={isOffline ? "Will sync when online" : "Saved to cloud"}
           />
         </DialogContent>
