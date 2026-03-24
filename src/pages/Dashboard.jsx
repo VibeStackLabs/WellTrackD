@@ -29,6 +29,7 @@ import {
   TableRow,
   TableCell,
   TableBody,
+  Tooltip,
   Paper,
   Dialog,
   DialogTitle,
@@ -3394,21 +3395,27 @@ export default function Dashboard() {
                   Share {workoutFilter === "today" ? "Today" : "Week"}
                 </Button>
               ) : (
-                <Button
-                  variant="contained"
-                  color="success"
-                  startIcon={<ShareIcon />}
-                  disabled
-                  size="small"
-                  sx={{
-                    textTransform: "none",
-                    borderRadius: 2,
-                    opacity: 0.6,
-                  }}
+                <Tooltip
                   title="Sharing is only available for Today and This Week views"
+                  arrow
                 >
-                  Share {workoutFilter === "month" ? "Month" : "All Time"}
-                </Button>
+                  <span>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      startIcon={<ShareIcon />}
+                      disabled
+                      size="small"
+                      sx={{
+                        textTransform: "none",
+                        borderRadius: 2,
+                        opacity: 0.6,
+                      }}
+                    >
+                      Share {workoutFilter === "month" ? "Month" : "All Time"}
+                    </Button>
+                  </span>
+                </Tooltip>
               )}
             </Box>
             <Box
