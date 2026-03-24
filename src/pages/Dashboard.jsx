@@ -385,29 +385,58 @@ export default function Dashboard() {
   const [shareData, setShareData] = useState({});
 
   // Share Functions
-  const generateWorkoutShareContent = () => {
-    const today = new Date().toISOString().split("T")[0];
-    const todayWorkouts = workouts.filter((w) => w.date === today);
+  const generateWorkoutShareContent = (period = "today") => {
+    let filteredWorkouts;
+    let periodText;
 
-    if (todayWorkouts.length === 0) {
-      setSnackbarMessage("No workouts logged today to share");
+    if (period === "today") {
+      const today = new Date().toISOString().split("T")[0];
+      filteredWorkouts = workouts.filter((w) => w.date === today);
+      periodText = format(new Date(), "dd MMM yyyy");
+    } else if (period === "week") {
+      // Get current week (Monday to Sunday)
+      const now = new Date();
+      const day = now.getDay();
+      const daysToMonday = day === 0 ? 6 : day - 1;
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - daysToMonday);
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
+
+      filteredWorkouts = workouts.filter((w) => {
+        const workoutDate = new Date(w.date);
+        workoutDate.setHours(0, 0, 0, 0);
+        return workoutDate >= startOfWeek && workoutDate <= endOfWeek;
+      });
+
+      periodText = `${format(startOfWeek, "dd MMM")} - ${format(endOfWeek, "dd MMM yyyy")}`;
+    } else {
+      // Should not be called for month/all time
+      return;
+    }
+
+    if (filteredWorkouts.length === 0) {
+      setSnackbarMessage(
+        `No workouts logged for ${period === "today" ? "today" : "this week"} to share`,
+      );
       setSnackbarSeverity("info");
       setSnackbarOpen(true);
       return;
     }
 
-    let content = `💪 My Workout Summary - ${format(new Date(), "dd MMM yyyy")}\n\n`;
+    let content = `💪 My Workout Summary - ${periodText}\n\n`;
     let totalCalories = 0;
+    let workoutCount = 0;
     let workoutDetails = [];
 
-    // Count only non-rest activities for workout count
-    let workoutCount = 0;
-
-    todayWorkouts.forEach((workout, index) => {
+    filteredWorkouts.forEach((workout, index) => {
       if (workout.type === "rest") {
         content += `🛌 Rest Day - Active Recovery\n`;
       } else if (workout.workoutType === "strength") {
-        workoutCount++; // Count strength workouts
+        workoutCount++;
         content += `💪 ${workout.exercise}\n`;
         workout.sets?.forEach((set) => {
           content += `  Set ${set.setNumber}: ${set.reps} reps × ${set.weight?.toFixed(1)} kg\n`;
@@ -421,7 +450,7 @@ export default function Dashboard() {
           totalWeight: workout.totalWeight?.toFixed(1) || 0,
         });
       } else if (workout.workoutType === "cardio") {
-        workoutCount++; // Count cardio workouts
+        workoutCount++;
         content += `🏃 ${workout.exercise}\n`;
         content += `  Duration: ${workout.duration} min\n`;
         if (workout.distance)
@@ -438,20 +467,20 @@ export default function Dashboard() {
             : null,
         });
       }
-      if (index < todayWorkouts.length - 1) content += `\n`;
+      if (index < filteredWorkouts.length - 1) content += `\n`;
     });
 
     content += `\n🔥 Total Calories: ${totalCalories.toFixed(0)} kcal`;
-    content += `\n📊 Total Workouts: ${workoutCount}`;
+    content += `\n📊 Total Activities: ${workoutCount}`;
 
     if (workoutDetails.length > 0) {
       content += `\n——\nWellTrackD\n#FitnessTracker #Workout #Fitness`;
     }
 
-    setShareTitle(`My Workout - ${format(new Date(), "dd MMM yyyy")}`);
+    setShareTitle(`My Workout - ${periodText}`);
     setShareContent(content);
     setShareData({
-      Workouts: workoutCount,
+      Activities: workoutCount,
       Calories: `${totalCalories.toFixed(0)} kcal`,
       ...(workoutDetails[0]?.exercise && {
         "Main Exercise": workoutDetails[0].exercise,
@@ -3348,22 +3377,39 @@ export default function Dashboard() {
               }}
             >
               <Typography variant="h6" mb={2}>
-                {" "}
-                Workout History{" "}
+                Workout History
               </Typography>
-              <Button
-                variant="contained"
-                color="success"
-                startIcon={<ShareIcon />}
-                onClick={generateWorkoutShareContent}
-                size="small"
-                sx={{
-                  textTransform: "none",
-                  borderRadius: 2,
-                }}
-              >
-                Share Today
-              </Button>
+              {workoutFilter === "today" || workoutFilter === "week" ? (
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<ShareIcon />}
+                  onClick={() => generateWorkoutShareContent(workoutFilter)}
+                  size="small"
+                  sx={{
+                    textTransform: "none",
+                    borderRadius: 2,
+                  }}
+                >
+                  Share {workoutFilter === "today" ? "Today" : "Week"}
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<ShareIcon />}
+                  disabled
+                  size="small"
+                  sx={{
+                    textTransform: "none",
+                    borderRadius: 2,
+                    opacity: 0.6,
+                  }}
+                  title="Sharing is only available for Today and This Week views"
+                >
+                  Share {workoutFilter === "month" ? "Month" : "All Time"}
+                </Button>
+              )}
             </Box>
             <Box
               sx={{
