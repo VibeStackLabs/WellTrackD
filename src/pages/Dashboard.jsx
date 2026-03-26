@@ -95,6 +95,7 @@ import BMIChart from "../components/BMIChart";
 import { useTheme } from "../contexts/ThemeContext";
 import { useTheme as useMuiTheme } from "@mui/material/styles";
 import ShareDialog from "../components/ShareDialog";
+import NutritionRecommendations from "../components/NutritionRecommendations";
 
 const PREDEFINED_STRENGTH_WORKOUTS = [
   "Bench Press",
@@ -4321,6 +4322,19 @@ export default function Dashboard() {
               latestBMIEntry={latestBMIEntry}
             />
           </Card>
+
+          {/* Nutrition Recommendations Component */}
+          <NutritionRecommendations
+            bmi={latestBMIEntry.bmi}
+            weight={latestBMIEntry.bodyweight}
+            height={
+              profile?.heightCm ||
+              (profile?.heightFt
+                ? profile.heightFt * 30.48 + (profile.heightIn || 0) * 2.54
+                : null)
+            }
+            workouts={workouts}
+          />
         </>
       )}
 

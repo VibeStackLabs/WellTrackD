@@ -553,18 +553,6 @@ export const ThemeProvider = ({ children }) => {
         },
       },
 
-      // LinearProgress styles
-      MuiLinearProgress: {
-        styleOverrides: {
-          root: {
-            backgroundColor: currentTheme.hover,
-          },
-          bar: {
-            backgroundColor: currentTheme.text,
-          },
-        },
-      },
-
       // SpeedDial styles
       MuiSpeedDial: {
         styleOverrides: {
