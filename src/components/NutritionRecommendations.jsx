@@ -62,10 +62,37 @@ const ACTIVITY_LEVELS = {
   },
 };
 
-const NutritionRecommendations = ({ bmi, weight, height, workouts = [] }) => {
+const NutritionRecommendations = ({
+  bmi,
+  weight,
+  height,
+  workouts = [],
+  gender = "male",
+  age = 30,
+}) => {
   const { mode } = useTheme();
   const [activityLevel, setActivityLevel] = useState("moderate");
   const [anchorEl, setAnchorEl] = useState(null);
+
+  // Calculate BMR using Mifflin-St Jeor Equation
+  const calculateBMR = (weightKg, heightCm, ageYears, genderType) => {
+    if (!weightKg || !heightCm || !ageYears) return null;
+
+    if (genderType === "male") {
+      return 10 * weightKg + 6.25 * heightCm - 5 * ageYears + 5;
+    } else {
+      return 10 * weightKg + 6.25 * heightCm - 5 * ageYears - 161;
+    }
+  };
+
+  // Calculate Maintenance Calories (TDEE)
+  const calculateMaintenanceCalories = () => {
+    const bmr = calculateBMR(weight, height, age, gender);
+    if (!bmr) return null;
+
+    const multiplier = ACTIVITY_LEVELS[activityLevel]?.multiplier || 1.55;
+    return Math.round(bmr * multiplier);
+  };
 
   // Function to get BMI category and recommendations
   const getBMICategory = (bmiValue) => {
@@ -185,43 +212,54 @@ const NutritionRecommendations = ({ bmi, weight, height, workouts = [] }) => {
     return Math.round(baseWater);
   };
 
-  // Get daily calorie deficit recommendation
-  const getCalorieDeficit = (bmiCategory) => {
-    let deficit = "";
+  // Get daily calorie recommendation
+  const getCalorieRecommendation = (bmiCategory, maintenanceCalories) => {
+    if (!maintenanceCalories) {
+      return {
+        calories: "—",
+        range: "—",
+        description: "Enter complete profile",
+      };
+    }
+
+    let targetCalories = maintenanceCalories;
+    let deficitAmount = 0;
     let description = "";
-    let recommendedCalories = "";
 
     switch (bmiCategory) {
       case "underweight":
-        deficit = "+300 to +500";
-        description = "Calorie surplus needed for healthy weight gain";
-        recommendedCalories = "Increase by 300-500 kcal/day";
+        deficitAmount = 400;
+        targetCalories = maintenanceCalories + deficitAmount;
+        description = "Calorie surplus for healthy weight gain";
         break;
       case "normal":
-        deficit = "0";
-        description = "Maintenance calories - no deficit needed";
-        recommendedCalories = "Maintain current intake";
+        deficitAmount = 0;
+        targetCalories = maintenanceCalories;
+        description = "Maintenance calories";
         break;
       case "overweight":
-        deficit = "-300 to -500";
-        description = "Mild deficit for gradual, sustainable weight loss";
-        recommendedCalories = "Reduce by 300-500 kcal/day";
+        deficitAmount = 400;
+        targetCalories = maintenanceCalories - deficitAmount;
+        description = "Mild deficit for sustainable weight loss";
         break;
       case "obese":
-        deficit = "-500 to -700";
+        deficitAmount = 600;
+        targetCalories = maintenanceCalories - deficitAmount;
         description = "Moderate deficit for healthy weight loss";
-        recommendedCalories = "Reduce by 500-700 kcal/day";
         break;
       default:
-        deficit = "0";
-        description = "Calculate BMI for recommendations";
-        recommendedCalories = "—";
+        targetCalories = maintenanceCalories;
+        description = "Based on your profile";
     }
 
+    // Calculate range (±100-150 calories for flexibility)
+    const rangeMin = targetCalories - (bmiCategory === "obese" ? 150 : 100);
+    const rangeMax = targetCalories + (bmiCategory === "obese" ? 150 : 100);
+
     return {
-      deficit,
-      recommendedCalories,
-      description,
+      calories: `${targetCalories} kcal`,
+      range: `${rangeMin}-${rangeMax} kcal`,
+      description: description,
     };
   };
 
@@ -260,8 +298,12 @@ const NutritionRecommendations = ({ bmi, weight, height, workouts = [] }) => {
   };
 
   const bmiCategory = getBMICategory(bmi);
+  const maintenanceCalories = calculateMaintenanceCalories();
+  const calorieRecommendation = getCalorieRecommendation(
+    bmiCategory,
+    maintenanceCalories,
+  );
   const waterIntake = getWaterIntake(weight, bmiCategory);
-  const calorieRecommendation = getCalorieDeficit(bmiCategory);
   const proteinRecommendation = getProteinIntake(weight, bmiCategory);
   const idealWeightRange = getIdealWeightRange(height);
   const weeklyBreakdown = getWeeklyWorkoutBreakdown();
@@ -517,23 +559,21 @@ const NutritionRecommendations = ({ bmi, weight, height, workouts = [] }) => {
                 color="text.secondary"
                 gutterBottom
               >
-                Calorie Recommendation
+                Recommended Daily Calories
               </Typography>
               <Typography variant="h5" sx={{ fontWeight: "bold", mb: 1 }}>
-                {calorieRecommendation.deficit}
+                {calorieRecommendation.calories}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {calorieRecommendation.recommendedCalories}
+              <Typography variant="caption" color="text.secondary">
+                {calorieRecommendation.description}
               </Typography>
-              <Tooltip title={calorieRecommendation.description} arrow>
-                <Typography
-                  variant="caption"
-                  color="info.main"
-                  sx={{ mt: 1, display: "block" }}
-                >
-                  ℹ️ {calorieRecommendation.description}
-                </Typography>
-              </Tooltip>
+              <Typography
+                variant="caption"
+                display="block"
+                color="text.secondary"
+              >
+                📊 Range: {calorieRecommendation.range}
+              </Typography>
             </Paper>
           </Grid>
 
